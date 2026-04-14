@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Animated, Modal, ScrollView, StyleSheet, Text,
-  TextInput, TouchableOpacity, View,
+  ActivityIndicator, Animated, Modal, ScrollView,
+  StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Callout, Marker, Polyline } from 'react-native-maps';
@@ -12,20 +12,24 @@ import {
 } from '../../src/constants/locations';
 import { TRANSPORT_COLORS } from '../../src/constants/tripData';
 import { useSavedStore } from '../../src/store/savedStore';
+import {
+  fetchPlacePredictions, fetchPlaceDetail, fetchDirections,
+  PlacePrediction, PlaceDetail, DirectionsResult,
+} from '../../src/hooks/useGoogleMaps';
 
 let ExpoLocation: any = null;
 try { ExpoLocation = require('expo-location'); } catch (_) {}
 
 // ─── Filter config ────────────────────────────────────────────────────────────
 const FILTERS = [
-  { id: 'all',       label: 'All India & SG', lat: 15.0,    lng: 90.0,    dLat: 35, dLng: 35 },
-  { id: 'india',     label: 'India',          lat: 22.5937, lng: 78.9629, dLat: 22, dLng: 22 },
-  { id: 'singapore', label: 'Singapore',      lat: 1.3521,  lng: 103.82,  dLat: 0.25, dLng: 0.25 },
-  { id: 'spiritual', label: 'Spiritual',      lat: 26.0,    lng: 76.0,    dLat: 14, dLng: 14 },
-  { id: 'beach',     label: 'Beach',          lat: 15.0,    lng: 74.0,    dLat: 12, dLng: 12 },
-  { id: 'heritage',  label: 'Heritage',       lat: 27.0,    lng: 78.0,    dLat: 10, dLng: 10 },
-  { id: 'food',      label: 'Food',           lat: 20.0,    lng: 78.0,    dLat: 18, dLng: 18 },
-  { id: 'nature',    label: 'Nature',         lat: 12.0,    lng: 76.0,    dLat: 10, dLng: 10 },
+  { id: 'all',       label: 'All',       lat: 15.0,    lng: 90.0,    dLat: 35,   dLng: 35 },
+  { id: 'india',     label: 'India',     lat: 22.5937, lng: 78.9629, dLat: 22,   dLng: 22 },
+  { id: 'singapore', label: 'Singapore', lat: 1.3521,  lng: 103.82,  dLat: 0.25, dLng: 0.25 },
+  { id: 'spiritual', label: 'Spiritual', lat: 26.0,    lng: 76.0,    dLat: 14,   dLng: 14 },
+  { id: 'beach',     label: 'Beach',     lat: 15.0,    lng: 74.0,    dLat: 12,   dLng: 12 },
+  { id: 'heritage',  label: 'Heritage',  lat: 27.0,    lng: 78.0,    dLat: 10,   dLng: 10 },
+  { id: 'food',      label: 'Food',      lat: 20.0,    lng: 78.0,    dLat: 18,   dLng: 18 },
+  { id: 'nature',    label: 'Nature',    lat: 12.0,    lng: 76.0,    dLat: 10,   dLng: 10 },
 ];
 
 function getFilteredLocs(id: string): TripLocation[] {
@@ -49,86 +53,12 @@ function markerColor(loc: TripLocation) {
   return '#2E7D32';
 }
 
-// ─── Custom marker component ──────────────────────────────────────────────────
-// Android fix: tracksViewChanges starts true, then goes false after render
-// so the marker measures correctly before freezing.
-function CityMarker({ loc, isSelected }: { loc: TripLocation; isSelected: boolean }) {
-  const color = markerColor(loc);
-  return (
-    <View style={{ width: 120, alignItems: 'center' }}>
-      <View style={[
-        mStyles.bubble,
-        { borderColor: color, backgroundColor: isSelected ? color : '#FFFFFF' },
-      ]}>
-        <Text style={[mStyles.name, { color: isSelected ? '#FFFFFF' : color }]}>
-          {loc.city}
-        </Text>
-      </View>
-      <View style={[mStyles.tail, { borderTopColor: color }]} />
-    </View>
-  );
-}
-
-function TripMarker({ city, index }: { city: string; index: number }) {
-  return (
-    <View style={{ width: 130, alignItems: 'center' }}>
-      <View style={mStyles.tripBubble}>
-        <View style={mStyles.tripNum}>
-          <Text style={mStyles.tripNumText}>{index + 1}</Text>
-        </View>
-        <Text style={mStyles.tripCity}>{city}</Text>
-      </View>
-      <View style={[mStyles.tail, { borderTopColor: '#2E7D32' }]} />
-    </View>
-  );
-}
-
-const mStyles = StyleSheet.create({
-  // Callout styles — rendered in native overlay, never clips
-  callout: {
-    borderRadius: 10, borderWidth: 2,
-    paddingHorizontal: 12, paddingVertical: 6,
-    minWidth: 60,
-  },
-  calloutText: {
-    fontSize: 13, fontWeight: '800', textAlign: 'center',
-  },
-  tripCallout: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#E8F5E9', borderRadius: 12, borderWidth: 2,
-    borderColor: '#2E7D32', paddingHorizontal: 10, paddingVertical: 6,
-  },
-  tripCalloutNum: {
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: '#2E7D32', alignItems: 'center', justifyContent: 'center',
-  },
-  tripCalloutNumText: { color: '#FFF', fontSize: 12, fontWeight: '900' },
-  tripCalloutCity: { color: '#1B5E20', fontSize: 13, fontWeight: '800' },
-  // Keep old styles for nav marker
-  bubble: {
-    borderRadius: 10, borderWidth: 2,
-    paddingHorizontal: 10, paddingVertical: 5,
-    alignSelf: 'center', elevation: 5,
-  },
-  name: { fontSize: 12, fontWeight: '800', textAlign: 'center' },
-  tail: {
-    width: 0, height: 0,
-    borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 7,
-    borderLeftColor: 'transparent', borderRightColor: 'transparent',
-  },
-  tripBubble: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#E8F5E9', borderRadius: 12, borderWidth: 2,
-    borderColor: '#2E7D32', paddingHorizontal: 8, paddingVertical: 5,
-    alignSelf: 'center', elevation: 6,
-  },
-  tripNum: {
-    width: 20, height: 20, borderRadius: 10,
-    backgroundColor: '#2E7D32', alignItems: 'center', justifyContent: 'center',
-  },
-  tripNumText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
-  tripCity: { color: '#1B5E20', fontSize: 12, fontWeight: '800' },
-});
+// ─── Nav mode config ──────────────────────────────────────────────────────────
+const NAV_MODES = [
+  { id: 'driving',  label: '🚗 Drive',  mode: 'driving'  as const },
+  { id: 'walking',  label: '🚶 Walk',   mode: 'walking'  as const },
+  { id: 'transit',  label: '🚌 Transit',mode: 'transit'  as const },
+];
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function ExploreScreen() {
@@ -137,17 +67,33 @@ export default function ExploreScreen() {
   const paths = useTripStore(s => s.paths);
   const selectNode = useTripStore(s => s.selectNode);
   const selectPath = useTripStore(s => s.selectPath);
-
   const { toggle, isSaved } = useSavedStore();
+
+  // Search state
   const [search, setSearch] = useState('');
-  const [searchResults, setSearchResults] = useState<TripLocation[]>([]);
+  const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
+  const [localResults, setLocalResults] = useState<TripLocation[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const sessionToken = useRef(Math.random().toString(36).slice(2));
+
+  // Map state
   const [activeFilter, setActiveFilter] = useState('all');
   const [visibleLocs, setVisibleLocs] = useState<TripLocation[]>(ALL_LOCATIONS);
   const [selectedLoc, setSelectedLoc] = useState<TripLocation | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceDetail | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+
+  // Location
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locLoading, setLocLoading] = useState(false);
-  const [navRoute, setNavRoute] = useState<{ from: { lat: number; lng: number }; to: TripLocation } | null>(null);
+
+  // Navigation
+  const [navRoute, setNavRoute] = useState<DirectionsResult | null>(null);
+  const [navDest, setNavDest] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [navMode, setNavMode] = useState<'driving' | 'walking' | 'transit'>('driving');
+  const [navLoading, setNavLoading] = useState(false);
+  const [currentStepIdx, setCurrentStepIdx] = useState(0);
+  const [showSteps, setShowSteps] = useState(false);
 
   const cardAnim = useRef(new Animated.Value(400)).current;
   const nodeMap = Object.fromEntries(nodes.map(n => [n.id, n]));
@@ -163,20 +109,175 @@ export default function ExploreScreen() {
       const pos = await ExpoLocation.getCurrentPositionAsync({ accuracy: 3 });
       const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       setUserCoords(c);
-      mapRef.current?.animateToRegion({ latitude: c.lat, longitude: c.lng, latitudeDelta: 6, longitudeDelta: 6 }, 1000);
+      mapRef.current?.animateToRegion(
+        { latitude: c.lat, longitude: c.lng, latitudeDelta: 6, longitudeDelta: 6 }, 1000
+      );
     } catch (_) {}
     setLocLoading(false);
   };
 
+  // ── Real-time search ──────────────────────────────────────────────────────
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearch = useCallback((text: string) => {
+    setSearch(text);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (text.length < 2) {
+      setPredictions([]);
+      setLocalResults([]);
+      return;
+    }
+    // Instant local results
+    const q = text.toLowerCase();
+    setLocalResults(ALL_LOCATIONS.filter(l =>
+      l.city.toLowerCase().includes(q) ||
+      l.region.toLowerCase().includes(q) ||
+      l.tags.some(t => t.includes(q)) ||
+      l.highlights.some(h => h.toLowerCase().includes(q))
+    ).slice(0, 4));
+
+    // Debounced Google Places
+    searchTimer.current = setTimeout(async () => {
+      setSearchLoading(true);
+      const preds = await fetchPlacePredictions(text, sessionToken.current);
+      setPredictions(preds.slice(0, 5));
+      setSearchLoading(false);
+    }, 350);
+  }, []);
+
+  const clearSearch = useCallback(() => {
+    setSearch('');
+    setPredictions([]);
+    setLocalResults([]);
+  }, []);
+
+  // ── Select a TomTom Places result ────────────────────────────────────────
+  const selectPrediction = useCallback(async (pred: PlacePrediction) => {
+    setSearch(pred.structured_formatting.main_text);
+    setPredictions([]);
+    setLocalResults([]);
+
+    // TomTom fuzzy search already returns coords — use them directly
+    const raw = pred as any;
+    if (raw._lat != null && raw._lng != null) {
+      const detail: PlaceDetail = {
+        place_id: pred.place_id,
+        name: pred.structured_formatting.main_text,
+        formatted_address: pred.description,
+        geometry: { location: { lat: raw._lat, lng: raw._lng } },
+      };
+      setSelectedPlace(detail);
+      setSelectedLoc(null);
+      mapRef.current?.animateToRegion({
+        latitude: detail.geometry.location.lat,
+        longitude: detail.geometry.location.lng,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }, 800);
+      cardAnim.setValue(400);
+      Animated.spring(cardAnim, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 120 }).start();
+      return;
+    }
+
+    // Fallback: fetch detail
+    setSearchLoading(true);
+    const detail = await fetchPlaceDetail(pred.place_id, raw);
+    setSearchLoading(false);
+    if (!detail) return;
+    setSelectedPlace(detail);
+    setSelectedLoc(null);
+    mapRef.current?.animateToRegion({
+      latitude: detail.geometry.location.lat,
+      longitude: detail.geometry.location.lng,
+      latitudeDelta: 0.05,
+      longitudeDelta: 0.05,
+    }, 800);
+    cardAnim.setValue(400);
+    Animated.spring(cardAnim, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 120 }).start();
+  }, [cardAnim]);
+
+  // ── Select a local location ───────────────────────────────────────────────
+  const openCard = useCallback((loc: TripLocation) => {
+    setSearch(loc.city);
+    setPredictions([]);
+    setLocalResults([]);
+    setSelectedLoc(loc);
+    setSelectedPlace(null);
+    mapRef.current?.animateToRegion({
+      latitude: loc.coordinates[1],
+      longitude: loc.coordinates[0],
+      latitudeDelta: 0.8,
+      longitudeDelta: 0.8,
+    }, 800);
+    cardAnim.setValue(400);
+    Animated.spring(cardAnim, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 120 }).start();
+  }, [cardAnim]);
+
+  const closeCard = useCallback(() => {
+    Animated.timing(cardAnim, { toValue: 400, useNativeDriver: true, duration: 200 }).start(() => {
+      setSelectedLoc(null);
+      setSelectedPlace(null);
+    });
+    setSearch('');
+  }, [cardAnim]);
+
+  // ── Real navigation ───────────────────────────────────────────────────────
+  const startNav = useCallback(async (
+    destLat: number, destLng: number, destName: string,
+    mode: 'driving' | 'walking' | 'transit' = 'driving'
+  ) => {
+    const origin = userCoords ?? { lat: destLat - 0.05, lng: destLng - 0.05 };
+    setNavLoading(true);
+    setNavDest({ name: destName, lat: destLat, lng: destLng });
+    setNavMode(mode);
+    setCurrentStepIdx(0);
+    setShowSteps(false);
+    closeCard();
+    setShowGuide(false);
+
+    const result = await fetchDirections(origin, { lat: destLat, lng: destLng }, mode);
+    setNavLoading(false);
+
+    if (result) {
+      setNavRoute(result);
+      setTimeout(() => {
+        const coords = result.polylineCoords;
+        if (coords.length > 1) {
+          mapRef.current?.fitToCoordinates(coords, {
+            edgePadding: { top: 140, right: 40, bottom: 280, left: 40 },
+            animated: true,
+          });
+        }
+      }, 300);
+    } else {
+      // Fallback straight line
+      setNavRoute({
+        polylineCoords: [
+          { latitude: origin.lat, longitude: origin.lng },
+          { latitude: destLat, longitude: destLng },
+        ],
+        steps: [],
+        totalDistance: '—',
+        totalDuration: '—',
+        summary: '',
+      });
+    }
+  }, [userCoords, closeCard]);
+
+  const endNav = useCallback(() => {
+    setNavRoute(null);
+    setNavDest(null);
+    setShowSteps(false);
+  }, []);
+
+  // ── Filter ────────────────────────────────────────────────────────────────
   const handleFilter = useCallback((f: typeof FILTERS[0]) => {
     setActiveFilter(f.id);
-    setSearch('');
-    setSearchResults([]);
+    clearSearch();
     const locs = getFilteredLocs(f.id);
     setVisibleLocs(locs);
     mapRef.current?.animateToRegion(
-      { latitude: f.lat, longitude: f.lng, latitudeDelta: f.dLat, longitudeDelta: f.dLng },
-      900
+      { latitude: f.lat, longitude: f.lng, latitudeDelta: f.dLat, longitudeDelta: f.dLng }, 900
     );
     if (locs.length > 1) {
       setTimeout(() => {
@@ -186,53 +287,16 @@ export default function ExploreScreen() {
         );
       }, 500);
     }
-  }, []);
+  }, [clearSearch]);
 
-  const handleSearch = useCallback((text: string) => {
-    setSearch(text);
-    if (text.length < 2) { setSearchResults([]); return; }
-    const q = text.toLowerCase();
-    setSearchResults(ALL_LOCATIONS.filter(l =>
-      l.city.toLowerCase().includes(q) ||
-      l.country.toLowerCase().includes(q) ||
-      l.region.toLowerCase().includes(q) ||
-      l.tags.some(t => t.includes(q)) ||
-      l.highlights.some(h => h.toLowerCase().includes(q))
-    ).slice(0, 8));
-  }, []);
-
-  const openCard = useCallback((loc: TripLocation) => {
-    setSearch(loc.city);
-    setSearchResults([]);
-    setSelectedLoc(loc);
-    mapRef.current?.animateToRegion(
-      { latitude: loc.coordinates[1], longitude: loc.coordinates[0], latitudeDelta: 1.0, longitudeDelta: 1.0 },
-      800
-    );
-    cardAnim.setValue(400);
-    Animated.spring(cardAnim, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 120 }).start();
-  }, [cardAnim]);
-
-  const closeCard = useCallback(() => {
-    Animated.timing(cardAnim, { toValue: 400, useNativeDriver: true, duration: 200 }).start(() => setSelectedLoc(null));
-    setSearch('');
-  }, [cardAnim]);
-
-  const startNav = useCallback((loc: TripLocation) => {
-    const origin = userCoords ?? { lat: loc.coordinates[1] - 0.08, lng: loc.coordinates[0] - 0.08 };
-    setNavRoute({ from: origin, to: loc });
-    setShowGuide(false);
-    closeCard();
-    setTimeout(() => {
-      mapRef.current?.fitToCoordinates(
-        [
-          { latitude: origin.lat, longitude: origin.lng },
-          { latitude: loc.coordinates[1], longitude: loc.coordinates[0] },
-        ],
-        { edgePadding: { top: 140, right: 40, bottom: 260, left: 40 }, animated: true }
-      );
-    }, 300);
-  }, [userCoords, closeCard]);
+  const showDropdown = (predictions.length > 0 || localResults.length > 0) && search.length >= 2;
+  const activeCard = selectedLoc || selectedPlace;
+  const cardName = selectedLoc ? selectedLoc.city : selectedPlace?.name ?? '';
+  const cardSubtitle = selectedLoc
+    ? `${selectedLoc.region} · ${selectedLoc.country}`
+    : selectedPlace?.formatted_address ?? '';
+  const cardLat = selectedLoc ? selectedLoc.coordinates[1] : selectedPlace?.geometry.location.lat ?? 0;
+  const cardLng = selectedLoc ? selectedLoc.coordinates[0] : selectedPlace?.geometry.location.lng ?? 0;
 
   return (
     <View style={s.container}>
@@ -278,82 +342,102 @@ export default function ExploreScreen() {
             pinColor="#2E7D32"
           >
             <Callout tooltip>
-              <View style={mStyles.tripCallout}>
-                <View style={mStyles.tripCalloutNum}>
-                  <Text style={mStyles.tripCalloutNumText}>{i + 1}</Text>
-                </View>
-                <Text style={mStyles.tripCalloutCity}>{node.city}</Text>
+              <View style={mS.tripCallout}>
+                <View style={mS.tripNum}><Text style={mS.tripNumText}>{i + 1}</Text></View>
+                <Text style={mS.tripCity}>{node.city}</Text>
               </View>
             </Callout>
           </Marker>
         ))}
 
-        {/* Discover location markers — use Callout for reliable text rendering */}
-        {visibleLocs
-          .filter(loc => !nodes.find(n => n.city === loc.city))
-          .map(loc => {
-            const color = markerColor(loc);
-            const isSelected = selectedLoc?.id === loc.id;
-            return (
-              <Marker
-                key={loc.id}
-                coordinate={{ latitude: loc.coordinates[1], longitude: loc.coordinates[0] }}
-                onPress={() => openCard(loc)}
-                tracksViewChanges={false}
-                pinColor={color}
-              >
-                <Callout tooltip onPress={() => openCard(loc)}>
-                  <View style={[mStyles.callout, { borderColor: color, backgroundColor: isSelected ? color : '#FFF' }]}>
-                    <Text style={[mStyles.calloutText, { color: isSelected ? '#FFF' : color }]}>
-                      {loc.city}
-                    </Text>
-                  </View>
-                </Callout>
-              </Marker>
-            );
-          })}
-
-        {/* Navigation route */}
-        {navRoute && (
-          <>
-            <Polyline
-              coordinates={[
-                { latitude: navRoute.from.lat, longitude: navRoute.from.lng },
-                { latitude: (navRoute.from.lat + navRoute.to.coordinates[1]) / 2 + 0.05, longitude: (navRoute.from.lng + navRoute.to.coordinates[0]) / 2 },
-                { latitude: navRoute.to.coordinates[1], longitude: navRoute.to.coordinates[0] },
-              ]}
-              strokeColor="#1565C0" strokeWidth={5}
-              lineDashPattern={[6, 3]}
-            />
-            <Marker coordinate={{ latitude: navRoute.to.coordinates[1], longitude: navRoute.to.coordinates[0] }} tracksViewChanges={false}>
-              <View style={s.navMarker}>
-                <Text style={s.navMarkerText}>{navRoute.to.city}</Text>
-              </View>
-              <View style={[mStyles.tail, { borderTopColor: '#1565C0' }]} />
+        {/* Discover markers */}
+        {visibleLocs.filter(loc => !nodes.find(n => n.city === loc.city)).map(loc => {
+          const color = markerColor(loc);
+          const isSel = selectedLoc?.id === loc.id;
+          return (
+            <Marker
+              key={loc.id}
+              coordinate={{ latitude: loc.coordinates[1], longitude: loc.coordinates[0] }}
+              onPress={() => openCard(loc)}
+              tracksViewChanges={false}
+              pinColor={color}
+            >
+              <Callout tooltip onPress={() => openCard(loc)}>
+                <View style={[mS.callout, { borderColor: color, backgroundColor: isSel ? color : '#FFF' }]}>
+                  <Text style={[mS.calloutText, { color: isSel ? '#FFF' : color }]}>{loc.city}</Text>
+                </View>
+              </Callout>
             </Marker>
+          );
+        })}
+
+        {/* Google Places search result marker */}
+        {selectedPlace && (
+          <Marker
+            coordinate={{ latitude: selectedPlace.geometry.location.lat, longitude: selectedPlace.geometry.location.lng }}
+            tracksViewChanges={false}
+            pinColor="#E65100"
+          >
+            <Callout tooltip>
+              <View style={[mS.callout, { borderColor: '#E65100', backgroundColor: '#FFF' }]}>
+                <Text style={[mS.calloutText, { color: '#E65100' }]}>{selectedPlace.name}</Text>
+              </View>
+            </Callout>
+          </Marker>
+        )}
+
+        {/* Real navigation route polyline */}
+        {navRoute && navRoute.polylineCoords.length > 1 && (
+          <>
+            {/* Route shadow */}
+            <Polyline
+              coordinates={navRoute.polylineCoords}
+              strokeColor="rgba(21,101,192,0.25)"
+              strokeWidth={10}
+            />
+            {/* Main route */}
+            <Polyline
+              coordinates={navRoute.polylineCoords}
+              strokeColor="#1565C0"
+              strokeWidth={5}
+            />
+            {/* Destination marker */}
+            {navDest && (
+              <Marker
+                coordinate={{ latitude: navDest.lat, longitude: navDest.lng }}
+                tracksViewChanges={false}
+              >
+                <View style={s.destMarker}>
+                  <Text style={s.destMarkerText}>{navDest.name}</Text>
+                </View>
+                <View style={mS.tail} />
+              </Marker>
+            )}
           </>
         )}
       </MapView>
 
-      {/* ── Overlay (search + filters) ── */}
+      {/* ── Overlay ── */}
       <SafeAreaView style={s.overlay} edges={['top']}>
         {/* Search row */}
         <View style={s.searchRow}>
           <View style={s.searchPill}>
-            <Text style={s.searchPillIcon}>◎</Text>
+            <Text style={s.searchIcon}>◎</Text>
             <TextInput
-              style={s.searchPillInput}
-              placeholder="Search cities, regions, tags..."
+              style={s.searchInput}
+              placeholder="Search any place, city, landmark..."
               placeholderTextColor="#81C784"
               value={search}
               onChangeText={handleSearch}
               returnKeyType="search"
+              autoCorrect={false}
             />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => { setSearch(''); setSearchResults([]); }}>
-                <Text style={s.searchClear}>✕</Text>
-              </TouchableOpacity>
-            )}
+            {searchLoading
+              ? <ActivityIndicator size="small" color="#4CAF50" style={{ marginRight: 4 }} />
+              : search.length > 0
+                ? <TouchableOpacity onPress={clearSearch}><Text style={s.clearBtn}>✕</Text></TouchableOpacity>
+                : null
+            }
           </View>
           <TouchableOpacity style={[s.locBtn, locLoading && { opacity: 0.5 }]} onPress={fetchLocation}>
             <Text style={s.locBtnText}>{locLoading ? '…' : '⊕'}</Text>
@@ -361,19 +445,33 @@ export default function ExploreScreen() {
         </View>
 
         {/* Search dropdown */}
-        {searchResults.length > 0 && (
+        {showDropdown && (
           <View style={s.dropdown}>
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              {searchResults.map(loc => (
-                <TouchableOpacity key={loc.id} style={s.dropItem} onPress={() => openCard(loc)} activeOpacity={0.7}>
-                  <View style={[s.dropFlag, { backgroundColor: loc.country === 'Singapore' ? '#BBDEFB' : '#C8E6C9' }]}>
-                    <Text style={s.dropFlagText}>{loc.country === 'Singapore' ? 'SG' : 'IN'}</Text>
+              {/* Local results first */}
+              {localResults.map(loc => (
+                <TouchableOpacity key={`local-${loc.id}`} style={s.dropItem} onPress={() => openCard(loc)} activeOpacity={0.7}>
+                  <View style={[s.dropBadge, { backgroundColor: '#C8E6C9' }]}>
+                    <Text style={s.dropBadgeText}>{loc.emoji}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.dropCity}>{loc.city}</Text>
-                    <Text style={s.dropSub}>{loc.region} · {loc.tags.slice(0, 2).join(', ')}</Text>
+                    <Text style={s.dropMain}>{loc.city}</Text>
+                    <Text style={s.dropSub}>{loc.region} · {loc.country}</Text>
                   </View>
-                  <Text style={s.dropCost}>~₹{loc.avgHotelCost * 83}/night</Text>
+                  <Text style={s.dropType}>Local</Text>
+                </TouchableOpacity>
+              ))}
+              {/* Google Places predictions */}
+              {predictions.map(pred => (
+                <TouchableOpacity key={pred.place_id} style={s.dropItem} onPress={() => selectPrediction(pred)} activeOpacity={0.7}>
+                  <View style={[s.dropBadge, { backgroundColor: '#BBDEFB' }]}>
+                    <Text style={s.dropBadgeText}>📍</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.dropMain}>{pred.structured_formatting.main_text}</Text>
+                    <Text style={s.dropSub}>{pred.structured_formatting.secondary_text}</Text>
+                  </View>
+                  <Text style={s.dropType}>Maps</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -381,18 +479,14 @@ export default function ExploreScreen() {
         )}
 
         {/* Filter chips */}
-        {searchResults.length === 0 && (
+        {!showDropdown && (
           <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={s.filterScroll}
-            contentContainerStyle={s.filterContent}
-            bounces
+            horizontal showsHorizontalScrollIndicator={false}
+            style={s.filterScroll} contentContainerStyle={s.filterContent}
           >
             {FILTERS.map(f => (
               <TouchableOpacity
-                key={f.id}
-                onPress={() => handleFilter(f)}
+                key={f.id} onPress={() => handleFilter(f)}
                 style={[s.chip, activeFilter === f.id && s.chipActive]}
                 activeOpacity={0.75}
               >
@@ -404,54 +498,83 @@ export default function ExploreScreen() {
       </SafeAreaView>
 
       {/* ── Location detail card ── */}
-      {selectedLoc && (
+      {activeCard && (
         <Animated.View style={[s.card, { transform: [{ translateY: cardAnim }] }]}>
           <View style={s.cardHandle} />
           <View style={s.cardHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={s.cardCity}>{selectedLoc.city}</Text>
-              <Text style={s.cardRegion}>{selectedLoc.region} · {selectedLoc.country}</Text>
+              <Text style={s.cardCity}>{cardName}</Text>
+              <Text style={s.cardRegion}>{cardSubtitle}</Text>
             </View>
-            <TouchableOpacity
-              onPress={() => toggle(selectedLoc.id)}
-              style={{ padding: 4, marginRight: 6 }}
-            >
-              <Text style={{ fontSize: 22 }}>{isSaved(selectedLoc.id) ? '❤️' : '🤍'}</Text>
-            </TouchableOpacity>
+            {selectedLoc && (
+              <TouchableOpacity onPress={() => toggle(selectedLoc.id)} style={{ padding: 4, marginRight: 6 }}>
+                <Text style={{ fontSize: 22 }}>{isSaved(selectedLoc.id) ? '❤️' : '🤍'}</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity onPress={closeCard} style={s.cardClose}>
               <Text style={s.cardCloseText}>✕</Text>
             </TouchableOpacity>
           </View>
-          <Text style={s.cardDesc}>{selectedLoc.description}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
-            {selectedLoc.highlights.map(h => (
-              <View key={h} style={s.hlChip}><Text style={s.hlText}>{h}</Text></View>
+
+          {selectedLoc && (
+            <>
+              <Text style={s.cardDesc}>{selectedLoc.description}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
+                {selectedLoc.highlights.map(h => (
+                  <View key={h} style={s.hlChip}><Text style={s.hlText}>{h}</Text></View>
+                ))}
+              </ScrollView>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                {selectedLoc.tags.map(t => (
+                  <View key={t} style={s.tagChip}><Text style={s.tagText}>{t}</Text></View>
+                ))}
+              </ScrollView>
+            </>
+          )}
+
+          {/* Nav mode selector */}
+          <View style={s.navModeRow}>
+            {NAV_MODES.map(m => (
+              <TouchableOpacity
+                key={m.id}
+                style={[s.navModeBtn, navMode === m.mode && s.navModeBtnActive]}
+                onPress={() => setNavMode(m.mode)}
+              >
+                <Text style={[s.navModeBtnText, navMode === m.mode && s.navModeBtnTextActive]}>{m.label}</Text>
+              </TouchableOpacity>
             ))}
-          </ScrollView>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-            {selectedLoc.tags.map(t => (
-              <View key={t} style={s.tagChip}><Text style={s.tagText}>{t}</Text></View>
-            ))}
-          </ScrollView>
+          </View>
+
           <View style={s.cardFooter}>
-            <View>
-              <Text style={s.cardCostLabel}>Avg hotel / night</Text>
-              <Text style={s.cardCost}>~₹{selectedLoc.avgHotelCost * 83}</Text>
-            </View>
-            <View style={s.cardActions}>
-              <TouchableOpacity style={s.navBtn} onPress={() => startNav(selectedLoc)}>
-                <Text style={s.navBtnText}>Navigate</Text>
+            {selectedLoc && (
+              <View>
+                <Text style={s.cardCostLabel}>Avg hotel / night</Text>
+                <Text style={s.cardCost}>~₹{selectedLoc.avgHotelCost * 83}</Text>
+              </View>
+            )}
+            <View style={[s.cardActions, !selectedLoc && { flex: 1 }]}>
+              <TouchableOpacity
+                style={[s.navBtn, navLoading && { opacity: 0.6 }, !selectedLoc && { flex: 1 }]}
+                onPress={() => startNav(cardLat, cardLng, cardName, navMode)}
+                disabled={navLoading}
+              >
+                {navLoading
+                  ? <ActivityIndicator size="small" color="#FFF" />
+                  : <Text style={s.navBtnText}>Navigate</Text>
+                }
               </TouchableOpacity>
-              <TouchableOpacity style={s.guideBtn} onPress={() => setShowGuide(true)}>
-                <Text style={s.guideBtnText}>Guide</Text>
-              </TouchableOpacity>
+              {selectedLoc && (
+                <TouchableOpacity style={s.guideBtn} onPress={() => setShowGuide(true)}>
+                  <Text style={s.guideBtnText}>Guide</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </Animated.View>
       )}
 
       {/* ── Navigation HUD ── */}
-      {navRoute && (
+      {navRoute && navDest && (
         <View style={s.navHUD}>
           <View style={s.navHUDLeft}>
             <View style={[s.navDot, { backgroundColor: '#4CAF50' }]} />
@@ -460,13 +583,64 @@ export default function ExploreScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.navFrom}>{userCoords ? 'Your Location' : 'Start'}</Text>
-            <Text style={s.navTo}>{navRoute.to.city}</Text>
+            <Text style={s.navTo}>{navDest.name}</Text>
+            <Text style={s.navMeta}>{navRoute.totalDistance}  ·  {navRoute.totalDuration}</Text>
+            {navRoute.summary ? <Text style={s.navSummary}>via {navRoute.summary}</Text> : null}
           </View>
-          <TouchableOpacity style={s.navEnd} onPress={() => setNavRoute(null)}>
-            <Text style={s.navEndText}>End</Text>
-          </TouchableOpacity>
+          <View style={s.navHUDRight}>
+            {navRoute.steps.length > 0 && (
+              <TouchableOpacity style={s.stepsBtn} onPress={() => setShowSteps(true)}>
+                <Text style={s.stepsBtnText}>Steps</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={s.navEnd} onPress={endNav}>
+              <Text style={s.navEndText}>End</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
+
+      {/* ── Turn-by-turn steps modal ── */}
+      <Modal visible={showSteps} animationType="slide" transparent presentationStyle="overFullScreen">
+        <View style={s.modalOverlay}>
+          <View style={s.stepsSheet}>
+            <View style={s.guideHandle} />
+            <Text style={s.stepsTitle}>Turn-by-Turn Directions</Text>
+            <Text style={s.stepsMeta}>{navRoute?.totalDistance}  ·  {navRoute?.totalDuration}</Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: 12 }}>
+              {navRoute?.steps.map((step, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[s.stepItem, i === currentStepIdx && s.stepItemActive]}
+                  onPress={() => {
+                    setCurrentStepIdx(i);
+                    mapRef.current?.animateToRegion({
+                      latitude: step.start_location.lat,
+                      longitude: step.start_location.lng,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
+                    }, 600);
+                  }}
+                >
+                  <View style={[s.stepNum, i === currentStepIdx && s.stepNumActive]}>
+                    <Text style={s.stepNumText}>{i + 1}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.stepInstr}>
+                      {step.html_instructions.replace(/<[^>]+>/g, '')}
+                    </Text>
+                    <Text style={s.stepDist}>{step.distance.text}  ·  {step.duration.text}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+              <View style={{ height: 32 }} />
+            </ScrollView>
+            <TouchableOpacity style={s.stepsClose} onPress={() => setShowSteps(false)}>
+              <Text style={s.stepsCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Travel Guide Modal ── */}
       <Modal visible={showGuide} animationType="slide" transparent presentationStyle="overFullScreen">
@@ -476,10 +650,8 @@ export default function ExploreScreen() {
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={s.guideCity}>{selectedLoc?.city}</Text>
               <Text style={s.guideRegion}>{selectedLoc?.region} · {selectedLoc?.country}</Text>
-
               <Text style={s.guideSection}>About</Text>
               <Text style={s.guideBody}>{selectedLoc?.description}. A destination rich in culture and local experiences.</Text>
-
               <Text style={s.guideSection}>Must-See</Text>
               {selectedLoc?.highlights.map((h, i) => (
                 <View key={h} style={s.guideItem}>
@@ -489,7 +661,6 @@ export default function ExploreScreen() {
                   <Text style={s.guideItemText}>{h}</Text>
                 </View>
               ))}
-
               <Text style={s.guideSection}>Best Season</Text>
               <View style={s.seasonRow}>
                 {[{ s: 'Oct–Mar', l: 'Best', c: '#4CAF50' }, { s: 'Apr–Jun', l: 'Hot', c: '#FF7043' }, { s: 'Jul–Sep', l: 'Monsoon', c: '#1565C0' }].map(x => (
@@ -499,7 +670,6 @@ export default function ExploreScreen() {
                   </View>
                 ))}
               </View>
-
               <Text style={s.guideSection}>Getting There</Text>
               {[
                 { icon: '🚆', mode: 'Train', detail: 'Book 3AC on IRCTC. Rajdhani/Shatabdi for comfort.' },
@@ -514,19 +684,11 @@ export default function ExploreScreen() {
                   </View>
                 </View>
               ))}
-
-              <Text style={s.guideSection}>Budget / night</Text>
-              <View style={s.budgetRow}>
-                {[{ tier: 'Budget', mult: 0.55, c: '#A5D6A7' }, { tier: 'Mid', mult: 1.0, c: '#4CAF50' }, { tier: 'Luxury', mult: 2.8, c: '#2E7D32' }].map(b => (
-                  <View key={b.tier} style={[s.budgetTier, { borderColor: b.c }]}>
-                    <Text style={[s.budgetTierLabel, { color: b.c }]}>{b.tier}</Text>
-                    <Text style={s.budgetTierCost}>₹{Math.round((selectedLoc?.avgHotelCost ?? 40) * b.mult * 83).toLocaleString()}</Text>
-                  </View>
-                ))}
-              </View>
-
               <View style={s.guideActions}>
-                <TouchableOpacity style={s.guideNavBtn} onPress={() => { if (selectedLoc) startNav(selectedLoc); }}>
+                <TouchableOpacity
+                  style={s.guideNavBtn}
+                  onPress={() => { if (selectedLoc) startNav(selectedLoc.coordinates[1], selectedLoc.coordinates[0], selectedLoc.city, navMode); }}
+                >
                   <Text style={s.guideNavBtnText}>Navigate Here</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={s.guideCloseBtn} onPress={() => setShowGuide(false)}>
@@ -542,11 +704,36 @@ export default function ExploreScreen() {
   );
 }
 
+// ─── Marker styles ────────────────────────────────────────────────────────────
+const mS = StyleSheet.create({
+  callout: {
+    borderRadius: 10, borderWidth: 2,
+    paddingHorizontal: 12, paddingVertical: 6, minWidth: 60,
+  },
+  calloutText: { fontSize: 13, fontWeight: '800', textAlign: 'center' },
+  tripCallout: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#E8F5E9', borderRadius: 12, borderWidth: 2,
+    borderColor: '#2E7D32', paddingHorizontal: 10, paddingVertical: 6,
+  },
+  tripNum: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: '#2E7D32', alignItems: 'center', justifyContent: 'center',
+  },
+  tripNumText: { color: '#FFF', fontSize: 12, fontWeight: '900' },
+  tripCity: { color: '#1B5E20', fontSize: 13, fontWeight: '800' },
+  tail: {
+    width: 0, height: 0,
+    borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 7,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderTopColor: '#1565C0',
+  },
+});
+
+// ─── Main styles ──────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
-
-  // Overlay
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20 },
 
   // Search
@@ -559,9 +746,9 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(76,175,80,0.3)', shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 1, shadowRadius: 12, elevation: 10,
   },
-  searchPillIcon: { fontSize: 17, color: '#81C784' },
-  searchPillInput: { flex: 1, color: '#1B5E20', fontSize: 14, fontWeight: '500' },
-  searchClear: { color: '#81C784', fontSize: 16, paddingHorizontal: 4 },
+  searchIcon: { fontSize: 17, color: '#81C784' },
+  searchInput: { flex: 1, color: '#1B5E20', fontSize: 14, fontWeight: '500' },
+  clearBtn: { color: '#81C784', fontSize: 16, paddingHorizontal: 4 },
   locBtn: {
     width: 46, height: 46, borderRadius: 23,
     backgroundColor: 'rgba(241,248,242,0.97)',
@@ -579,19 +766,19 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.95)',
     shadowColor: 'rgba(76,175,80,0.25)', shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 1, shadowRadius: 12, elevation: 10,
-    maxHeight: 300, overflow: 'hidden',
+    maxHeight: 320, overflow: 'hidden',
   },
   dropItem: {
     flexDirection: 'row', alignItems: 'center', padding: 13, gap: 12,
     borderBottomWidth: 1, borderBottomColor: 'rgba(165,214,167,0.25)',
   },
-  dropFlag: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  dropFlagText: { color: '#1B5E20', fontSize: 10, fontWeight: '900' },
-  dropCity: { color: '#1B5E20', fontSize: 14, fontWeight: '700' },
+  dropBadge: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  dropBadgeText: { fontSize: 16 },
+  dropMain: { color: '#1B5E20', fontSize: 14, fontWeight: '700' },
   dropSub: { color: '#558B2F', fontSize: 11, marginTop: 1 },
-  dropCost: { color: '#2E7D32', fontSize: 11, fontWeight: '700' },
+  dropType: { color: '#81C784', fontSize: 10, fontWeight: '700' },
 
-  // Filter chips
+  // Filters
   filterScroll: { marginTop: 8 },
   filterContent: { paddingHorizontal: 14, paddingBottom: 6, gap: 8 },
   chip: {
@@ -601,20 +788,17 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(76,175,80,0.2)', shadowOffset: { width: 2, height: 3 },
     shadowOpacity: 1, shadowRadius: 6, elevation: 5,
   },
-  chipActive: {
-    backgroundColor: '#4CAF50',
-    shadowColor: 'rgba(76,175,80,0.5)', shadowRadius: 10, elevation: 8,
-  },
+  chipActive: { backgroundColor: '#4CAF50', shadowColor: 'rgba(76,175,80,0.5)', shadowRadius: 10, elevation: 8 },
   chipText: { color: '#2E7D32', fontSize: 12, fontWeight: '700' },
   chipTextActive: { color: '#FFF' },
 
-  // Nav marker
-  navMarker: {
+  // Destination marker
+  destMarker: {
     backgroundColor: '#1565C0', borderRadius: 12,
     paddingHorizontal: 12, paddingVertical: 6,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)',
   },
-  navMarkerText: { color: '#FFF', fontSize: 12, fontWeight: '800' },
+  destMarkerText: { color: '#FFF', fontSize: 12, fontWeight: '800' },
 
   // Detail card
   card: {
@@ -635,7 +819,18 @@ const s = StyleSheet.create({
   hlText: { color: '#1B5E20', fontSize: 11, fontWeight: '700' },
   tagChip: { backgroundColor: '#DCEDC8', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, marginRight: 6 },
   tagText: { color: '#33691E', fontSize: 10, fontWeight: '600' },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
+
+  // Nav mode selector
+  navModeRow: { flexDirection: 'row', gap: 8, marginTop: 12, marginBottom: 4 },
+  navModeBtn: {
+    flex: 1, paddingVertical: 8, borderRadius: 16, alignItems: 'center',
+    backgroundColor: '#E8F5E9', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
+  },
+  navModeBtnActive: { backgroundColor: '#4CAF50', borderColor: 'rgba(255,255,255,0.7)' },
+  navModeBtnText: { color: '#2E7D32', fontSize: 11, fontWeight: '700' },
+  navModeBtnTextActive: { color: '#FFF' },
+
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
   cardCostLabel: { color: '#558B2F', fontSize: 10, fontWeight: '600' },
   cardCost: { color: '#1B5E20', fontSize: 18, fontWeight: '900' },
   cardActions: { flexDirection: 'row', gap: 10 },
@@ -643,6 +838,7 @@ const s = StyleSheet.create({
     backgroundColor: '#4CAF50', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 10,
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)',
     shadowColor: 'rgba(76,175,80,0.4)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 6, elevation: 5,
+    alignItems: 'center', justifyContent: 'center', minWidth: 90,
   },
   navBtnText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
   guideBtn: { backgroundColor: '#C8E6C9', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
@@ -662,11 +858,43 @@ const s = StyleSheet.create({
   navStem: { width: 2, height: 20, backgroundColor: '#C8E6C9' },
   navFrom: { fontSize: 11, color: '#558B2F', fontWeight: '600' },
   navTo: { fontSize: 16, color: '#1B3A1F', fontWeight: '800', marginTop: 2 },
+  navMeta: { fontSize: 12, color: '#2E7D32', fontWeight: '700', marginTop: 3 },
+  navSummary: { fontSize: 10, color: '#81C784', marginTop: 1 },
+  navHUDRight: { alignItems: 'flex-end', gap: 6 },
+  stepsBtn: { backgroundColor: '#E8F5E9', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
+  stepsBtnText: { color: '#1B5E20', fontSize: 12, fontWeight: '800' },
   navEnd: { backgroundColor: '#E53935', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 8 },
   navEndText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
 
-  // Guide modal
+  // Steps modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  stepsSheet: {
+    backgroundColor: '#F1F8F2', borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    padding: 20, maxHeight: '80%',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: 'rgba(0,0,0,0.2)', shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 1, shadowRadius: 20, elevation: 20,
+  },
+  stepsTitle: { color: '#1B5E20', fontSize: 18, fontWeight: '900', marginBottom: 2 },
+  stepsMeta: { color: '#558B2F', fontSize: 13, fontWeight: '600', marginBottom: 4 },
+  stepItem: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    backgroundColor: '#E8F5E9', borderRadius: 16, padding: 12, marginBottom: 8,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
+  },
+  stepItemActive: { backgroundColor: '#C8E6C9', borderColor: '#4CAF50' },
+  stepNum: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#A5D6A7', alignItems: 'center', justifyContent: 'center' },
+  stepNumActive: { backgroundColor: '#4CAF50' },
+  stepNumText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
+  stepInstr: { color: '#1B5E20', fontSize: 13, fontWeight: '600', lineHeight: 18 },
+  stepDist: { color: '#558B2F', fontSize: 11, marginTop: 3 },
+  stepsClose: {
+    backgroundColor: '#4CAF50', borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginTop: 8,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.6)',
+  },
+  stepsCloseText: { color: '#FFF', fontSize: 15, fontWeight: '900' },
+
+  // Guide modal
   guideSheet: {
     backgroundColor: '#F1F8F2', borderTopLeftRadius: 32, borderTopRightRadius: 32,
     padding: 20, maxHeight: '88%',
@@ -695,10 +923,6 @@ const s = StyleSheet.create({
   transportIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#C8E6C9', alignItems: 'center', justifyContent: 'center' },
   transportMode: { color: '#1B5E20', fontSize: 13, fontWeight: '800' },
   transportDetail: { color: '#2E7D32', fontSize: 12, lineHeight: 17, marginTop: 2 },
-  budgetRow: { flexDirection: 'row', gap: 10 },
-  budgetTier: { flex: 1, borderRadius: 16, padding: 12, alignItems: 'center', backgroundColor: '#F1F8F2', borderWidth: 2 },
-  budgetTierLabel: { fontSize: 11, fontWeight: '800' },
-  budgetTierCost: { color: '#1B5E20', fontSize: 13, fontWeight: '900', marginTop: 4 },
   guideActions: { flexDirection: 'row', gap: 12, marginTop: 20 },
   guideNavBtn: {
     flex: 2, backgroundColor: '#4CAF50', borderRadius: 50, paddingVertical: 16, alignItems: 'center',
