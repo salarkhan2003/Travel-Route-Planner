@@ -5,11 +5,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import LottieView from 'lottie-react-native';
 import { NC } from '../src/constants/theme';
-
-// Safe lottie import — falls back to null if not installed in build folder
-let LottieView: any = null;
-try { LottieView = require('lottie-react-native').default; } catch (_) {}
 
 const { width, height } = Dimensions.get('window');
 
@@ -18,35 +15,38 @@ const SLIDES = [
     id: '1',
     title: 'Plan Your\nDream Trip',
     subtitle: 'Build beautiful itineraries across India & Singapore with smart route planning.',
-    anim: '../animations/Man Planning A Sightseeing Route.lottie',
-    animReq: () => { try { return require('../animations/Man Planning A Sightseeing Route.lottie'); } catch { return null; } },
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    source: require('../animations/Man Planning A Sightseeing Route.lottie'),
     accent: '#39653f', bg1: '#c5f8c7', bg2: '#b7e9b9',
   },
   {
     id: '2',
     title: 'Fly & Explore\nThe World',
     subtitle: 'Compare flights, trains and buses. Swap transport modes with a single tap.',
-    animReq: () => { try { return require('../animations/airport.lottie'); } catch { return null; } },
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    source: require('../animations/airport.lottie'),
     accent: '#0d6661', bg1: '#a7f3ec', bg2: '#cceacd',
   },
   {
     id: '3',
     title: 'Ride the Rails\nAcross India',
     subtitle: 'Plan your rail journey, compare classes and book the perfect seat instantly.',
-    animReq: () => { try { return require('../animations/Train.lottie'); } catch { return null; } },
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    source: require('../animations/Train.lottie'),
     accent: '#39653f', bg1: '#c5f8c7', bg2: '#ebf3e3',
   },
   {
     id: '4',
     title: 'Travel as\nOne Family',
     subtitle: 'Manage all members, split expenses, broadcast alerts and stay in sync.',
-    animReq: () => { try { return require('../animations/planning.lottie'); } catch { return null; } },
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    source: require('../animations/planning.lottie'),
     accent: '#47624b', bg1: '#cceacd', bg2: '#b7e9b9',
   },
 ];
 
 function SlideCard({ slide, isActive }: { slide: typeof SLIDES[0]; isActive: boolean }) {
-  const lottieRef = useRef<any>(null);
+  const lottieRef = useRef<LottieView>(null);
   const scaleAnim = useRef(new Animated.Value(isActive ? 1 : 0.9)).current;
   const opacityAnim = useRef(new Animated.Value(isActive ? 1 : 0.5)).current;
 
@@ -55,36 +55,24 @@ function SlideCard({ slide, isActive }: { slide: typeof SLIDES[0]; isActive: boo
       Animated.spring(scaleAnim, { toValue: isActive ? 1 : 0.9, useNativeDriver: true, damping: 18, stiffness: 140 }),
       Animated.timing(opacityAnim, { toValue: isActive ? 1 : 0.5, duration: 250, useNativeDriver: true }),
     ]).start();
-    if (isActive) lottieRef.current?.play?.();
-    else lottieRef.current?.pause?.();
+    if (isActive) lottieRef.current?.play();
+    else lottieRef.current?.pause();
   }, [isActive]);
-
-  const src = slide.animReq();
 
   return (
     <Animated.View style={[s.animCard, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
-      {/* Decorative bg blobs */}
       <View style={[s.blob1, { backgroundColor: slide.bg1 }]} />
       <View style={[s.blob2, { backgroundColor: slide.bg2 }]} />
-      {/* Lottie or fallback */}
-      {LottieView && src ? (
-        <LottieView
-          ref={lottieRef}
-          source={src}
-          autoPlay={isActive}
-          loop
-          style={s.lottie}
-          resizeMode="contain"
-          renderMode="HARDWARE"
-          cacheComposition
-        />
-      ) : (
-        <View style={s.fallback}>
-          <View style={[s.fallbackCircle, { backgroundColor: slide.bg1 }]}>
-            <Text style={[s.fallbackNum, { color: slide.accent }]}>{SLIDES.indexOf(slide) + 1}</Text>
-          </View>
-        </View>
-      )}
+      <LottieView
+        ref={lottieRef}
+        source={slide.source}
+        autoPlay={isActive}
+        loop
+        style={s.lottie}
+        resizeMode="contain"
+        renderMode="HARDWARE"
+        cacheComposition
+      />
     </Animated.View>
   );
 }
@@ -240,13 +228,6 @@ const s = StyleSheet.create({
     bottom: -30, left: -30, opacity: 0.5,
   },
   lottie: { width: '90%', height: '90%' },
-  fallback: { alignItems: 'center', justifyContent: 'center', flex: 1 },
-  fallbackCircle: {
-    width: 100, height: 100, borderRadius: 50,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: 'rgba(255,255,255,0.8)',
-  },
-  fallbackNum: { fontSize: 40, fontWeight: '900' },
 
   // Bottom
   bottom: { paddingHorizontal: 24, paddingBottom: 36, paddingTop: 12 },
