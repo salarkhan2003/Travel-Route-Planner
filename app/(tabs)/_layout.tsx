@@ -1,29 +1,22 @@
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
-const ICONS: Record<string, { active: string; inactive: string }> = {
-  home:      { active: '⌂',  inactive: '⌂' },
-  explore:   { active: '◉',  inactive: '◎' },
-  itinerary: { active: '⊞',  inactive: '⊟' },
-  saved:     { active: '♥',  inactive: '♡' },
-  booking:   { active: '▣',  inactive: '▢' },
-};
-
-const LABELS: Record<string, string> = {
-  home: 'Home', explore: 'Map', itinerary: 'Routes',
-  saved: 'Saved', booking: 'Booking',
-};
+const TABS = [
+  { name: 'home',      label: 'Home',    icon: '⌂',  iconActive: '⌂'  },
+  { name: 'explore',   label: 'Map',     icon: '◎',  iconActive: '◉'  },
+  { name: 'itinerary', label: 'Routes',  icon: '≡',  iconActive: '≡'  },
+  { name: 'saved',     label: 'Saved',   icon: '♡',  iconActive: '♥'  },
+  { name: 'booking',   label: 'Booking', icon: '▢',  iconActive: '▣'  },
+] as const;
 
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
-  const icon = ICONS[name];
+  const tab = TABS.find(t => t.name === name)!;
   return (
-    <View style={[styles.tabItem, focused && styles.tabItemActive]}>
-      <Text style={[styles.icon, focused && styles.iconActive]}>
-        {focused ? icon.active : icon.inactive}
+    <View style={[st.item, focused && st.itemActive]}>
+      <Text style={[st.icon, focused && st.iconActive]}>
+        {focused ? tab.iconActive : tab.icon}
       </Text>
-      <Text style={[styles.label, focused && styles.labelActive]}>
-        {LABELS[name]}
-      </Text>
+      <Text style={[st.label, focused && st.labelActive]}>{tab.label}</Text>
     </View>
   );
 }
@@ -33,18 +26,16 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: st.bar,
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
       }}
     >
-      {(['home', 'explore', 'itinerary', 'saved', 'booking'] as const).map((name) => (
+      {TABS.map(({ name }) => (
         <Tabs.Screen
           key={name}
           name={name}
-          options={{
-            tabBarIcon: ({ focused }) => <TabIcon name={name} focused={focused} />,
-          }}
+          options={{ tabBarIcon: ({ focused }) => <TabIcon name={name} focused={focused} /> }}
         />
       ))}
       <Tabs.Screen name="profile" options={{ href: null }} />
@@ -52,46 +43,62 @@ export default function TabLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  tabBar: {
+const st = StyleSheet.create({
+  bar: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 24 : 16,
-    left: 20,
-    right: 20,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#F1F8F2',
+    bottom: Platform.OS === 'ios' ? 28 : 16,
+    left: 16,
+    right: 16,
+    height: 70,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.97)',
     borderTopWidth: 0,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.95)',
-    shadowColor: 'rgba(76,175,80,0.4)',
-    shadowOffset: { width: 0, height: 10 },
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
+    // Clay nav shadow matching reference HTML exactly
+    shadowColor: 'rgba(42,49,39,0.14)',
+    shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 1,
-    shadowRadius: 24,
+    shadowRadius: 32,
     elevation: 18,
     paddingBottom: 0,
     paddingTop: 0,
   },
-  tabItem: {
+  item: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 58,
-    height: 52,
-    borderRadius: 26,
-    gap: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    gap: 1,
+    minWidth: 54,
   },
-  tabItemActive: {
-    backgroundColor: '#C8E6C9',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.95)',
-    shadowColor: 'rgba(76,175,80,0.3)',
-    shadowOffset: { width: 2, height: 3 },
+  itemActive: {
+    backgroundColor: '#c5f8c7',
+    // Inset clay pressed effect
+    shadowColor: 'rgba(0,0,0,0.06)',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowRadius: 4,
+    elevation: 0,
   },
-  icon: { fontSize: 20, color: '#81C784', lineHeight: 24 },
-  iconActive: { color: '#2E7D32' },
-  label: { fontSize: 9, color: '#81C784', fontWeight: '700', lineHeight: 11 },
-  labelActive: { color: '#1B5E20' },
+  icon: {
+    fontSize: 18,
+    color: '#575e52',
+    lineHeight: 22,
+  },
+  iconActive: {
+    color: '#39653f',
+    fontWeight: '900',
+  },
+  label: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#575e52',
+    letterSpacing: 0.2,
+  },
+  labelActive: {
+    color: '#39653f',
+    fontWeight: '800',
+  },
 });

@@ -9,17 +9,16 @@ import { ClayCard } from '../../src/components/clay/ClayCard';
 import { ClayButton } from '../../src/components/clay/ClayButton';
 import { useFamilyStore } from '../../src/store/familyStore';
 import { useTripStore } from '../../src/store/tripStore';
+import { NC } from '../../src/constants/theme';
 
 const BADGES = [
-  { id: 'b1', emoji: '🧭', title: 'Trip Planner', desc: 'Created first itinerary' },
-  { id: 'b2', emoji: '✈️', title: 'Sky Traveller', desc: 'Booked first flight' },
-  { id: 'b3', emoji: '👨‍👩‍👧‍👦', title: 'Family CEO', desc: 'Managing 5+ members' },
-  { id: 'b4', emoji: '🌏', title: 'International', desc: 'Added Singapore route' },
-  { id: 'b5', emoji: '🕌', title: 'Pilgrim', desc: 'Visited spiritual site' },
-  { id: 'b6', emoji: '💰', title: 'Budget Master', desc: 'Stayed under budget' },
+  { id: 'b1', title: 'Trip Planner', desc: 'Created first itinerary' },
+  { id: 'b2', title: 'Sky Traveller', desc: 'Booked first flight' },
+  { id: 'b3', title: 'Family CEO', desc: 'Managing 5+ members' },
+  { id: 'b4', title: 'International', desc: 'Added Singapore route' },
+  { id: 'b5', title: 'Pilgrim', desc: 'Visited spiritual site' },
+  { id: 'b6', title: 'Budget Master', desc: 'Stayed under budget' },
 ];
-
-const MEMBER_EMOJIS = ['👨', '👩', '👧', '👦', '👴', '👵', '🧑', '👶'];
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -36,7 +35,6 @@ export default function ProfileScreen() {
   const [newName, setNewName] = useState('');
   const [newRelation, setNewRelation] = useState('');
   const [newAge, setNewAge] = useState('');
-  const [newEmoji, setNewEmoji] = useState('👤');
 
   const leader = members.find((m) => m.isLeader);
   const totalNights = nodes.reduce((s, n) => s + n.stayNights, 0);
@@ -48,42 +46,47 @@ export default function ProfileScreen() {
       name: newName.trim(),
       relation: newRelation.trim() || 'Member',
       age: parseInt(newAge) || 0,
-      emoji: newEmoji,
+      emoji: 'T',
       isLeader: false,
     });
-    setNewName(''); setNewRelation(''); setNewAge(''); setNewEmoji('👤');
+    setNewName(''); setNewRelation(''); setNewAge('');
     setShowAddModal(false);
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={ps.container} edges={['top']}>
+      <ScrollView contentContainerStyle={ps.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* Header */}
+        <View style={ps.header}>
+          <Text style={ps.heading}>Profile</Text>
+          <TouchableOpacity onPress={() => router.push('/settings')} style={ps.settingsBtn}>
+            <Text style={ps.settingsBtnText}>Settings</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Hero card */}
-        <ClayCard style={styles.heroCard}>
-          <View style={styles.heroRow}>
-            <View style={styles.avatar}>
-              <Text style={{ fontSize: 36 }}>{leader?.emoji ?? '👤'}</Text>
+        <ClayCard dark style={ps.heroCard}>
+          <View style={ps.heroRow}>
+            <View style={ps.avatar}>
+              <Text style={ps.avatarText}>{(leader?.name?.[0] ?? 'T').toUpperCase()}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.heroName}>{leader?.name ?? 'Traveller'}</Text>
-              <Text style={styles.heroRole}>🎯 Trip CEO · {members.length} members</Text>
-              <Text style={styles.heroSub}>India → Singapore Journey</Text>
+              <Text style={ps.heroName}>{leader?.name ?? 'Traveller'}</Text>
+              <Text style={ps.heroRole}>Trip CEO · {members.length} members</Text>
+              <Text style={ps.heroSub}>India to Singapore Journey</Text>
             </View>
-            <TouchableOpacity onPress={() => router.push('/settings')} style={styles.settingsBtn}>
-              <Text style={{ fontSize: 22 }}>⚙️</Text>
-            </TouchableOpacity>
           </View>
-          <View style={styles.statsRow}>
+          <View style={ps.statsRow}>
             {[
               { label: 'Cities', value: nodes.length },
               { label: 'Nights', value: totalNights },
               { label: 'Members', value: members.length },
               { label: 'Vows', value: `${fulfilledVows}/${vows.length}` },
             ].map((st) => (
-              <View key={st.label} style={styles.statItem}>
-                <Text style={styles.statValue}>{st.value}</Text>
-                <Text style={styles.statLabel}>{st.label}</Text>
+              <View key={st.label} style={ps.statItem}>
+                <Text style={ps.statValue}>{st.value}</Text>
+                <Text style={ps.statLabel}>{st.label}</Text>
               </View>
             ))}
           </View>
@@ -91,169 +94,124 @@ export default function ProfileScreen() {
 
         {/* Family group */}
         <TouchableOpacity onPress={() => setShowMembers(!showMembers)}>
-          <ClayCard style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>👨‍👩‍👧‍👦 Family Group</Text>
-              <Text style={styles.sectionArrow}>{showMembers ? '▲' : '▼'}</Text>
+          <ClayCard style={ps.sectionCard}>
+            <View style={ps.sectionHeader}>
+              <Text style={ps.sectionTitle}>Family Group</Text>
+              <Text style={ps.sectionArrow}>{showMembers ? '▲' : '▼'}</Text>
             </View>
-            <Text style={styles.sectionSub}>{members.length} members · Tap to manage</Text>
+            <Text style={ps.sectionSub}>{members.length} members · Tap to manage</Text>
           </ClayCard>
         </TouchableOpacity>
 
         {showMembers && (
-          <ClayCard style={styles.membersCard}>
+          <ClayCard style={ps.membersCard}>
             {members.map((m) => (
-              <View key={m.id} style={styles.memberRow}>
-                <Text style={{ fontSize: 26 }}>{m.emoji}</Text>
+              <View key={m.id} style={ps.memberRow}>
+                <View style={ps.memberAvatar}>
+                  <Text style={ps.memberAvatarText}>{m.name[0].toUpperCase()}</Text>
+                </View>
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.memberName}>{m.name}</Text>
-                  <Text style={styles.memberRelation}>{m.relation} · Age {m.age}</Text>
+                  <Text style={ps.memberName}>{m.name}</Text>
+                  <Text style={ps.memberRelation}>{m.relation} · Age {m.age}</Text>
                 </View>
                 {m.isLeader
-                  ? <View style={styles.leaderBadge}><Text style={styles.leaderText}>LEADER</Text></View>
+                  ? <View style={ps.leaderBadge}><Text style={ps.leaderText}>LEADER</Text></View>
                   : <TouchableOpacity onPress={() => Alert.alert('Remove', `Remove ${m.name}?`, [
                       { text: 'Cancel' },
                       { text: 'Remove', style: 'destructive', onPress: () => removeMember(m.id) },
                     ])}>
-                      <Text style={{ color: '#E53935', fontSize: 18 }}>✕</Text>
+                      <Text style={{ color: NC.error, fontSize: 16, fontWeight: '700' }}>Remove</Text>
                     </TouchableOpacity>
                 }
               </View>
             ))}
-            <ClayButton
-              label="Add Member"
-              emoji="➕"
-              onPress={() => setShowAddModal(true)}
-              color="#4CAF50"
-              style={{ marginTop: 12 }}
-              small
-            />
+            <ClayButton label="Add Member" onPress={() => setShowAddModal(true)}
+              color={NC.primaryFixed} textColor={NC.onPrimaryFixed} small style={{ marginTop: 12 }} />
           </ClayCard>
         )}
 
         {/* Trip Vows */}
-        <Text style={styles.heading}>🤲 Trip Promises</Text>
-        <Text style={styles.headingSub}>Long press to mark fulfilled</Text>
+        <Text style={ps.heading}>Trip Promises</Text>
+        <Text style={ps.headingSub}>Long press to mark fulfilled</Text>
         {vows.map((vow) => (
-          <TouchableOpacity
-            key={vow.id}
-            onLongPress={() => !vow.fulfilled && fulfillVow(vow.id)}
-            activeOpacity={0.85}
-          >
-            <ClayCard style={[styles.vowCard, vow.fulfilled ? styles.vowFulfilled : undefined]}>
-              <View style={styles.vowRow}>
-                <Text style={{ fontSize: 24 }}>{vow.emoji}</Text>
+          <TouchableOpacity key={vow.id} onLongPress={() => !vow.fulfilled && fulfillVow(vow.id)} activeOpacity={0.85}>
+            <ClayCard style={[ps.vowCard, vow.fulfilled && ps.vowFulfilled]}>
+              <View style={ps.vowRow}>
+                <View style={[ps.vowDot, { backgroundColor: vow.fulfilled ? '#F9A825' : NC.primary }]} />
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={[styles.vowTitle, vow.fulfilled && { color: '#F57F17' }]}>
-                    {vow.title}
-                  </Text>
-                  <Text style={styles.vowLocation}>📍 {vow.location}</Text>
+                  <Text style={[ps.vowTitle, vow.fulfilled && { color: '#F9A825' }]}>{vow.title}</Text>
+                  <Text style={ps.vowLocation}>{vow.location}</Text>
                 </View>
-                <Text style={{ fontSize: 22 }}>{vow.fulfilled ? '✅' : '⭕'}</Text>
+                <View style={[ps.vowStatus, { backgroundColor: vow.fulfilled ? '#FFF9C4' : NC.surfaceLow }]}>
+                  <Text style={[ps.vowStatusText, { color: vow.fulfilled ? '#F9A825' : NC.onSurfaceVariant }]}>
+                    {vow.fulfilled ? 'Done' : 'Pending'}
+                  </Text>
+                </View>
               </View>
-              {vow.fulfilled && (
-                <Text style={styles.vowDone}>✨ Promise Fulfilled!</Text>
-              )}
             </ClayCard>
           </TouchableOpacity>
         ))}
 
         {/* Spend overview */}
-        <Text style={styles.heading}>💸 Spend Overview</Text>
-        <ClayCard style={styles.spendCard}>
+        <Text style={ps.heading}>Spend Overview</Text>
+        <ClayCard style={ps.spendCard}>
+          {nodes.length === 0 && <Text style={ps.emptyText}>No cities added yet</Text>}
           {nodes.map((n) => {
             const pct = spentBudget > 0 ? (n.totalStayCost / spentBudget) * 100 : 0;
             return (
-              <View key={n.id} style={styles.spendRow}>
-                <Text style={styles.spendCity}>{n.city}</Text>
-                <View style={styles.spendBarBg}>
-                  <View style={[styles.spendBarFill, { width: `${pct}%` as any }]} />
+              <View key={n.id} style={ps.spendRow}>
+                <Text style={ps.spendCity}>{n.city}</Text>
+                <View style={ps.spendBarBg}>
+                  <View style={[ps.spendBarFill, { width: `${pct}%` as any }]} />
                 </View>
-                <Text style={styles.spendAmt}>₹{n.totalStayCost}</Text>
+                <Text style={ps.spendAmt}>₹{n.totalStayCost}</Text>
               </View>
             );
           })}
         </ClayCard>
 
         {/* Badges */}
-        <Text style={styles.heading}>🏆 Badges</Text>
-        <View style={styles.badgesGrid}>
+        <Text style={ps.heading}>Achievements</Text>
+        <View style={ps.badgesGrid}>
           {BADGES.map((b) => (
-            <ClayCard key={b.id} style={styles.badgeCard}>
-              <Text style={{ fontSize: 32, textAlign: 'center' }}>{b.emoji}</Text>
-              <Text style={styles.badgeTitle}>{b.title}</Text>
-              <Text style={styles.badgeDesc}>{b.desc}</Text>
+            <ClayCard key={b.id} style={ps.badgeCard}>
+              <View style={ps.badgeIcon}>
+                <Text style={ps.badgeIconText}>{b.title[0]}</Text>
+              </View>
+              <Text style={ps.badgeTitle}>{b.title}</Text>
+              <Text style={ps.badgeDesc}>{b.desc}</Text>
             </ClayCard>
           ))}
         </View>
 
-        <ClayButton
-          label="Broadcast to Family"
-          emoji="📢"
+        <ClayButton label="Broadcast to Family"
           onPress={() => Alert.alert('Broadcast', 'Live location sent to all members!')}
-          color="#4CAF50"
-          style={{ marginTop: 8 }}
-        />
-        <ClayButton
-          label="Share Itinerary"
-          emoji="📤"
+          color={NC.primary} style={{ marginTop: 8 }} />
+        <ClayButton label="Share Itinerary"
           onPress={() => Alert.alert('Share', 'Itinerary link copied!')}
-          color="#A5D6A7"
-          textColor="#1B5E20"
-          style={{ marginTop: 10 }}
-        />
+          color={NC.primaryFixed} textColor={NC.onPrimaryFixed} style={{ marginTop: 10 }} />
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 110 }} />
       </ScrollView>
 
       {/* Add Member Modal */}
       <Modal visible={showAddModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <ClayCard style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Add Family Member</Text>
-
-            <Text style={styles.inputLabel}>Choose Emoji</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-              {MEMBER_EMOJIS.map((e) => (
-                <TouchableOpacity
-                  key={e}
-                  onPress={() => setNewEmoji(e)}
-                  style={[styles.emojiChip, newEmoji === e && styles.emojiChipActive]}
-                >
-                  <Text style={{ fontSize: 24 }}>{e}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={styles.inputLabel}>Name *</Text>
-            <TextInput
-              style={styles.input}
-              value={newName}
-              onChangeText={setNewName}
-              placeholder="e.g. Mom"
-              placeholderTextColor="#81C784"
-            />
-            <Text style={styles.inputLabel}>Relation</Text>
-            <TextInput
-              style={styles.input}
-              value={newRelation}
-              onChangeText={setNewRelation}
-              placeholder="e.g. Mother"
-              placeholderTextColor="#81C784"
-            />
-            <Text style={styles.inputLabel}>Age</Text>
-            <TextInput
-              style={styles.input}
-              value={newAge}
-              onChangeText={setNewAge}
-              placeholder="e.g. 48"
-              placeholderTextColor="#81C784"
-              keyboardType="numeric"
-            />
-
-            <View style={styles.modalBtns}>
-              <ClayButton label="Cancel" onPress={() => setShowAddModal(false)} color="#C8E6C9" textColor="#1B5E20" small />
-              <ClayButton label="Add" emoji="✅" onPress={handleAddMember} color="#4CAF50" small />
+        <View style={ps.modalOverlay}>
+          <ClayCard style={ps.modalCard}>
+            <Text style={ps.modalTitle}>Add Family Member</Text>
+            <Text style={ps.inputLabel}>Name *</Text>
+            <TextInput style={ps.input} value={newName} onChangeText={setNewName}
+              placeholder="e.g. Mom" placeholderTextColor={NC.outlineVariant} />
+            <Text style={ps.inputLabel}>Relation</Text>
+            <TextInput style={ps.input} value={newRelation} onChangeText={setNewRelation}
+              placeholder="e.g. Mother" placeholderTextColor={NC.outlineVariant} />
+            <Text style={ps.inputLabel}>Age</Text>
+            <TextInput style={ps.input} value={newAge} onChangeText={setNewAge}
+              placeholder="e.g. 48" placeholderTextColor={NC.outlineVariant} keyboardType="numeric" />
+            <View style={ps.modalBtns}>
+              <ClayButton label="Cancel" onPress={() => setShowAddModal(false)}
+                color={NC.surfaceLow} textColor={NC.onSurface} small />
+              <ClayButton label="Add Member" onPress={handleAddMember} color={NC.primary} small />
             </View>
           </ClayCard>
         </View>
@@ -262,76 +220,77 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#E8F5E9' },
-  scroll: { padding: 16 },
-  heroCard: { marginBottom: 12 },
-  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+const ps = StyleSheet.create({
+  container: { flex: 1, backgroundColor: NC.background },
+  scroll: { paddingHorizontal: 20, paddingTop: 8 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  heading: { fontSize: 26, fontWeight: '900', color: NC.primary, letterSpacing: -0.5 },
+  settingsBtn: {
+    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 50,
+    backgroundColor: NC.surfaceLowest, borderWidth: 1, borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: NC.shadowOuter, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 10, elevation: 4,
+  },
+  settingsBtnText: { color: NC.primary, fontSize: 13, fontWeight: '700' },
+  heroCard: { marginBottom: 16 },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20 },
   avatar: {
     width: 64, height: 64, borderRadius: 32,
-    backgroundColor: '#C8E6C9', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: NC.primary, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 3, borderColor: NC.primaryFixed,
+    shadowColor: NC.shadowButton, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 1, shadowRadius: 14, elevation: 6,
   },
-  heroName: { color: '#1B5E20', fontSize: 20, fontWeight: '800' },
-  heroRole: { color: '#2E7D32', fontSize: 12, marginTop: 2 },
-  heroSub: { color: '#558B2F', fontSize: 11, marginTop: 2 },
-  settingsBtn: { padding: 8, backgroundColor: '#C8E6C9', borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-around' },
+  avatarText: { fontSize: 26, fontWeight: '900', color: NC.onPrimary },
+  heroName: { color: NC.onSurface, fontSize: 20, fontWeight: '900' },
+  heroRole: { color: NC.onSurfaceVariant, fontSize: 12, marginTop: 3, fontWeight: '600' },
+  heroSub: { color: NC.outline, fontSize: 11, marginTop: 2 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingTop: 16, borderTopWidth: 1, borderTopColor: NC.surfaceLow },
   statItem: { alignItems: 'center' },
-  statValue: { color: '#1B5E20', fontSize: 20, fontWeight: '800' },
-  statLabel: { color: '#558B2F', fontSize: 10 },
+  statValue: { color: NC.primary, fontSize: 22, fontWeight: '900' },
+  statLabel: { color: NC.onSurfaceVariant, fontSize: 10, fontWeight: '600', marginTop: 2 },
   sectionCard: { marginBottom: 4 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { color: '#1B5E20', fontSize: 15, fontWeight: '700' },
-  sectionArrow: { color: '#558B2F' },
-  sectionSub: { color: '#558B2F', fontSize: 11, marginTop: 4 },
+  sectionTitle: { color: NC.onSurface, fontSize: 15, fontWeight: '800' },
+  sectionArrow: { color: NC.onSurfaceVariant, fontSize: 12 },
+  sectionSub: { color: NC.onSurfaceVariant, fontSize: 11, marginTop: 4 },
   membersCard: { marginBottom: 12 },
-  memberRow: {
-    flexDirection: 'row', alignItems: 'center', paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(76,175,80,0.1)',
-  },
-  memberName: { color: '#1B5E20', fontSize: 14, fontWeight: '600' },
-  memberRelation: { color: '#558B2F', fontSize: 11 },
-  leaderBadge: {
-    backgroundColor: '#FFF9C4', paddingHorizontal: 8,
-    paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: '#FFD700',
-  },
-  leaderText: { color: '#F57F17', fontSize: 9, fontWeight: '800' },
-  heading: { color: '#1B5E20', fontSize: 16, fontWeight: '800', marginTop: 16, marginBottom: 4 },
-  headingSub: { color: '#558B2F', fontSize: 11, marginBottom: 10 },
+  memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: NC.surfaceLow },
+  memberAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: NC.primaryFixed, alignItems: 'center', justifyContent: 'center' },
+  memberAvatarText: { fontSize: 16, fontWeight: '900', color: NC.onPrimaryFixed },
+  memberName: { color: NC.onSurface, fontSize: 14, fontWeight: '700' },
+  memberRelation: { color: NC.onSurfaceVariant, fontSize: 11, marginTop: 1 },
+  leaderBadge: { backgroundColor: '#FFF9C4', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 50, borderWidth: 1, borderColor: '#F9A825' },
+  leaderText: { color: '#F9A825', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+  heading: { color: NC.onSurface, fontSize: 16, fontWeight: '900', marginTop: 20, marginBottom: 4 },
+  headingSub: { color: NC.onSurfaceVariant, fontSize: 11, marginBottom: 12 },
   vowCard: { marginBottom: 8 },
-  vowFulfilled: { borderColor: '#FFD700', borderWidth: 1.5 },
+  vowFulfilled: { borderColor: '#F9A825', borderWidth: 1.5 },
   vowRow: { flexDirection: 'row', alignItems: 'center' },
-  vowTitle: { color: '#1B5E20', fontSize: 14, fontWeight: '600' },
-  vowLocation: { color: '#558B2F', fontSize: 11, marginTop: 2 },
-  vowDone: { color: '#F57F17', fontSize: 11, marginTop: 6, fontWeight: '600' },
+  vowDot: { width: 12, height: 12, borderRadius: 6 },
+  vowTitle: { color: NC.onSurface, fontSize: 14, fontWeight: '700' },
+  vowLocation: { color: NC.onSurfaceVariant, fontSize: 11, marginTop: 2 },
+  vowStatus: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 50 },
+  vowStatusText: { fontSize: 10, fontWeight: '700' },
   spendCard: { marginBottom: 8 },
-  spendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  spendCity: { color: '#1B5E20', fontSize: 12, width: 70 },
-  spendBarBg: { flex: 1, height: 8, backgroundColor: '#C8E6C9', borderRadius: 4, overflow: 'hidden' },
-  spendBarFill: { height: '100%', backgroundColor: '#4CAF50', borderRadius: 4 },
-  spendAmt: { color: '#2E7D32', fontSize: 11, fontWeight: '700', width: 50, textAlign: 'right' },
-  badgesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
-  badgeCard: { width: '47%', alignItems: 'center', padding: 14 },
-  badgeTitle: { color: '#1B5E20', fontSize: 12, fontWeight: '700', marginTop: 6, textAlign: 'center' },
-  badgeDesc: { color: '#558B2F', fontSize: 10, textAlign: 'center', marginTop: 2 },
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'flex-end', padding: 16,
-  },
+  emptyText: { color: NC.onSurfaceVariant, fontSize: 13, textAlign: 'center', paddingVertical: 8 },
+  spendRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  spendCity: { color: NC.onSurface, fontSize: 12, fontWeight: '600', width: 72 },
+  spendBarBg: { flex: 1, height: 8, backgroundColor: NC.surfaceLow, borderRadius: 4, overflow: 'hidden' },
+  spendBarFill: { height: '100%', backgroundColor: NC.primary, borderRadius: 4 },
+  spendAmt: { color: NC.primary, fontSize: 11, fontWeight: '800', width: 52, textAlign: 'right' },
+  badgesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
+  badgeCard: { width: '47%', alignItems: 'center', padding: 16, marginBottom: 0 },
+  badgeIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: NC.primaryFixed, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  badgeIconText: { fontSize: 20, fontWeight: '900', color: NC.onPrimaryFixed },
+  badgeTitle: { color: NC.onSurface, fontSize: 12, fontWeight: '800', textAlign: 'center' },
+  badgeDesc: { color: NC.onSurfaceVariant, fontSize: 10, textAlign: 'center', marginTop: 3 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end', padding: 16 },
   modalCard: { paddingBottom: 24 },
-  modalTitle: { color: '#1B5E20', fontSize: 18, fontWeight: '800', marginBottom: 16 },
-  inputLabel: { color: '#558B2F', fontSize: 11, fontWeight: '600', marginBottom: 6 },
+  modalTitle: { color: NC.onSurface, fontSize: 20, fontWeight: '900', marginBottom: 20 },
+  inputLabel: { color: NC.onSurfaceVariant, fontSize: 11, fontWeight: '700', marginBottom: 6, letterSpacing: 0.5 },
   input: {
-    backgroundColor: '#C8E6C9', borderRadius: 14, padding: 12,
-    color: '#1B5E20', fontSize: 14, marginBottom: 12,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: NC.surfaceLow, borderRadius: 16, padding: 14,
+    color: NC.onSurface, fontSize: 15, marginBottom: 14,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.8)',
   },
-  emojiChip: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: '#C8E6C9',
-    alignItems: 'center', justifyContent: 'center', marginRight: 8,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
-  },
-  emojiChipActive: { backgroundColor: '#4CAF50' },
-  modalBtns: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  modalBtns: { flexDirection: 'row', gap: 12, marginTop: 4 },
 });
