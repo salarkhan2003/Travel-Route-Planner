@@ -1,11 +1,10 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  Animated, Dimensions, FlatList, StyleSheet,
+  Animated, Dimensions, Easing, FlatList, StyleSheet,
   Text, TouchableOpacity, View, ViewToken,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import LottieView from 'lottie-react-native';
 import { NC } from '../src/constants/theme';
 
 const { width, height } = Dimensions.get('window');
@@ -15,64 +14,104 @@ const SLIDES = [
     id: '1',
     title: 'Plan Your\nDream Trip',
     subtitle: 'Build beautiful itineraries across India & Singapore with smart route planning.',
-    source: require('../animations/Man Planning A Sightseeing Route.lottie'),
-    bg1: '#c5f8c7', bg2: '#b7e9b9',
+    bg1: '#c5f8c7', bg2: '#b7e9b9', accent: NC.primary,
+    label: 'Route Planner',
   },
   {
     id: '2',
     title: 'Fly & Explore\nThe World',
     subtitle: 'Compare flights, trains and buses. Swap transport modes with a single tap.',
-    source: require('../animations/airport.lottie'),
-    bg1: '#a7f3ec', bg2: '#cceacd',
+    bg1: '#a7f3ec', bg2: '#cceacd', accent: NC.tertiary,
+    label: 'Air Travel',
   },
   {
     id: '3',
     title: 'Ride the Rails\nAcross India',
     subtitle: 'Plan your rail journey, compare classes and book the perfect seat instantly.',
-    source: require('../animations/Train.lottie'),
-    bg1: '#c5f8c7', bg2: '#ebf3e3',
+    bg1: '#c5f8c7', bg2: '#ebf3e3', accent: NC.primary,
+    label: 'Train Journey',
   },
   {
     id: '4',
     title: 'Travel as\nOne Family',
     subtitle: 'Manage all members, split expenses, broadcast alerts and stay in sync.',
-    source: require('../animations/planning.lottie'),
-    bg1: '#cceacd', bg2: '#b7e9b9',
+    bg1: '#cceacd', bg2: '#b7e9b9', accent: NC.secondary,
+    label: 'Family Hub',
   },
 ];
 
-function SlideCard({ slide, isActive }: { slide: typeof SLIDES[0]; isActive: boolean }) {
-  const lottieRef = useRef<LottieView>(null);
-  const scaleAnim = useRef(new Animated.Value(isActive ? 1 : 0.9)).current;
-  const opacityAnim = useRef(new Animated.Value(isActive ? 1 : 0.5)).current;
+// ─── Animated illustration for each slide ────────────────────────────────────
+function Illustration({ slide, index, isActive }: { slide: typeof SLIDES[0]; index: number; isActive: boolean }) {
+  const float = useRef(new Animated.Value(0)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.85)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
-  React.useEffect(() => {
+  useEffect(() => {
+    if (!isActive) {
+      Animated.parallel([
+        Animated.spring(scale, { toValue: 0.85, useNativeDriver: true, damping: 18, stiffness: 140 }),
+        Animated.timing(opacity, { toValue: 0.4, duration: 200, useNativeDriver: true }),
+      ]).start();
+      return;
+    }
     Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: isActive ? 1 : 0.9, useNativeDriver: true, damping: 18, stiffness: 140 }),
-      Animated.timing(opacityAnim, { toValue: isActive ? 1 : 0.5, duration: 250, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, damping: 14, stiffness: 100 }),
+      Animated.timing(opacity, { toValue: 1, duration: 350, useNativeDriver: true }),
     ]).start();
-    if (isActive) lottieRef.current?.play();
-    else lottieRef.current?.pause();
+    // Float loop
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(float, { toValue: -14, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(float, { toValue: 0, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])
+    ).start();
+    // Slow rotate for decorative elements
+    Animated.loop(
+      Animated.timing(rotate, { toValue: 1, duration: 8000, easing: Easing.linear, useNativeDriver: true })
+    ).start();
   }, [isActive]);
 
+  const spin = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
+  const icons = ['◎', '✈', '🚆', '◈'];
+  const icon = icons[index];
+
   return (
-    <Animated.View style={[s.animCard, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
+    <Animated.View style={[s.illusWrap, { opacity, transform: [{ scale }] }]}>
+      {/* Background blobs */}
       <View style={[s.blob1, { backgroundColor: slide.bg1 }]} />
       <View style={[s.blob2, { backgroundColor: slide.bg2 }]} />
-      <LottieView
-        ref={lottieRef}
-        source={slide.source}
-        autoPlay={isActive}
-        loop
-        style={s.lottie}
-        resizeMode="contain"
-        hardwareAccelerationAndroid
-        enableMergePathsAndroidForKitKatAndAbove
-      />
+      {/* Rotating ring */}
+      <Animated.View style={[s.ring, { borderColor: slide.accent + '30', transform: [{ rotate: spin }] }]} />
+      <Animated.View style={[s.ring2, { borderColor: slide.bg1, transform: [{ rotate: spin }] }]} />
+      {/* Floating main icon */}
+      <Animated.View style={[s.iconCircle, { backgroundColor: slide.accent, transform: [{ translateY: float }] }]}>
+        <Text style={s.iconText}>{icon}</Text>
+      </Animated.View>
+      {/* Floating mini cards */}
+      <Animated.View style={[s.miniCard, s.miniCard1, { backgroundColor: slide.bg1, transform: [{ translateY: float }] }]}>
+        <View style={[s.miniDot, { backgroundColor: slide.accent }]} />
+        <View style={s.miniLine} />
+        <View style={[s.miniLine, { width: '60%' }]} />
+      </Animated.View>
+      <Animated.View style={[s.miniCard, s.miniCard2, { backgroundColor: NC.surfaceLowest, transform: [{ translateY: Animated.multiply(float, new Animated.Value(-0.6)) }] }]}>
+        <Text style={[s.miniLabel, { color: slide.accent }]}>{slide.label}</Text>
+      </Animated.View>
+      {/* Dots */}
+      {[0, 1, 2].map(i => (
+        <Animated.View key={i} style={[s.floatDot, {
+          backgroundColor: i === 0 ? slide.accent : slide.bg1,
+          left: `${20 + i * 28}%` as any,
+          bottom: '14%',
+          transform: [{ translateY: Animated.multiply(float, new Animated.Value(0.4 + i * 0.2)) }],
+        }]} />
+      ))}
     </Animated.View>
   );
 }
 
+// ─── Main screen ──────────────────────────────────────────────────────────────
 export default function OnboardingScreen() {
   const router = useRouter();
   const [current, setCurrent] = useState(0);
@@ -123,12 +162,15 @@ export default function OnboardingScreen() {
         style={s.flatList}
         renderItem={({ item, index }) => (
           <View style={[s.slide, { width }]}>
-            <SlideCard slide={item} isActive={index === current} />
+            <View style={s.animCard}>
+              <Illustration slide={item} index={index} isActive={index === current} />
+            </View>
           </View>
         )}
       />
 
       <View style={s.bottom}>
+        {/* Progress dots */}
         <View style={s.dotsRow}>
           {SLIDES.map((_, i) => {
             const w = progressAnim.interpolate({ inputRange: [i - 1, i, i + 1], outputRange: [8, 36, 8], extrapolate: 'clamp' });
@@ -140,11 +182,13 @@ export default function OnboardingScreen() {
           })}
         </View>
 
+        {/* Text card */}
         <View style={s.textCard}>
           <Text style={s.title}>{slide.title}</Text>
           <Text style={s.subtitle}>{slide.subtitle}</Text>
         </View>
 
+        {/* CTA */}
         <View style={s.ctaRow}>
           {current > 0 ? (
             <TouchableOpacity onPress={() => goTo(current - 1)} style={s.backBtn} activeOpacity={0.8}>
@@ -175,16 +219,42 @@ const s = StyleSheet.create({
   skipText: { fontSize: 13, fontWeight: '700', color: NC.primary },
   flatList: { flex: 1 },
   slide: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+
+  // Clay animation card
   animCard: {
-    width: width * 0.88, height: height * 0.34, borderRadius: 40,
+    width: width * 0.88, height: height * 0.36, borderRadius: 40,
     backgroundColor: NC.surfaceLowest, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.95)',
     shadowColor: 'rgba(42,49,39,0.14)', shadowOffset: { width: 0, height: 20 },
     shadowOpacity: 1, shadowRadius: 40, elevation: 12,
-    overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
   },
-  blob1: { position: 'absolute', width: 160, height: 160, borderRadius: 80, top: -40, right: -40, opacity: 0.6 },
-  blob2: { position: 'absolute', width: 120, height: 120, borderRadius: 60, bottom: -30, left: -30, opacity: 0.5 },
-  lottie: { width: '90%', height: '90%' },
+
+  // Illustration internals
+  illusWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  blob1: { position: 'absolute', width: 180, height: 180, borderRadius: 90, top: -50, right: -50, opacity: 0.55 },
+  blob2: { position: 'absolute', width: 140, height: 140, borderRadius: 70, bottom: -40, left: -40, opacity: 0.45 },
+  ring: { position: 'absolute', width: 200, height: 200, borderRadius: 100, borderWidth: 2, borderStyle: 'dashed' },
+  ring2: { position: 'absolute', width: 140, height: 140, borderRadius: 70, borderWidth: 1.5 },
+  iconCircle: {
+    width: 88, height: 88, borderRadius: 44,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 3, borderColor: 'rgba(255,255,255,0.6)',
+    shadowColor: 'rgba(42,49,39,0.2)', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 1, shadowRadius: 16, elevation: 8,
+  },
+  iconText: { fontSize: 36, color: '#fff' },
+  miniCard: {
+    position: 'absolute', borderRadius: 16, padding: 10,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: 'rgba(42,49,39,0.10)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 1, shadowRadius: 12, elevation: 5,
+  },
+  miniCard1: { left: '6%', top: '12%', width: 80, gap: 5 },
+  miniCard2: { right: '6%', bottom: '16%', paddingHorizontal: 14 },
+  miniDot: { width: 8, height: 8, borderRadius: 4 },
+  miniLine: { height: 4, backgroundColor: 'rgba(42,49,39,0.08)', borderRadius: 2, width: '100%' },
+  miniLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
+  floatDot: { position: 'absolute', width: 10, height: 10, borderRadius: 5 },
+
+  // Bottom
   bottom: { paddingHorizontal: 24, paddingBottom: 36, paddingTop: 12 },
   dotsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 18 },
   dot: { height: 8, borderRadius: 4 },
