@@ -58,7 +58,7 @@ export default function HomeScreen() {
   const [toCur, setToCur] = useState('SGD');
   const [amount, setAmount] = useState('1000');
   const [showConverter, setShowConverter] = useState(false);
-  const nextCity = nodes[0]?.city ?? 'Ajmer';
+  const nextCity = nodes[0]?.city ?? 'New Delhi';
   const budgetPct = Math.min((spentBudget / globalBudget) * 100, 100);
 
   const converted = (() => {
@@ -106,7 +106,7 @@ export default function HomeScreen() {
             <View style={s.liveBadge}><Text style={s.liveBadgeText}>LIVE TRIP</Text></View>
             <Text style={s.dayBadge}>Day 1 of 9</Text>
           </View>
-          <Text style={s.heroTitle}>Next: Train to{'\n'}{nextCity}</Text>
+          <Text style={s.heroTitle}>Next: Train to{'\n'}Goa</Text>
           <View style={s.heroMeta}>
             <View>
               <Text style={s.heroMetaLabel}>DEPARTURE IN</Text>

@@ -11,6 +11,7 @@ import { useCurrency } from '../../src/hooks/useCurrency';
 import { POPULAR_ROUTES, PopularRoute } from '../../src/constants/popularRoutes';
 import { useHistoryStore, TripStatus } from '../../src/store/historyStore';
 import type { TripPath, TripNode } from '../../src/types/trip';
+import { NC } from '../../src/constants/theme';
 
 const MODE_ICON: Record<string, string> = {
   train: '🚆', flight: '✈', bus: '🚌', road: '🚗',
@@ -518,41 +519,43 @@ export default function ItineraryScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#E8F5E9' },
+  container: { flex: 1, backgroundColor: NC.background },
   scroll: { paddingHorizontal: 16, paddingBottom: 20 },
 
   tabBar: {
-    flexDirection: 'row', marginHorizontal: 16, marginTop: 8, marginBottom: 4,
-    backgroundColor: '#E8F5E9', borderRadius: 16, padding: 4,
+    flexDirection: 'row', marginHorizontal: 0, marginTop: 8, marginBottom: 4,
+    backgroundColor: NC.surfaceLow, borderRadius: 999, padding: 4,
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
-    shadowColor: 'rgba(76,175,80,0.2)', shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 1, shadowRadius: 8, elevation: 4,
+    shadowColor: NC.shadowOuter, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1, shadowRadius: 14, elevation: 5,
   },
-  tabBtn: { flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center' },
+  tabBtn: { flex: 1, paddingVertical: 11, borderRadius: 999, alignItems: 'center' },
   tabBtnActive: {
-    backgroundColor: '#FFF',
-    shadowColor: 'rgba(76,175,80,0.2)', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1, shadowRadius: 4, elevation: 3,
+    backgroundColor: NC.surfaceLowest,
+    shadowColor: NC.shadowOuter, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1, shadowRadius: 10, elevation: 4,
   },
-  tabBtnText: { fontSize: 12, fontWeight: '600', color: '#81C784' },
-  tabBtnTextActive: { color: '#1B5E20', fontWeight: '800' },
+  tabBtnText: { fontSize: 12, fontWeight: '700', color: NC.onSurfaceVariant },
+  tabBtnTextActive: { color: NC.primary, fontWeight: '900' },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 14 },
-  heading: { fontSize: 24, fontWeight: '800', color: '#1B3A1F', letterSpacing: -0.5, marginTop: 16, marginBottom: 4 },
-  subHeading: { fontSize: 13, color: '#558B2F', marginBottom: 16 },
-  metaBadge: { backgroundColor: '#C8E6C9', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
-  metaBadgeText: { color: '#2E7D32', fontSize: 12, fontWeight: '700' },
+  heading: { fontSize: 24, fontWeight: '900', color: NC.onSurface, letterSpacing: -0.5, marginTop: 16, marginBottom: 4 },
+  subHeading: { fontSize: 13, color: NC.onSurfaceVariant, marginBottom: 16 },
+  metaBadge: { backgroundColor: NC.primaryFixed, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.8)' },
+  metaBadgeText: { color: NC.onPrimaryFixed, fontSize: 12, fontWeight: '800' },
 
   // Empty state
   emptyState: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 24 },
   emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#1B3A1F', marginBottom: 8 },
-  emptyDesc: { fontSize: 13, color: '#558B2F', textAlign: 'center', lineHeight: 20, marginBottom: 20 },
+  emptyTitle: { fontSize: 18, fontWeight: '900', color: NC.onSurface, marginBottom: 8 },
+  emptyDesc: { fontSize: 13, color: NC.onSurfaceVariant, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
   emptyBtn: {
-    backgroundColor: '#4CAF50', borderRadius: 50, paddingHorizontal: 24, paddingVertical: 12,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: NC.primary, borderRadius: 999, paddingHorizontal: 28, paddingVertical: 14,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)',
+    shadowColor: NC.shadowButton, shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1, shadowRadius: 20, elevation: 8,
   },
-  emptyBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
+  emptyBtnText: { color: '#FFF', fontSize: 14, fontWeight: '900' },
 
   // Budget card
   budgetCard: {
@@ -724,14 +727,14 @@ const md = StyleSheet.create({
   cityArrow: { fontSize: 14, fontWeight: '700' },
   actions: { flexDirection: 'row', gap: 12, marginTop: 20 },
   bookBtn: {
-    flex: 2, borderRadius: 50, paddingVertical: 16, alignItems: 'center',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.6)',
-    shadowColor: 'rgba(76,175,80,0.35)', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1, shadowRadius: 8, elevation: 6,
+    flex: 2, borderRadius: 999, paddingVertical: 18, alignItems: 'center',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)',
+    shadowColor: NC.shadowButton, shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1, shadowRadius: 20, elevation: 8,
   },
   bookBtnText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
-  closeBtn: { flex: 1, backgroundColor: '#F0FAF1', borderRadius: 50, paddingVertical: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(200,230,201,0.7)' },
-  closeBtnText: { color: '#1B5E20', fontSize: 16, fontWeight: '800' },
+  closeBtn: { flex: 1, backgroundColor: NC.surfaceLow, borderRadius: 999, paddingVertical: 18, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', shadowColor: NC.shadowOuter, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 10, elevation: 3 },
+  closeBtnText: { color: NC.primary, fontSize: 16, fontWeight: '800' },
   routeHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   summaryCard: { backgroundColor: '#F0FAF1', borderRadius: 16, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(200,230,201,0.5)' },
   optGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
