@@ -22,12 +22,7 @@
         "ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
-      ],
-      "config": {
-        "googleMaps": {
-          "apiKey": ""
-        }
-      }
+      ]
     },
     "ios": {
       "bundleIdentifier": "com.spatialtravel.planner",
@@ -35,9 +30,6 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We use your location to show nearby destinations and provide navigation.",
         "NSLocationAlwaysUsageDescription": "We use your location for navigation."
-      },
-      "config": {
-        "googleMapsApiKey": "UNUSED_TOMTOM_REPLACES_GOOGLE_MAPS"
       }
     },
     "plugins": [
