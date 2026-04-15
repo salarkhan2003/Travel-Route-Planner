@@ -4,7 +4,7 @@ import {
   StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Callout, Marker, Polyline } from 'react-native-maps';
+import MapView, { Callout, Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 import { useTripStore } from '../../src/store/tripStore';
 import {
   ALL_LOCATIONS, INDIA_LOCATIONS, SINGAPORE_LOCATIONS,
@@ -304,6 +304,7 @@ export default function ExploreScreen() {
       <MapView
         ref={mapRef}
         style={s.map}
+        provider={PROVIDER_DEFAULT}
         initialRegion={{ latitude: 22.5937, longitude: 78.9629, latitudeDelta: 22, longitudeDelta: 22 }}
         onPress={() => { selectPath(null); selectNode(null); closeCard(); }}
         showsUserLocation

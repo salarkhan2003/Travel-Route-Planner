@@ -60,7 +60,7 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Hero card */}
-        <ClayCard dark style={styles.heroCard}>
+        <ClayCard style={styles.heroCard}>
           <View style={styles.heroRow}>
             <View style={styles.avatar}>
               <Text style={{ fontSize: 36 }}>{leader?.emoji ?? '👤'}</Text>
@@ -91,7 +91,7 @@ export default function ProfileScreen() {
 
         {/* Family group */}
         <TouchableOpacity onPress={() => setShowMembers(!showMembers)}>
-          <ClayCard dark style={styles.sectionCard}>
+          <ClayCard style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>👨‍👩‍👧‍👦 Family Group</Text>
               <Text style={styles.sectionArrow}>{showMembers ? '▲' : '▼'}</Text>
@@ -101,7 +101,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         {showMembers && (
-          <ClayCard dark style={styles.membersCard}>
+          <ClayCard style={styles.membersCard}>
             {members.map((m) => (
               <View key={m.id} style={styles.memberRow}>
                 <Text style={{ fontSize: 26 }}>{m.emoji}</Text>
@@ -115,7 +115,7 @@ export default function ProfileScreen() {
                       { text: 'Cancel' },
                       { text: 'Remove', style: 'destructive', onPress: () => removeMember(m.id) },
                     ])}>
-                      <Text style={{ color: '#FF6B6B', fontSize: 18 }}>✕</Text>
+                      <Text style={{ color: '#E53935', fontSize: 18 }}>✕</Text>
                     </TouchableOpacity>
                 }
               </View>
@@ -124,7 +124,7 @@ export default function ProfileScreen() {
               label="Add Member"
               emoji="➕"
               onPress={() => setShowAddModal(true)}
-              color="#A7F3D0"
+              color="#4CAF50"
               style={{ marginTop: 12 }}
               small
             />
@@ -140,11 +140,11 @@ export default function ProfileScreen() {
             onLongPress={() => !vow.fulfilled && fulfillVow(vow.id)}
             activeOpacity={0.85}
           >
-            <ClayCard dark style={[styles.vowCard, vow.fulfilled ? styles.vowFulfilled : undefined]}>
+            <ClayCard style={[styles.vowCard, vow.fulfilled ? styles.vowFulfilled : undefined]}>
               <View style={styles.vowRow}>
                 <Text style={{ fontSize: 24 }}>{vow.emoji}</Text>
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={[styles.vowTitle, vow.fulfilled && { color: '#FFD700' }]}>
+                  <Text style={[styles.vowTitle, vow.fulfilled && { color: '#F57F17' }]}>
                     {vow.title}
                   </Text>
                   <Text style={styles.vowLocation}>📍 {vow.location}</Text>
@@ -160,7 +160,7 @@ export default function ProfileScreen() {
 
         {/* Spend overview */}
         <Text style={styles.heading}>💸 Spend Overview</Text>
-        <ClayCard dark style={styles.spendCard}>
+        <ClayCard style={styles.spendCard}>
           {nodes.map((n) => {
             const pct = spentBudget > 0 ? (n.totalStayCost / spentBudget) * 100 : 0;
             return (
@@ -179,7 +179,7 @@ export default function ProfileScreen() {
         <Text style={styles.heading}>🏆 Badges</Text>
         <View style={styles.badgesGrid}>
           {BADGES.map((b) => (
-            <ClayCard key={b.id} dark style={styles.badgeCard}>
+            <ClayCard key={b.id} style={styles.badgeCard}>
               <Text style={{ fontSize: 32, textAlign: 'center' }}>{b.emoji}</Text>
               <Text style={styles.badgeTitle}>{b.title}</Text>
               <Text style={styles.badgeDesc}>{b.desc}</Text>
@@ -187,19 +187,19 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        {/* Broadcast */}
         <ClayButton
           label="Broadcast to Family"
           emoji="📢"
           onPress={() => Alert.alert('Broadcast', 'Live location sent to all members!')}
-          color="#C4B5FD"
+          color="#4CAF50"
           style={{ marginTop: 8 }}
         />
         <ClayButton
           label="Share Itinerary"
           emoji="📤"
           onPress={() => Alert.alert('Share', 'Itinerary link copied!')}
-          color="#A3C9FF"
+          color="#A5D6A7"
+          textColor="#1B5E20"
           style={{ marginTop: 10 }}
         />
 
@@ -209,7 +209,7 @@ export default function ProfileScreen() {
       {/* Add Member Modal */}
       <Modal visible={showAddModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <ClayCard dark style={styles.modalCard}>
+          <ClayCard style={styles.modalCard}>
             <Text style={styles.modalTitle}>Add Family Member</Text>
 
             <Text style={styles.inputLabel}>Choose Emoji</Text>
@@ -231,7 +231,7 @@ export default function ProfileScreen() {
               value={newName}
               onChangeText={setNewName}
               placeholder="e.g. Mom"
-              placeholderTextColor="#555"
+              placeholderTextColor="#81C784"
             />
             <Text style={styles.inputLabel}>Relation</Text>
             <TextInput
@@ -239,7 +239,7 @@ export default function ProfileScreen() {
               value={newRelation}
               onChangeText={setNewRelation}
               placeholder="e.g. Mother"
-              placeholderTextColor="#555"
+              placeholderTextColor="#81C784"
             />
             <Text style={styles.inputLabel}>Age</Text>
             <TextInput
@@ -247,13 +247,13 @@ export default function ProfileScreen() {
               value={newAge}
               onChangeText={setNewAge}
               placeholder="e.g. 48"
-              placeholderTextColor="#555"
+              placeholderTextColor="#81C784"
               keyboardType="numeric"
             />
 
             <View style={styles.modalBtns}>
-              <ClayButton label="Cancel" onPress={() => setShowAddModal(false)} color="#2A2D3E" textColor="#FFF" small />
-              <ClayButton label="Add" emoji="✅" onPress={handleAddMember} color="#A7F3D0" small />
+              <ClayButton label="Cancel" onPress={() => setShowAddModal(false)} color="#C8E6C9" textColor="#1B5E20" small />
+              <ClayButton label="Add" emoji="✅" onPress={handleAddMember} color="#4CAF50" small />
             </View>
           </ClayCard>
         </View>
@@ -263,74 +263,75 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0D0F1A' },
+  container: { flex: 1, backgroundColor: '#E8F5E9' },
   scroll: { padding: 16 },
   heroCard: { marginBottom: 12 },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   avatar: {
     width: 64, height: 64, borderRadius: 32,
-    backgroundColor: '#2A2D3E', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#A3C9FF',
+    backgroundColor: '#C8E6C9', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.95)',
   },
-  heroName: { color: '#FFF', fontSize: 20, fontWeight: '800' },
-  heroRole: { color: '#A3C9FF', fontSize: 12, marginTop: 2 },
-  heroSub: { color: '#888', fontSize: 11, marginTop: 2 },
-  settingsBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12 },
+  heroName: { color: '#1B5E20', fontSize: 20, fontWeight: '800' },
+  heroRole: { color: '#2E7D32', fontSize: 12, marginTop: 2 },
+  heroSub: { color: '#558B2F', fontSize: 11, marginTop: 2 },
+  settingsBtn: { padding: 8, backgroundColor: '#C8E6C9', borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
   statsRow: { flexDirection: 'row', justifyContent: 'space-around' },
   statItem: { alignItems: 'center' },
-  statValue: { color: '#FFF', fontSize: 20, fontWeight: '800' },
-  statLabel: { color: '#888', fontSize: 10 },
+  statValue: { color: '#1B5E20', fontSize: 20, fontWeight: '800' },
+  statLabel: { color: '#558B2F', fontSize: 10 },
   sectionCard: { marginBottom: 4 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { color: '#FFF', fontSize: 15, fontWeight: '700' },
-  sectionArrow: { color: '#888' },
-  sectionSub: { color: '#888', fontSize: 11, marginTop: 4 },
+  sectionTitle: { color: '#1B5E20', fontSize: 15, fontWeight: '700' },
+  sectionArrow: { color: '#558B2F' },
+  sectionSub: { color: '#558B2F', fontSize: 11, marginTop: 4 },
   membersCard: { marginBottom: 12 },
   memberRow: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(76,175,80,0.1)',
   },
-  memberName: { color: '#FFF', fontSize: 14, fontWeight: '600' },
-  memberRelation: { color: '#888', fontSize: 11 },
+  memberName: { color: '#1B5E20', fontSize: 14, fontWeight: '600' },
+  memberRelation: { color: '#558B2F', fontSize: 11 },
   leaderBadge: {
-    backgroundColor: 'rgba(255,215,0,0.15)', paddingHorizontal: 8,
+    backgroundColor: '#FFF9C4', paddingHorizontal: 8,
     paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: '#FFD700',
   },
-  leaderText: { color: '#FFD700', fontSize: 9, fontWeight: '800' },
-  heading: { color: '#FFF', fontSize: 16, fontWeight: '800', marginTop: 16, marginBottom: 4 },
-  headingSub: { color: '#888', fontSize: 11, marginBottom: 10 },
+  leaderText: { color: '#F57F17', fontSize: 9, fontWeight: '800' },
+  heading: { color: '#1B5E20', fontSize: 16, fontWeight: '800', marginTop: 16, marginBottom: 4 },
+  headingSub: { color: '#558B2F', fontSize: 11, marginBottom: 10 },
   vowCard: { marginBottom: 8 },
   vowFulfilled: { borderColor: '#FFD700', borderWidth: 1.5 },
   vowRow: { flexDirection: 'row', alignItems: 'center' },
-  vowTitle: { color: '#FFF', fontSize: 14, fontWeight: '600' },
-  vowLocation: { color: '#888', fontSize: 11, marginTop: 2 },
-  vowDone: { color: '#FFD700', fontSize: 11, marginTop: 6, fontWeight: '600' },
+  vowTitle: { color: '#1B5E20', fontSize: 14, fontWeight: '600' },
+  vowLocation: { color: '#558B2F', fontSize: 11, marginTop: 2 },
+  vowDone: { color: '#F57F17', fontSize: 11, marginTop: 6, fontWeight: '600' },
   spendCard: { marginBottom: 8 },
   spendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  spendCity: { color: '#FFF', fontSize: 12, width: 70 },
-  spendBarBg: { flex: 1, height: 8, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' },
-  spendBarFill: { height: '100%', backgroundColor: '#A3C9FF', borderRadius: 4 },
-  spendAmt: { color: '#A7F3D0', fontSize: 11, fontWeight: '700', width: 50, textAlign: 'right' },
+  spendCity: { color: '#1B5E20', fontSize: 12, width: 70 },
+  spendBarBg: { flex: 1, height: 8, backgroundColor: '#C8E6C9', borderRadius: 4, overflow: 'hidden' },
+  spendBarFill: { height: '100%', backgroundColor: '#4CAF50', borderRadius: 4 },
+  spendAmt: { color: '#2E7D32', fontSize: 11, fontWeight: '700', width: 50, textAlign: 'right' },
   badgesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
   badgeCard: { width: '47%', alignItems: 'center', padding: 14 },
-  badgeTitle: { color: '#FFF', fontSize: 12, fontWeight: '700', marginTop: 6, textAlign: 'center' },
-  badgeDesc: { color: '#888', fontSize: 10, textAlign: 'center', marginTop: 2 },
+  badgeTitle: { color: '#1B5E20', fontSize: 12, fontWeight: '700', marginTop: 6, textAlign: 'center' },
+  badgeDesc: { color: '#558B2F', fontSize: 10, textAlign: 'center', marginTop: 2 },
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'flex-end', padding: 16,
   },
   modalCard: { paddingBottom: 24 },
-  modalTitle: { color: '#FFF', fontSize: 18, fontWeight: '800', marginBottom: 16 },
-  inputLabel: { color: '#888', fontSize: 11, fontWeight: '600', marginBottom: 6 },
+  modalTitle: { color: '#1B5E20', fontSize: 18, fontWeight: '800', marginBottom: 16 },
+  inputLabel: { color: '#558B2F', fontSize: 11, fontWeight: '600', marginBottom: 6 },
   input: {
-    backgroundColor: '#2A2D3E', borderRadius: 14, padding: 12,
-    color: '#FFF', fontSize: 14, marginBottom: 12,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#C8E6C9', borderRadius: 14, padding: 12,
+    color: '#1B5E20', fontSize: 14, marginBottom: 12,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
   },
   emojiChip: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: '#2A2D3E',
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#C8E6C9',
     alignItems: 'center', justifyContent: 'center', marginRight: 8,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
   },
-  emojiChipActive: { backgroundColor: '#A3C9FF' },
+  emojiChipActive: { backgroundColor: '#4CAF50' },
   modalBtns: { flexDirection: 'row', gap: 10, marginTop: 4 },
 });

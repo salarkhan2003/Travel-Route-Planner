@@ -1,6 +1,6 @@
 import React, { useRef, useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
-import MapView, { Polyline } from 'react-native-maps';
+import MapView, { Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 import { useTripStore } from '../store/tripStore';
 import { TripNodeMarker } from './TripNode';
 import { TRANSPORT_COLORS } from '../constants/tripData';
@@ -31,6 +31,7 @@ export function MapCanvas() {
       <MapView
         ref={mapRef}
         style={styles.map}
+        provider={PROVIDER_DEFAULT}
         initialRegion={INDIA_REGION}
         onPress={handleMapPress}
         showsUserLocation={false}
