@@ -1,64 +1,136 @@
-// Mint Liquid Claymorphism Theme
-export const CLAY = {
-  // Surfaces
-  bg: '#E8F5E9',
-  bgDeep: '#C8E6C9',
-  surface: '#F1F8F2',
-  surfaceCard: '#DCEDC8',
+// ─── Liquid Clay Light Green — Design Tokens ─────────────────────────────────
+// Matches the "Nomad Canvas" reference UI exactly.
 
-  // Greens
-  mint: '#A5D6A7',
-  mintLight: '#E8F5E9',
-  mintMid: '#81C784',
-  mintDark: '#4CAF50',
-  mintDeep: '#1B5E20',
+export const C = {
+  // Page backgrounds
+  bg:          '#E8F5E9',   // main screen bg — soft mint
+  bgCard:      '#FFFFFF',   // card surface — pure white
+  bgChip:      '#F0FAF1',   // chip / pill bg
+  bgInput:     '#F4FBF4',   // input field bg
+  bgSection:   '#EBF5EC',   // section divider bg
 
-  // Accents
-  gold: '#FFD700',
-  coral: '#FF7043',
-  sky: '#81D4FA',
-  lavender: '#CE93D8',
-  amber: '#FFB300',
+  // Green palette
+  g50:  '#E8F5E9',
+  g100: '#C8E6C9',
+  g200: '#A5D6A7',
+  g300: '#81C784',
+  g400: '#66BB6A',
+  g500: '#4CAF50',   // primary action
+  g600: '#43A047',
+  g700: '#388E3C',
+  g800: '#2E7D32',
+  g900: '#1B5E20',   // darkest text
 
   // Text
-  text: '#1B5E20',
-  textMid: '#2E7D32',
-  textMuted: '#558B2F',
-  textLight: '#A5D6A7',
+  textH:    '#1B5E20',   // headings
+  textB:    '#2E7D32',   // body
+  textM:    '#558B2F',   // muted
+  textL:    '#81C784',   // light / placeholder
 
-  // Shadows (Liquid Clay recipe)
-  shadowOuter: 'rgba(129,199,132,0.45)',   // outer glow
-  shadowDark: '#81C784',                    // bottom-right depth
-  shadowLight: '#FFFFFF',                   // top-left sheen
-  shadowInner: 'rgba(129,199,132,0.3)',
+  // Accents (from reference images)
+  red:    '#E53935',
+  amber:  '#F57F17',
+  blue:   '#1565C0',
+  purple: '#6A1B9A',
+  gold:   '#F9A825',
 
-  radius: { sm: 16, md: 24, lg: 32, xl: 44, full: 999 },
+  // Clay shadow recipe — the 3D lift effect
+  // Apply as: shadowColor, shadowOffset {w:0,h:8}, shadowOpacity:1, shadowRadius:20, elevation:8
+  shadow:      'rgba(76,175,80,0.18)',   // card outer glow
+  shadowDeep:  'rgba(46,125,50,0.28)',   // deeper cards
+
+  // Border
+  border:      'rgba(255,255,255,0.95)',
+  borderCard:  'rgba(200,230,201,0.6)',
+
+  // Radius
+  r12: 12, r16: 16, r20: 20, r24: 24, r28: 28, r32: 32, r50: 50,
 };
 
-// Liquid Clay card style (light)
-export const LIQUID_CARD: object = {
-  backgroundColor: '#E8F5E9',
-  borderRadius: 28,
-  borderWidth: 1.5,
-  borderColor: 'rgba(255,255,255,0.9)',
-  shadowColor: 'rgba(129,199,132,0.4)',
-  shadowOffset: { width: 10, height: 10 },
+// ─── Reusable style objects ───────────────────────────────────────────────────
+
+/** Standard liquid-clay card — white surface, green shadow lift */
+export const CARD = {
+  backgroundColor: '#FFFFFF',
+  borderRadius: 24,
+  borderWidth: 1,
+  borderColor: 'rgba(200,230,201,0.5)',
+  shadowColor: 'rgba(76,175,80,0.18)',
+  shadowOffset: { width: 0, height: 8 },
   shadowOpacity: 1,
   shadowRadius: 20,
-  elevation: 8,
+  elevation: 6,
   padding: 16,
+  marginBottom: 12,
 };
 
-// Dark variant for contrast sections
-export const LIQUID_CARD_DARK: object = {
-  backgroundColor: '#1B3A1F',
-  borderRadius: 28,
-  borderWidth: 1,
-  borderColor: 'rgba(165,214,167,0.15)',
-  shadowColor: '#000',
-  shadowOffset: { width: 4, height: 4 },
-  shadowOpacity: 0.5,
-  shadowRadius: 12,
-  elevation: 8,
+/** Tinted card — mint green surface */
+export const CARD_TINT = {
+  backgroundColor: '#F0FAF1',
+  borderRadius: 24,
+  borderWidth: 1.5,
+  borderColor: 'rgba(255,255,255,0.95)',
+  shadowColor: 'rgba(76,175,80,0.22)',
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: 1,
+  shadowRadius: 16,
+  elevation: 5,
   padding: 16,
+  marginBottom: 12,
+};
+
+/** Primary button */
+export const BTN_PRIMARY = {
+  backgroundColor: '#4CAF50',
+  borderRadius: 50,
+  paddingVertical: 14,
+  paddingHorizontal: 28,
+  alignItems: 'center' as const,
+  borderWidth: 1.5,
+  borderColor: 'rgba(255,255,255,0.6)',
+  shadowColor: 'rgba(76,175,80,0.4)',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 1,
+  shadowRadius: 10,
+  elevation: 5,
+};
+
+/** Secondary / ghost button */
+export const BTN_GHOST = {
+  backgroundColor: '#F0FAF1',
+  borderRadius: 50,
+  paddingVertical: 14,
+  paddingHorizontal: 28,
+  alignItems: 'center' as const,
+  borderWidth: 1.5,
+  borderColor: 'rgba(255,255,255,0.95)',
+  shadowColor: 'rgba(76,175,80,0.15)',
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 1,
+  shadowRadius: 8,
+  elevation: 3,
+};
+
+/** Pill / chip */
+export const CHIP = {
+  paddingHorizontal: 14,
+  paddingVertical: 8,
+  borderRadius: 50,
+  backgroundColor: '#FFFFFF',
+  borderWidth: 1.5,
+  borderColor: 'rgba(200,230,201,0.7)',
+  shadowColor: 'rgba(76,175,80,0.12)',
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 1,
+  shadowRadius: 6,
+  elevation: 3,
+};
+
+export const CHIP_ACTIVE = {
+  ...CHIP,
+  backgroundColor: '#4CAF50',
+  borderColor: 'rgba(255,255,255,0.5)',
+  shadowColor: 'rgba(76,175,80,0.4)',
+  shadowRadius: 10,
+  elevation: 6,
 };
