@@ -1,7 +1,8 @@
 /**
- * ClayCard — Nomad Canvas Claymorphism
- * Double inner shadow: top-left white highlight + bottom-right dark green depth
- * Ultra-rounded corners (40px default)
+ * ClayCard — Mint Green Liquid Clay
+ * Card bg: #F1F8E9
+ * Outer shadow: 12px 12px 24px rgba(165,214,167,0.3)
+ * Border radius: min 40px
  */
 import React from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
@@ -22,8 +23,7 @@ export function ClayCard({ children, style, variant = 'white', color, radius, pa
     : variant === 'dark' ? s.dark
     : s.white;
   return (
-    <View style={[
-      base,
+    <View style={[base,
       color ? { backgroundColor: color } : {},
       radius ? { borderRadius: radius } : {},
       padding !== undefined ? { padding } : {},
@@ -34,45 +34,42 @@ export function ClayCard({ children, style, variant = 'white', color, radius, pa
   );
 }
 
+const OUTER_SHADOW = {
+  shadowColor: 'rgba(165,214,167,0.35)',
+  shadowOffset: { width: 10, height: 10 },
+  shadowOpacity: 1,
+  shadowRadius: 24,
+  elevation: 8,
+};
+
 const s = StyleSheet.create({
   white: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F1F8E9',
     borderRadius: 40,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.95)',
-    shadowColor: 'rgba(27,62,31,0.18)',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 1,
-    shadowRadius: 32,
-    elevation: 10,
+    ...OUTER_SHADOW,
     padding: 20,
     marginBottom: 16,
   },
   mint: {
-    backgroundColor: '#F1F8F2',
+    backgroundColor: '#E8F5E9',
     borderRadius: 40,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.95)',
-    shadowColor: 'rgba(27,62,31,0.14)',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 1,
-    shadowRadius: 28,
-    elevation: 8,
+    ...OUTER_SHADOW,
     padding: 20,
     marginBottom: 16,
   },
   green: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: '#1B5E20',
     borderRadius: 40,
     borderWidth: 1.5,
     borderColor: 'rgba(165,214,167,0.3)',
-    shadowColor: 'rgba(27,62,31,0.35)',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 1,
-    shadowRadius: 32,
-    elevation: 12,
-    padding: 20,
-    marginBottom: 16,
+    shadowColor: 'rgba(27,94,32,0.5)',
+    shadowOffset: { width: 8, height: 8 },
+    shadowOpacity: 1, shadowRadius: 24, elevation: 12,
+    padding: 20, marginBottom: 16,
   },
   dark: {
     backgroundColor: '#1B3A1F',
@@ -80,11 +77,8 @@ const s = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(165,214,167,0.2)',
     shadowColor: 'rgba(0,0,0,0.4)',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 1,
-    shadowRadius: 32,
-    elevation: 12,
-    padding: 20,
-    marginBottom: 16,
+    shadowOffset: { width: 8, height: 8 },
+    shadowOpacity: 1, shadowRadius: 24, elevation: 12,
+    padding: 20, marginBottom: 16,
   },
 });

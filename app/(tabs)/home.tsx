@@ -113,9 +113,14 @@ export default function HomeScreen() {
 
         {/* ── Header ── */}
         <View style={s.header}>
-          <View>
-            <Text style={s.appName}>Nomad Canvas</Text>
-            <Text style={s.sub}>Trip CEO · {members.length} members</Text>
+          <View style={s.headerLeft}>
+            <View style={s.logoCircle}>
+              <Text style={s.logoText}>R</Text>
+            </View>
+            <View>
+              <Text style={s.appName}>Roamio</Text>
+              <Text style={s.sub}>Trip CEO · {members.length} members</Text>
+            </View>
           </View>
           <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={s.avatar}>
             <Text style={s.avatarText}>{(leader?.name?.[0] ?? 'T').toUpperCase()}</Text>
@@ -359,7 +364,15 @@ const s = StyleSheet.create({
 
   // Header
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
-  appName: { fontSize: 26, fontWeight: '900', color: NC.onSurface, letterSpacing: -0.5 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logoCircle: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: NC.primary, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: NC.shadowButton, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 10, elevation: 6,
+  },
+  logoText: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
+  appName: { fontSize: 22, fontWeight: '900', color: '#1B5E20', letterSpacing: -0.5 },
   sub: { fontSize: 12, color: NC.onSurfaceVariant, marginTop: 2, fontWeight: '600' },
   avatar: {
     width: 48, height: 48, borderRadius: 24,

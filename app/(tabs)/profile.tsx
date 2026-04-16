@@ -66,7 +66,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Hero card */}
-        <ClayCard dark style={ps.heroCard}>
+        <ClayCard variant="green" style={ps.heroCard}>
           <View style={ps.heroRow}>
             <View style={ps.avatar}>
               <Text style={ps.avatarText}>{(leader?.name?.[0] ?? 'T').toUpperCase()}</Text>
@@ -236,17 +236,17 @@ const ps = StyleSheet.create({
   avatar: {
     width: 64, height: 64, borderRadius: 32,
     backgroundColor: NC.primary, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: NC.primaryFixed,
-    shadowColor: NC.shadowButton, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 1, shadowRadius: 14, elevation: 6,
+    borderWidth: 3, borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: NC.shadowButton, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 1, shadowRadius: 16, elevation: 8,
   },
   avatarText: { fontSize: 26, fontWeight: '900', color: NC.onPrimary },
-  heroName: { color: NC.onSurface, fontSize: 20, fontWeight: '900' },
-  heroRole: { color: NC.onSurfaceVariant, fontSize: 12, marginTop: 3, fontWeight: '600' },
-  heroSub: { color: NC.outline, fontSize: 11, marginTop: 2 },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingTop: 16, borderTopWidth: 1, borderTopColor: NC.surfaceLow },
+  heroName: { color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: -0.3 },
+  heroRole: { color: 'rgba(197,248,199,0.85)', fontSize: 12, marginTop: 3, fontWeight: '600' },
+  heroSub: { color: 'rgba(197,248,199,0.7)', fontSize: 11, marginTop: 2 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)' },
   statItem: { alignItems: 'center' },
-  statValue: { color: NC.primary, fontSize: 22, fontWeight: '900' },
-  statLabel: { color: NC.onSurfaceVariant, fontSize: 10, fontWeight: '600', marginTop: 2 },
+  statValue: { color: '#FFFFFF', fontSize: 22, fontWeight: '900' },
+  statLabel: { color: 'rgba(197,248,199,0.8)', fontSize: 10, fontWeight: '600', marginTop: 2 },
   sectionCard: { marginBottom: 4 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitle: { color: NC.onSurface, fontSize: 15, fontWeight: '800' },

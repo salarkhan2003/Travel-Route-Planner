@@ -148,7 +148,7 @@ export default function SettingsScreen() {
         <Text style={st.section}>About</Text>
         <ClayCard style={st.card}>
           <Text style={st.aboutTitle}>Spatial Travel Planner v1.0</Text>
-          <Text style={st.aboutSub}>Built for Travellers · India to Singapore</Text>
+          <Text style={st.aboutSub}>Built for Travellers · India to Global</Text>
         </ClayCard>
 
         <View style={{ height: 110 }} />

@@ -31,6 +31,9 @@ export const NC = {
   warning:  '#F57F17',
   info:     '#1565C0',
   tertiary: '#00695C',   // teal accent
+  secondary: '#47624b',  // olive green
+  secondaryContainer: '#DCEDC8',
+  onSecondaryContainer: '#33691E',
 
   // ── Clay shadow recipe ─────────────────────────────────────────────────────
   // Outer drop: rgba(27,62,31,0.18) y:16 blur:32

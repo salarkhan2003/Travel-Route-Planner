@@ -9,7 +9,12 @@ import { NC } from '../src/constants/theme';
 
 // Safe lottie — works if installed, falls back to animated illustration
 let LottieView: any = null;
-try { LottieView = require('lottie-react-native'); LottieView = LottieView.default ?? LottieView; } catch (_) {}
+try { 
+  LottieView = require('lottie-react-native').default; 
+  if (!LottieView) LottieView = require('lottie-react-native');
+} catch (e) {
+  console.log('Lottie not available:', e);
+}
 
 const { width, height } = Dimensions.get('window');
 
@@ -85,7 +90,7 @@ function SlideCard({ slide, isActive }: { slide: typeof SLIDES[0]; isActive: boo
   return (
     <Animated.View style={[ob.animCard, { borderColor: slide.cardBg, transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
       <View style={[ob.cardBgBlob, { backgroundColor: slide.cardBg }]} />
-      {LottieView ? (
+      {LottieView && slide.source ? (
         <LottieView
           ref={lottieRef}
           source={slide.source}
@@ -93,7 +98,7 @@ function SlideCard({ slide, isActive }: { slide: typeof SLIDES[0]; isActive: boo
           loop
           style={ob.lottie}
           resizeMode="contain"
-          hardwareAccelerationAndroid
+          hardwareAccelerationAndroid={true}
         />
       ) : (
         // Fallback animated illustration
@@ -140,7 +145,7 @@ export default function OnboardingScreen() {
         <View style={ob.topBar}>
           <View style={ob.brandRow}>
             <View style={[ob.brandDot, { backgroundColor: slide.accent }]} />
-            <Text style={[ob.brand, { color: slide.accent }]}>Nomad Canvas</Text>
+            <Text style={[ob.brand, { color: slide.accent }]}>Roamio</Text>
           </View>
           {!isLast && (
             <TouchableOpacity onPress={skip} style={[ob.skipBtn, { borderColor: slide.accent + '40' }]} activeOpacity={0.8}>
