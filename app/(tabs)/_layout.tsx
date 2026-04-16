@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet, Text, View } from 'react-native';
+import { NC } from '../../src/constants/theme';
 
 const TABS = [
   { name: 'home',      label: 'Home',    icon: '⌂',  iconActive: '⌂'  },
@@ -13,7 +14,8 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   const tab = TABS.find(t => t.name === name)!;
   return (
     <View style={[st.item, focused && st.itemActive]}>
-      {focused && <View style={st.activePill} />}
+      {/* Glowing green inner light for active */}
+      {focused && <View style={st.glow} />}
       <Text style={[st.icon, focused && st.iconActive]}>
         {focused ? tab.iconActive : tab.icon}
       </Text>
@@ -45,91 +47,56 @@ export default function TabLayout() {
   );
 }
 
-const BAR_H = 72;
-
 const st = StyleSheet.create({
   bar: {
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 28 : 16,
-    left: 20,
-    right: 20,
-    height: BAR_H,
+    left: 16, right: 16,
+    height: 72,
     borderRadius: 999,
     backgroundColor: 'transparent',
     borderTopWidth: 0,
-    elevation: 0,
-    shadowOpacity: 0,
+    elevation: 0, shadowOpacity: 0,
   },
-
-  // The actual visible bar — rendered via tabBarBackground
+  // Frosted glass + clay background
   barBg: {
-    flex: 1,
-    borderRadius: 999,
-    // Base white surface
-    backgroundColor: '#ffffff',
-    // 3D clay outer shadow — large soft drop
-    shadowColor: 'rgba(42,49,39,0.18)',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 1,
-    shadowRadius: 36,
-    elevation: 22,
-    // Top-left white highlight border (simulates inset light)
+    flex: 1, borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.88)',
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.95)',
-    // Bottom-right green depth border
-    borderBottomColor: 'rgba(57,101,63,0.12)',
-    borderRightColor: 'rgba(57,101,63,0.08)',
+    // Clay outer shadow
+    shadowColor: 'rgba(27,62,31,0.20)',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 1,
+    shadowRadius: 32,
+    elevation: 20,
   },
-
   item: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 999,
-    gap: 2,
-    minWidth: 52,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 10, paddingVertical: 8,
+    borderRadius: 999, gap: 1, minWidth: 54,
     position: 'relative',
   },
-
-  itemActive: {},
-
-  // The green pill behind the active icon
-  activePill: {
-    position: 'absolute',
-    top: 4,
-    left: 0,
-    right: 0,
-    bottom: 4,
+  // Active item pops out with clay pill
+  itemActive: {
+    backgroundColor: NC.primaryFixed,
+    // Soft green inner glow
+    shadowColor: NC.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
+    // Slight upward pop
+    transform: [{ translateY: -2 }],
+  },
+  // Glowing green inner light
+  glow: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     borderRadius: 999,
-    backgroundColor: '#c5f8c7',
-    // Inset clay pressed effect
-    shadowColor: 'rgba(57,101,63,0.2)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: 'rgba(165,214,167,0.35)',
   },
-
-  icon: {
-    fontSize: 20,
-    color: '#a8afa2',
-    lineHeight: 24,
-    zIndex: 1,
-  },
-  iconActive: {
-    color: '#39653f',
-    fontWeight: '900',
-  },
-  label: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#a8afa2',
-    letterSpacing: 0.2,
-    zIndex: 1,
-  },
-  labelActive: {
-    color: '#39653f',
-    fontWeight: '800',
-  },
+  icon: { fontSize: 20, color: NC.outline, lineHeight: 24, zIndex: 1 },
+  iconActive: { color: NC.primary, fontWeight: '900' },
+  label: { fontSize: 9, fontWeight: '700', color: NC.outline, letterSpacing: 0.2, zIndex: 1 },
+  labelActive: { color: NC.primary, fontWeight: '900' },
 });

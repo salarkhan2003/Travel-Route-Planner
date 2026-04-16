@@ -1,68 +1,57 @@
 /**
- * Nomad Canvas — Liquid Clay Design System
+ * Nomad Canvas — Claymorphism + Liquid Motion Design System
  * "Soft inflated plastic / digital clay" aesthetic
- * Ultra-rounded (40–50px), double inner shadows, mint green palette
+ * Primary: Mint Green #E8F5E9 | Accent: Deep Forest #1B5E20
  */
 
 export const NC = {
   // ── Page surfaces ──────────────────────────────────────────────────────────
-  background:    '#E8F5E9',   // main mint green bg
+  background:    '#E8F5E9',   // mint green page bg
   surfaceLowest: '#FFFFFF',   // pure white card
   surfaceLow:    '#F1F8F2',   // very light mint
-  surface:       '#E2EBD8',   // mid mint
-  surfaceHigh:   '#D4E6D6',   // deeper mint
+  surface:       '#DCF0DE',   // mid mint
+  surfaceHigh:   '#C8E6C9',   // deeper mint
 
-  // ── Primary forest green ───────────────────────────────────────────────────
-  primary:              '#1B5E20',   // deep forest green
-  primaryMid:           '#2E7D32',   // mid green
-  primaryLight:         '#4CAF50',   // bright green
-  primaryFixed:         '#C8E6C9',   // light mint (badges, active)
-  primaryFixedBright:   '#A5D6A7',   // brighter mint
-  onPrimary:            '#FFFFFF',
-  onPrimaryFixed:       '#1B5E20',
+  // ── Green palette ──────────────────────────────────────────────────────────
+  primary:       '#2E7D32',   // deep forest green (buttons, accents)
+  primaryLight:  '#4CAF50',   // medium green
+  primaryFixed:  '#A5D6A7',   // soft mint (active states)
+  primaryPale:   '#E8F5E9',   // palest mint
+  onPrimary:     '#FFFFFF',   // white on green
+  onPrimaryFixed:'#1B5E20',   // dark on pale mint
 
-  // ── Secondary ─────────────────────────────────────────────────────────────
-  secondary:            '#388E3C',
-  secondaryContainer:   '#DCEDC8',
-  onSecondaryContainer: '#1B5E20',
+  // ── Text ───────────────────────────────────────────────────────────────────
+  onSurface:        '#1B3A1F',   // darkest text
+  onSurfaceVariant: '#4A6741',   // muted green text
+  outline:          '#7CB87F',   // border / divider
+  outlineVariant:   '#B2D9B4',   // light border
 
-  // ── Tertiary teal ─────────────────────────────────────────────────────────
-  tertiary:             '#00695C',
-  tertiaryContainer:    '#B2DFDB',
-
-  // ── Text ──────────────────────────────────────────────────────────────────
-  onSurface:            '#1B3A1F',   // darkest text
-  onSurfaceVariant:     '#4A6741',   // muted green text
-  outline:              '#6A8F6D',
-  outlineVariant:       '#A5C8A8',
-
-  // ── Status ────────────────────────────────────────────────────────────────
+  // ── Semantic ───────────────────────────────────────────────────────────────
   error:    '#C62828',
   warning:  '#F57F17',
-  success:  '#2E7D32',
+  info:     '#1565C0',
+  tertiary: '#00695C',   // teal accent
 
   // ── Clay shadow recipe ─────────────────────────────────────────────────────
-  // Outer drop: rgba(27,94,32,0.18) at y:16 blur:32
-  // Inner highlight: top-left white rgba(255,255,255,0.9)
-  // Inner depth: bottom-right green rgba(27,94,32,0.15)
-  shadowOuter:   'rgba(27,94,32,0.18)',
-  shadowButton:  'rgba(27,94,32,0.22)',
-  shadowDeep:    'rgba(27,94,32,0.30)',
+  // Outer drop: rgba(27,62,31,0.18) y:16 blur:32
+  // Inner highlight (top-left): rgba(255,255,255,0.85)
+  // Inner depth (bottom-right): rgba(27,94,32,0.20)
+  shadowOuter:  'rgba(27,62,31,0.18)',
+  shadowButton: 'rgba(27,62,31,0.25)',
+  shadowDeep:   'rgba(27,62,31,0.35)',
 
-  // ── Radius — ultra-rounded clay ───────────────────────────────────────────
-  r12: 12, r16: 16, r20: 20, r24: 24,
+  // ── Radius — ultra-rounded clay ────────────────────────────────────────────
+  r8: 8, r12: 12, r16: 16, r20: 20, r24: 24,
   r32: 32, r40: 40, r48: 48, rFull: 999,
 } as const;
 
-// ── Reusable clay style fragments ─────────────────────────────────────────────
-
-/** Main clay card — white, ultra-rounded, deep green shadow */
+// ── Reusable clay card style ──────────────────────────────────────────────────
 export const CLAY_CARD = {
   backgroundColor: '#FFFFFF',
   borderRadius: 40,
   borderWidth: 1.5,
   borderColor: 'rgba(255,255,255,0.95)',
-  shadowColor: 'rgba(27,94,32,0.18)',
+  shadowColor: 'rgba(27,62,31,0.18)',
   shadowOffset: { width: 0, height: 16 },
   shadowOpacity: 1,
   shadowRadius: 32,
@@ -71,46 +60,33 @@ export const CLAY_CARD = {
   marginBottom: 16,
 } as const;
 
-/** Mint tinted clay card */
-export const CLAY_CARD_MINT = {
-  backgroundColor: '#F1F8F2',
-  borderRadius: 40,
-  borderWidth: 1.5,
-  borderColor: 'rgba(255,255,255,0.95)',
-  shadowColor: 'rgba(27,94,32,0.14)',
-  shadowOffset: { width: 0, height: 12 },
-  shadowOpacity: 1,
-  shadowRadius: 24,
-  elevation: 7,
-  padding: 20,
-  marginBottom: 16,
-} as const;
-
-/** Primary clay button */
+// ── Clay button ───────────────────────────────────────────────────────────────
 export const CLAY_BTN = {
   borderRadius: 999,
   paddingVertical: 16,
   paddingHorizontal: 32,
   alignItems: 'center' as const,
-  backgroundColor: '#1B5E20',
-  shadowColor: 'rgba(27,94,32,0.30)',
+  backgroundColor: '#2E7D32',
+  shadowColor: 'rgba(27,62,31,0.30)',
   shadowOffset: { width: 0, height: 10 },
   shadowOpacity: 1,
-  shadowRadius: 22,
+  shadowRadius: 20,
   elevation: 8,
   borderWidth: 1.5,
   borderColor: 'rgba(255,255,255,0.45)',
 } as const;
 
-/** Inset / recessed clay (progress bars, inputs) */
-export const CLAY_INSET = {
-  backgroundColor: '#E2EBD8',
-  borderRadius: 24,
+// ── Liquid progress bar track ─────────────────────────────────────────────────
+export const LIQUID_TRACK = {
+  height: 14,
+  borderRadius: 999,
+  backgroundColor: '#C8E6C9',
+  overflow: 'hidden' as const,
   borderWidth: 1,
-  borderColor: 'rgba(255,255,255,0.5)',
-  shadowColor: 'rgba(0,0,0,0.04)',
-  shadowOffset: { width: 0, height: 2 },
+  borderColor: 'rgba(255,255,255,0.8)',
+  shadowColor: 'rgba(27,62,31,0.12)',
+  shadowOffset: { width: 0, height: 3 },
   shadowOpacity: 1,
-  shadowRadius: 4,
-  elevation: 0,
+  shadowRadius: 6,
+  elevation: 2,
 } as const;
