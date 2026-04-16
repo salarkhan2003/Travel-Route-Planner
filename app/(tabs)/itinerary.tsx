@@ -524,19 +524,19 @@ const s = StyleSheet.create({
 
   tabBar: {
     flexDirection: 'row', marginHorizontal: 0, marginTop: 8, marginBottom: 4,
-    backgroundColor: NC.surfaceLow, borderRadius: 999, padding: 4,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
-    shadowColor: NC.shadowOuter, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1, shadowRadius: 14, elevation: 5,
+    backgroundColor: '#FFFFFF', borderRadius: 999, padding: 5,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.98)',
+    shadowColor: 'rgba(165,214,167,0.4)', shadowOffset: { width: 6, height: 6 },
+    shadowOpacity: 1, shadowRadius: 16, elevation: 8,
   },
-  tabBtn: { flex: 1, paddingVertical: 11, borderRadius: 999, alignItems: 'center' },
+  tabBtn: { flex: 1, paddingVertical: 12, borderRadius: 999, alignItems: 'center' },
   tabBtnActive: {
-    backgroundColor: NC.surfaceLowest,
-    shadowColor: NC.shadowOuter, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1, shadowRadius: 10, elevation: 4,
+    backgroundColor: '#2E7D32',
+    shadowColor: 'rgba(27,62,31,0.3)', shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1, shadowRadius: 10, elevation: 6,
   },
-  tabBtnText: { fontSize: 12, fontWeight: '700', color: NC.onSurfaceVariant },
-  tabBtnTextActive: { color: NC.primary, fontWeight: '900' },
+  tabBtnText: { fontSize: 12, fontWeight: '700', color: '#7CB87F' },
+  tabBtnTextActive: { color: '#FFF', fontWeight: '900' },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 14 },
   heading: { fontSize: 24, fontWeight: '900', color: NC.onSurface, letterSpacing: -0.5, marginTop: 16, marginBottom: 4 },
@@ -550,12 +550,12 @@ const s = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontWeight: '900', color: NC.onSurface, marginBottom: 8 },
   emptyDesc: { fontSize: 13, color: NC.onSurfaceVariant, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
   emptyBtn: {
-    backgroundColor: NC.primary, borderRadius: 999, paddingHorizontal: 28, paddingVertical: 14,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)',
-    shadowColor: NC.shadowButton, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1, shadowRadius: 20, elevation: 8,
+    backgroundColor: '#2E7D32', borderRadius: 999, paddingHorizontal: 32, paddingVertical: 16,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)',
+    shadowColor: 'rgba(165,214,167,0.45)', shadowOffset: { width: 8, height: 8 },
+    shadowOpacity: 1, shadowRadius: 20, elevation: 10,
   },
-  emptyBtnText: { color: '#FFF', fontSize: 14, fontWeight: '900' },
+  emptyBtnText: { color: '#FFF', fontSize: 15, fontWeight: '900', letterSpacing: 0.2 },
 
   // Budget card
   budgetCard: {

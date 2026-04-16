@@ -525,24 +525,30 @@ const s = StyleSheet.create({
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20 },
 
   searchRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 14, marginTop: 6, gap: 10 },
+  // Concave clay tube — sunken into background (reversed inner shadows)
   searchPill: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: 'rgba(241,248,242,0.97)', borderRadius: 50,
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.95)',
-    shadowColor: 'rgba(76,175,80,0.3)', shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 1, shadowRadius: 12, elevation: 10,
+    backgroundColor: '#DCF0DE',
+    borderRadius: 999,
+    paddingHorizontal: 18, paddingVertical: 13,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.6)',
+    // Inset shadow = concave/sunken look
+    shadowColor: 'rgba(27,62,31,0.15)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1, shadowRadius: 4, elevation: 1,
   },
-  searchIcon: { fontSize: 17, color: '#81C784' },
-  searchInput: { flex: 1, color: '#1B5E20', fontSize: 14, fontWeight: '500' },
+  searchIcon: { fontSize: 17, color: '#4CAF50' },
+  searchInput: { flex: 1, color: '#1B5E20', fontSize: 14, fontWeight: '600' },
   clearBtn: { color: '#81C784', fontSize: 16, paddingHorizontal: 4 },
+  // Location button — inflated clay circle
   locBtn: {
-    width: 46, height: 46, borderRadius: 23,
-    backgroundColor: 'rgba(241,248,242,0.97)',
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.95)',
-    shadowColor: 'rgba(76,175,80,0.3)', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1, shadowRadius: 10, elevation: 8,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.98)',
+    shadowColor: 'rgba(165,214,167,0.5)',
+    shadowOffset: { width: 6, height: 6 },
+    shadowOpacity: 1, shadowRadius: 12, elevation: 8,
   },
   locBtnText: { fontSize: 22, color: '#2E7D32', fontWeight: '900' },
 
@@ -563,16 +569,24 @@ const s = StyleSheet.create({
 
   filterScroll: { marginTop: 8 },
   filterContent: { paddingHorizontal: 14, paddingBottom: 6, gap: 8 },
+  // Clay filter chips — inflated pill style
   chip: {
-    paddingHorizontal: 16, paddingVertical: 9, borderRadius: 50,
-    backgroundColor: 'rgba(241,248,242,0.95)',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.95)',
-    shadowColor: 'rgba(76,175,80,0.2)', shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 1, shadowRadius: 6, elevation: 5,
+    paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.98)',
+    // Outer clay shadow
+    shadowColor: 'rgba(165,214,167,0.45)',
+    shadowOffset: { width: 6, height: 6 },
+    shadowOpacity: 1, shadowRadius: 12, elevation: 6,
   },
-  chipActive: { backgroundColor: '#4CAF50' },
-  chipText: { color: '#2E7D32', fontSize: 12, fontWeight: '700' },
-  chipTextActive: { color: '#FFF' },
+  chipActive: {
+    backgroundColor: '#2E7D32',
+    shadowColor: 'rgba(27,62,31,0.4)',
+    shadowOffset: { width: 4, height: 4 },
+    shadowRadius: 10, elevation: 8,
+  },
+  chipText: { color: '#2E7D32', fontSize: 12, fontWeight: '800' },
+  chipTextActive: { color: '#FFF', fontWeight: '900' },
 
   card: {
     position: 'absolute', bottom: 88, left: 14, right: 14,
@@ -604,13 +618,20 @@ const s = StyleSheet.create({
   cardCost: { color: '#1B5E20', fontSize: 18, fontWeight: '900' },
   cardActions: { flexDirection: 'row', gap: 10 },
   navBtn: {
-    backgroundColor: '#4CAF50', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 10,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)',
-    alignItems: 'center', justifyContent: 'center', minWidth: 90,
+    backgroundColor: '#2E7D32', borderRadius: 999, paddingHorizontal: 20, paddingVertical: 12,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)',
+    shadowColor: 'rgba(165,214,167,0.45)', shadowOffset: { width: 6, height: 6 },
+    shadowOpacity: 1, shadowRadius: 14, elevation: 8,
+    alignItems: 'center', justifyContent: 'center', minWidth: 100,
   },
-  navBtnText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
-  guideBtn: { backgroundColor: '#C8E6C9', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
-  guideBtnText: { color: '#1B5E20', fontSize: 13, fontWeight: '800' },
+  navBtnText: { color: '#FFF', fontSize: 13, fontWeight: '900' },
+  guideBtn: {
+    backgroundColor: '#FFFFFF', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 12,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.98)',
+    shadowColor: 'rgba(165,214,167,0.4)', shadowOffset: { width: 5, height: 5 },
+    shadowOpacity: 1, shadowRadius: 10, elevation: 5,
+  },
+  guideBtnText: { color: '#2E7D32', fontSize: 13, fontWeight: '900' },
 
   navHUD: {
     position: 'absolute', bottom: 100, left: 16, right: 16,
