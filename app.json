@@ -1,21 +1,24 @@
 {
   "expo": {
-    "name": "Trip Planner",
-    "slug": "spatial-travel-planner",
+    "name": "Roamio",
+    "slug": "roamio",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "spatialtravel",
+    "scheme": "roamio",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "icon": "./logo/Roamio_logo.png",
     "splash": {
+      "image": "./logo/Roamio_logo.png",
       "backgroundColor": "#E8F5E9",
       "resizeMode": "contain"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#4CAF50"
+        "foregroundImage": "./logo/Roamio_logo.png",
+        "backgroundColor": "#E8F5E9"
       },
-      "package": "com.spatialtravel.planner",
+      "package": "com.roamio.app",
       "versionCode": 1,
       "permissions": [
         "ACCESS_FINE_LOCATION",
@@ -25,11 +28,11 @@
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.spatialtravel.planner",
+      "bundleIdentifier": "com.roamio.app",
       "supportsTablet": false,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "We use your location to show nearby destinations and provide navigation.",
-        "NSLocationAlwaysUsageDescription": "We use your location for navigation."
+        "NSLocationWhenInUseUsageDescription": "Roamio uses your location to show nearby destinations and provide navigation.",
+        "NSLocationAlwaysUsageDescription": "Roamio uses your location for navigation."
       }
     },
     "plugins": [
@@ -37,7 +40,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow Trip Planner to use your location for navigation and nearby suggestions."
+          "locationWhenInUsePermission": "Allow Roamio to use your location for navigation and nearby suggestions."
         }
       ]
     ],
