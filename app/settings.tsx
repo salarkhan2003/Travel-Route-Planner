@@ -100,8 +100,16 @@ export default function SettingsScreen() {
           <Chips options={['Sleeper', '3AC', '2AC', '1AC', 'Economy', 'Business'] as const} value={draft.travelClass} onSelect={(v) => setDraft(d => ({ ...d, travelClass: v }))} />
           <View style={st.div} />
           <Text style={st.rowLabel}>Currency</Text>
-          <Text style={st.rowSub}>Applies to all price displays across the app</Text>
-          <Chips options={['INR', 'SGD', 'USD', 'EUR', 'GBP'] as const} value={draft.currency} onSelect={(v) => setDraft(d => ({ ...d, currency: v }))} />
+          <Text style={st.rowSub}>Select your preferred currency — applies to all price displays</Text>
+          <View style={st.currencyGrid}>
+            {CURRENCIES.map(c => (
+              <TouchableOpacity key={c.code} onPress={() => setDraft(d => ({ ...d, currency: c.code }))}
+                style={[st.currencyChip, draft.currency === c.code && st.currencyChipOn]}>
+                <Text style={st.currencyFlag}>{c.flag}</Text>
+                <Text style={[st.currencyCode, draft.currency === c.code && st.currencyCodeOn]}>{c.code}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
           <View style={st.div} />
           <Text style={st.rowLabel}>Distance</Text>
           <Chips options={['km', 'miles'] as const} value={draft.distanceUnit} onSelect={(v) => setDraft(d => ({ ...d, distanceUnit: v }))} />
@@ -171,6 +179,18 @@ const st = StyleSheet.create({
   chipOn: { backgroundColor: NC.primary, borderColor: 'rgba(255,255,255,0.4)', shadowColor: NC.shadowButton, shadowRadius: 10, elevation: 5 },
   chipText: { color: NC.onSurfaceVariant, fontSize: 12, fontWeight: '600' },
   chipTextOn: { color: '#fff', fontWeight: '800' },
+  // Currency grid
+  currencyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  currencyChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999,
+    backgroundColor: NC.surfaceLow, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)',
+    shadowColor: NC.shadowOuter, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 6, elevation: 2,
+  },
+  currencyChipOn: { backgroundColor: NC.primary, borderColor: 'rgba(255,255,255,0.4)', shadowColor: NC.shadowButton, elevation: 5 },
+  currencyFlag: { fontSize: 14 },
+  currencyCode: { fontSize: 11, fontWeight: '700', color: NC.onSurfaceVariant },
+  currencyCodeOn: { color: '#fff', fontWeight: '900' },
   rateRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 8 },
   rateFrom: { color: NC.onSurface, fontSize: 13, fontWeight: '600', flex: 1 },
   rateEq: { color: NC.outlineVariant, fontSize: 12 },

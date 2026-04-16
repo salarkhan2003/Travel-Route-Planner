@@ -7,21 +7,43 @@ export interface Currency {
 }
 
 export const CURRENCIES: Currency[] = [
-  { code: 'INR', symbol: '\u20B9', name: 'Indian Rupee',       flag: '\uD83C\uDDEE\uD83C\uDDF3', rateFromINR: 1 },
-  { code: 'SGD', symbol: 'S$',     name: 'Singapore Dollar',   flag: '\uD83C\uDDF8\uD83C\uDDEC', rateFromINR: 0.016 },
-  { code: 'USD', symbol: 'US$',    name: 'US Dollar',          flag: '\uD83C\uDDFA\uD83C\uDDF8', rateFromINR: 0.012 },
-  { code: 'EUR', symbol: '\u20AC', name: 'Euro',               flag: '\uD83C\uDDEA\uD83C\uDDFA', rateFromINR: 0.011 },
-  { code: 'GBP', symbol: '\u00A3', name: 'British Pound',      flag: '\uD83C\uDDEC\uD83C\uDDE7', rateFromINR: 0.0095 },
-  { code: 'AED', symbol: 'AED',    name: 'UAE Dirham',         flag: '\uD83C\uDDE6\uD83C\uDDEA', rateFromINR: 0.044 },
-  { code: 'JPY', symbol: '\u00A5', name: 'Japanese Yen',       flag: '\uD83C\uDDEF\uD83C\uDDF5', rateFromINR: 1.82 },
-  { code: 'AUD', symbol: 'A$',     name: 'Australian Dollar',  flag: '\uD83C\uDDE6\uD83C\uDDFA', rateFromINR: 0.018 },
-  { code: 'MYR', symbol: 'RM',     name: 'Malaysian Ringgit',  flag: '\uD83C\uDDF2\uD83C\uDDFE', rateFromINR: 0.053 },
+  { code: 'INR', symbol: '₹',   name: 'Indian Rupee',        flag: '🇮🇳', rateFromINR: 1 },
+  { code: 'SGD', symbol: 'S$',  name: 'Singapore Dollar',    flag: '🇸🇬', rateFromINR: 0.016 },
+  { code: 'USD', symbol: '$',   name: 'US Dollar',           flag: '🇺🇸', rateFromINR: 0.012 },
+  { code: 'EUR', symbol: '€',   name: 'Euro',                flag: '🇪🇺', rateFromINR: 0.011 },
+  { code: 'GBP', symbol: '£',   name: 'British Pound',       flag: '🇬🇧', rateFromINR: 0.0095 },
+  { code: 'AED', symbol: 'AED', name: 'UAE Dirham',          flag: '🇦🇪', rateFromINR: 0.044 },
+  { code: 'JPY', symbol: '¥',   name: 'Japanese Yen',        flag: '🇯🇵', rateFromINR: 1.82 },
+  { code: 'AUD', symbol: 'A$',  name: 'Australian Dollar',   flag: '🇦🇺', rateFromINR: 0.018 },
+  { code: 'MYR', symbol: 'RM',  name: 'Malaysian Ringgit',   flag: '🇲🇾', rateFromINR: 0.053 },
+  { code: 'THB', symbol: '฿',   name: 'Thai Baht',           flag: '🇹🇭', rateFromINR: 0.42 },
+  { code: 'CAD', symbol: 'C$',  name: 'Canadian Dollar',     flag: '🇨🇦', rateFromINR: 0.016 },
+  { code: 'CHF', symbol: 'Fr',  name: 'Swiss Franc',         flag: '🇨🇭', rateFromINR: 0.011 },
+  { code: 'HKD', symbol: 'HK$', name: 'Hong Kong Dollar',    flag: '🇭🇰', rateFromINR: 0.094 },
+  { code: 'NZD', symbol: 'NZ$', name: 'New Zealand Dollar',  flag: '🇳🇿', rateFromINR: 0.020 },
+  { code: 'SAR', symbol: 'SR',  name: 'Saudi Riyal',         flag: '🇸🇦', rateFromINR: 0.045 },
+  { code: 'QAR', symbol: 'QR',  name: 'Qatari Riyal',        flag: '🇶🇦', rateFromINR: 0.044 },
+  { code: 'KWD', symbol: 'KD',  name: 'Kuwaiti Dinar',       flag: '🇰🇼', rateFromINR: 0.0037 },
+  { code: 'IDR', symbol: 'Rp',  name: 'Indonesian Rupiah',   flag: '🇮🇩', rateFromINR: 196 },
+  { code: 'PHP', symbol: '₱',   name: 'Philippine Peso',     flag: '🇵🇭', rateFromINR: 0.68 },
+  { code: 'KRW', symbol: '₩',   name: 'South Korean Won',    flag: '🇰🇷', rateFromINR: 16.4 },
+  { code: 'CNY', symbol: '¥',   name: 'Chinese Yuan',        flag: '🇨🇳', rateFromINR: 0.087 },
+  { code: 'BDT', symbol: '৳',   name: 'Bangladeshi Taka',    flag: '🇧🇩', rateFromINR: 1.32 },
+  { code: 'PKR', symbol: 'Rs',  name: 'Pakistani Rupee',     flag: '🇵🇰', rateFromINR: 3.35 },
+  { code: 'LKR', symbol: 'Rs',  name: 'Sri Lankan Rupee',    flag: '🇱🇰', rateFromINR: 3.65 },
+  { code: 'NPR', symbol: 'Rs',  name: 'Nepalese Rupee',      flag: '🇳🇵', rateFromINR: 1.60 },
+  { code: 'BHD', symbol: 'BD',  name: 'Bahraini Dinar',      flag: '🇧🇭', rateFromINR: 0.0045 },
+  { code: 'OMR', symbol: 'OMR', name: 'Omani Rial',          flag: '🇴🇲', rateFromINR: 0.0046 },
+  { code: 'ZAR', symbol: 'R',   name: 'South African Rand',  flag: '🇿🇦', rateFromINR: 0.22 },
+  { code: 'TRY', symbol: '₺',   name: 'Turkish Lira',        flag: '🇹🇷', rateFromINR: 0.39 },
+  { code: 'RUB', symbol: '₽',   name: 'Russian Ruble',       flag: '🇷🇺', rateFromINR: 1.10 },
 ];
 
 export function convertFromINR(amountINR: number, toCurrency: Currency): string {
   const converted = amountINR * toCurrency.rateFromINR;
+  if (converted >= 1000000) return `${toCurrency.symbol}${(converted / 1000000).toFixed(1)}M`;
   if (converted >= 1000) return `${toCurrency.symbol}${(converted / 1000).toFixed(1)}k`;
-  if (converted < 1) return `${toCurrency.symbol}${converted.toFixed(2)}`;
+  if (converted < 1) return `${toCurrency.symbol}${converted.toFixed(3)}`;
   return `${toCurrency.symbol}${converted.toFixed(0)}`;
 }
 
