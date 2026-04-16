@@ -37,7 +37,7 @@ export default function SavedScreen() {
         {savedIds.length === 0 ? (
           <View style={s.emptyState}>
             <View style={s.emptyIcon}>
-              <Text style={s.emptyIconText}>♡</Text>
+              <Text style={s.emptyIconText}>+</Text>
             </View>
             <Text style={s.emptyTitle}>Nothing saved yet</Text>
             <Text style={s.emptyDesc}>Tap the heart on any city in the Explore tab to save it here.</Text>
@@ -69,7 +69,7 @@ export default function SavedScreen() {
                       <TouchableOpacity onPress={() => toggle(loc.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                         <View style={[s.heartWrap, isSaved(loc.id) && s.heartWrapActive]}>
                           <Text style={[s.heartIcon, isSaved(loc.id) && s.heartIconActive]}>
-                            {isSaved(loc.id) ? '♥' : '♡'}
+                            {isSaved(loc.id) ? 'Saved' : 'Save'}
                           </Text>
                         </View>
                       </TouchableOpacity>
@@ -105,43 +105,89 @@ export default function SavedScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: NC.background },
-  scroll: { paddingHorizontal: 16, paddingBottom: 20 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 20 },
-  heading: { fontSize: 26, fontWeight: '900', color: NC.onSurface, letterSpacing: -0.5 },
-  sub: { fontSize: 12, color: NC.onSurfaceVariant, marginTop: 2, fontWeight: '600' },
-  countBadge: { width: 44, height: 44, borderRadius: 22, backgroundColor: NC.primaryFixed, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)', shadowColor: NC.shadowOuter, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 10, elevation: 4 },
-  countText: { color: NC.onPrimaryFixed, fontSize: 16, fontWeight: '900' },
-  emptyState: { alignItems: 'center', paddingVertical: 64, paddingHorizontal: 32 },
-  emptyIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: NC.primaryFixed, alignItems: 'center', justifyContent: 'center', marginBottom: 20, shadowColor: NC.shadowOuter, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 1, shadowRadius: 20, elevation: 6 },
-  emptyIconText: { fontSize: 36, color: NC.primary },
-  emptyTitle: { fontSize: 20, fontWeight: '900', color: NC.onSurface, marginBottom: 8 },
-  emptyDesc: { fontSize: 14, color: NC.onSurfaceVariant, textAlign: 'center', lineHeight: 21 },
-  filterRow: { marginBottom: 18 },
-  chip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999, backgroundColor: NC.surfaceLowest, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', shadowColor: NC.shadowOuter, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 10, elevation: 3 },
-  chipOn: { backgroundColor: NC.primary, borderColor: 'rgba(255,255,255,0.4)', shadowColor: NC.shadowButton, elevation: 6 },
-  chipText: { color: NC.onSurfaceVariant, fontSize: 12, fontWeight: '700' },
-  chipTextOn: { color: '#fff', fontWeight: '800' },
-  emptyFilter: { paddingVertical: 32, alignItems: 'center' },
-  emptyFilterText: { color: NC.onSurfaceVariant, fontSize: 14 },
-  card: { backgroundColor: NC.surfaceLowest, borderRadius: 28, marginBottom: 14, flexDirection: 'row', overflow: 'hidden', shadowColor: 'rgba(42,49,39,0.12)', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 1, shadowRadius: 24, elevation: 7, borderWidth: 1, borderColor: 'rgba(255,255,255,0.9)' },
-  accentBar: { width: 5, borderTopLeftRadius: 28, borderBottomLeftRadius: 28 },
-  cardInner: { flex: 1, padding: 16 },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
-  cardCity: { fontSize: 20, fontWeight: '900', color: NC.onSurface, letterSpacing: -0.3 },
-  cardRegion: { fontSize: 12, color: NC.onSurfaceVariant, marginTop: 2 },
-  heartWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: NC.surfaceLow, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.8)' },
+  scroll: { paddingHorizontal: 18, paddingBottom: 20 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 22 },
+  heading: { fontSize: 28, fontWeight: '900', color: NC.onSurface, letterSpacing: -0.5 },
+  sub: { fontSize: 12, color: NC.onSurfaceVariant, marginTop: 3, fontWeight: '600' },
+  countBadge: {
+    width: 50, height: 50, borderRadius: 25, backgroundColor: NC.primaryFixed,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.9)',
+    borderBottomColor: 'rgba(165,214,167,0.35)',
+    borderRightColor: 'rgba(165,214,167,0.25)',
+    shadowColor: 'rgba(165,214,167,0.5)', shadowOffset: { width: 5, height: 5 },
+    shadowOpacity: 1, shadowRadius: 12, elevation: 8,
+  },
+  countText: { color: NC.onPrimaryFixed, fontSize: 18, fontWeight: '900' },
+  emptyState: { alignItems: 'center', paddingVertical: 72, paddingHorizontal: 32 },
+  emptyIcon: {
+    width: 90, height: 90, borderRadius: 45, backgroundColor: NC.primaryFixed,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 22,
+    borderWidth: 3, borderColor: 'rgba(255,255,255,0.9)',
+    borderBottomColor: 'rgba(165,214,167,0.35)',
+    shadowColor: 'rgba(165,214,167,0.5)', shadowOffset: { width: 6, height: 6 },
+    shadowOpacity: 1, shadowRadius: 18, elevation: 10,
+  },
+  emptyIconText: { fontSize: 40, color: NC.primary },
+  emptyTitle: { fontSize: 22, fontWeight: '900', color: NC.onSurface, marginBottom: 10 },
+  emptyDesc: { fontSize: 14, color: NC.onSurfaceVariant, textAlign: 'center', lineHeight: 22 },
+  filterRow: { marginBottom: 20 },
+  chip: {
+    paddingHorizontal: 20, paddingVertical: 11, borderRadius: 999,
+    backgroundColor: NC.surfaceLowest,
+    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
+    borderBottomColor: 'rgba(165,214,167,0.35)',
+    borderRightColor: 'rgba(165,214,167,0.25)',
+    shadowColor: 'rgba(165,214,167,0.45)', shadowOffset: { width: 5, height: 5 },
+    shadowOpacity: 1, shadowRadius: 12, elevation: 6,
+  },
+  chipOn: {
+    backgroundColor: NC.primary,
+    borderColor: 'rgba(255,255,255,0.4)',
+    borderBottomColor: 'rgba(27,94,32,0.3)',
+    shadowColor: 'rgba(27,94,32,0.4)', elevation: 8,
+  },
+  chipText: { color: NC.onSurfaceVariant, fontSize: 13, fontWeight: '700' },
+  chipTextOn: { color: '#fff', fontWeight: '900' },
+  emptyFilter: { paddingVertical: 36, alignItems: 'center' },
+  emptyFilterText: { color: NC.onSurfaceVariant, fontSize: 15 },
+  card: {
+    backgroundColor: NC.surfaceLowest, borderRadius: 36, marginBottom: 16,
+    flexDirection: 'row', overflow: 'hidden',
+    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
+    borderBottomColor: 'rgba(165,214,167,0.3)',
+    borderRightColor: 'rgba(165,214,167,0.2)',
+    shadowColor: 'rgba(165,214,167,0.5)', shadowOffset: { width: 8, height: 8 },
+    shadowOpacity: 1, shadowRadius: 24, elevation: 10,
+  },
+  accentBar: { width: 6, borderTopLeftRadius: 36, borderBottomLeftRadius: 36 },
+  cardInner: { flex: 1, padding: 18 },
+  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
+  cardCity: { fontSize: 22, fontWeight: '900', color: NC.onSurface, letterSpacing: -0.3 },
+  cardRegion: { fontSize: 12, color: NC.onSurfaceVariant, marginTop: 3 },
+  heartWrap: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: NC.surfaceLow,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.85)',
+    borderBottomColor: 'rgba(165,214,167,0.3)',
+    shadowColor: 'rgba(165,214,167,0.3)', shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1, shadowRadius: 6, elevation: 4,
+  },
   heartWrapActive: { backgroundColor: NC.primaryFixed },
-  heartIcon: { fontSize: 18, color: NC.onSurfaceVariant },
+  heartIcon: { fontSize: 20, color: NC.onSurfaceVariant },
   heartIconActive: { color: NC.primary },
-  cardDesc: { fontSize: 13, color: NC.onSurfaceVariant, lineHeight: 18, marginBottom: 12 },
-  tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
-  tag: { backgroundColor: NC.surfaceLow, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.8)' },
-  tagText: { color: NC.primary, fontSize: 11, fontWeight: '600' },
-  tagMore: { backgroundColor: NC.primaryFixed, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
-  tagMoreText: { color: NC.onPrimaryFixed, fontSize: 11, fontWeight: '700' },
+  cardDesc: { fontSize: 13, color: NC.onSurfaceVariant, lineHeight: 19, marginBottom: 14 },
+  tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 14 },
+  tag: {
+    backgroundColor: NC.surfaceLow, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)',
+  },
+  tagText: { color: NC.primary, fontSize: 11, fontWeight: '700' },
+  tagMore: { backgroundColor: NC.primaryFixed, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5 },
+  tagMoreText: { color: NC.onPrimaryFixed, fontSize: 11, fontWeight: '800' },
   cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardCost: { fontSize: 15, fontWeight: '900', color: NC.primary },
+  cardCost: { fontSize: 16, fontWeight: '900', color: NC.primary },
   tagsInline: { flexDirection: 'row', gap: 6 },
-  tagSmall: { backgroundColor: NC.secondaryContainer, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  tagSmallText: { color: NC.onSecondaryContainer, fontSize: 10, fontWeight: '700' },
+  tagSmall: { backgroundColor: NC.secondaryContainer, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  tagSmallText: { color: NC.onSecondaryContainer, fontSize: 10, fontWeight: '800' },
 });

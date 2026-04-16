@@ -42,7 +42,7 @@ export function TripNodeMarker({ node, index, onPress }: Props) {
             <Text style={styles.cityName}>{node.city}</Text>
             <Text style={[styles.costText, { color: borderColor }]}>${node.totalStayCost}</Text>
             <Text style={styles.nightsText}>{node.stayNights}N</Text>
-            {node.isLocked && <Text style={styles.lockIcon}>🔒</Text>}
+            {node.isLocked && <Text style={styles.lockIcon}>Lk</Text>}
           </View>
           <View style={[styles.pinTail, { borderTopColor: borderColor }]} />
         </TouchableOpacity>

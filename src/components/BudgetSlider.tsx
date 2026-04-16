@@ -19,7 +19,7 @@ export function BudgetSlider() {
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <Text style={styles.label}>💰 Budget</Text>
+        <Text style={styles.label}>Budget</Text>
         <Text style={[styles.budgetValue, isOverBudget && styles.overBudget]}>
           ${globalBudget}
         </Text>

@@ -14,7 +14,7 @@ import type { TripPath, TripNode } from '../../src/types/trip';
 import { NC } from '../../src/constants/theme';
 
 const MODE_ICON: Record<string, string> = {
-  train: '🚆', flight: '✈', bus: '🚌', road: '🚗',
+  train: 'TR', flight: 'FL', bus: 'BU', road: 'CA',
 };
 
 const STATUS_CONFIG: Record<TripStatus, { label: string; color: string; bg: string }> = {
@@ -98,7 +98,7 @@ function RouteDetailModal({
                     </View>
                   ))}
                   {day.stay ? (
-                    <Text style={md.stayText}>🏨 {day.stay}</Text>
+                    <Text style={md.stayText}>Stay: {day.stay}</Text>
                   ) : null}
                 </View>
               </View>
@@ -277,7 +277,7 @@ export default function ItineraryScreen() {
 
             {nodes.length === 0 ? (
               <View style={s.emptyState}>
-                <Text style={s.emptyIcon}>🗺️</Text>
+                <Text style={s.emptyIcon}>Map</Text>
                 <Text style={s.emptyTitle}>No routes yet</Text>
                 <Text style={s.emptyDesc}>Tap a city on the map to start building your trip, or pick a Popular route below.</Text>
                 <TouchableOpacity style={s.emptyBtn} onPress={() => setTab('popular')}>
@@ -447,7 +447,7 @@ export default function ItineraryScreen() {
             <Text style={s.heading}>Trip History</Text>
             {trips.length === 0 ? (
               <View style={s.emptyState}>
-                <Text style={s.emptyIcon}>📋</Text>
+                <Text style={s.emptyIcon}>List</Text>
                 <Text style={s.emptyTitle}>No trips yet</Text>
                 <Text style={s.emptyDesc}>Book a popular route or plan your own trip to see it here.</Text>
                 <TouchableOpacity style={s.emptyBtn} onPress={() => setTab('popular')}>
@@ -557,19 +557,25 @@ const s = StyleSheet.create({
   },
   emptyBtnText: { color: '#FFF', fontSize: 15, fontWeight: '900', letterSpacing: 0.2 },
 
-  // Budget card
+  // Budget card — inflated clay card
   budgetCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 24, padding: 16, marginBottom: 20,
-    shadowColor: 'rgba(76,175,80,0.18)', shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1, shadowRadius: 20, elevation: 6,
-    borderWidth: 1, borderColor: 'rgba(200,230,201,0.5)',
+    backgroundColor: '#FFFFFF', borderRadius: 36, padding: 18, marginBottom: 22,
+    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
+    borderBottomColor: 'rgba(165,214,167,0.35)',
+    borderRightColor: 'rgba(165,214,167,0.25)',
+    shadowColor: 'rgba(165,214,167,0.5)', shadowOffset: { width: 8, height: 8 },
+    shadowOpacity: 1, shadowRadius: 24, elevation: 10,
   },
-  budgetTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  budgetLabel: { fontSize: 11, color: '#558B2F', fontWeight: '600', marginBottom: 2 },
-  budgetAmt: { fontSize: 20, fontWeight: '900', color: '#1B5E20' },
-  progressBg: { height: 8, backgroundColor: '#C8E6C9', borderRadius: 4, overflow: 'hidden', marginBottom: 6 },
-  progressFill: { height: '100%', borderRadius: 4 },
-  budgetRemain: { fontSize: 12, color: '#558B2F', fontWeight: '600' },
+  budgetTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  budgetLabel: { fontSize: 12, color: '#558B2F', fontWeight: '700', marginBottom: 2 },
+  budgetAmt: { fontSize: 22, fontWeight: '900', color: '#1B5E20' },
+  progressBg: {
+    height: 14, backgroundColor: '#DCF0DE', borderRadius: 999, overflow: 'hidden', marginBottom: 8,
+    borderWidth: 1.5, borderColor: 'rgba(165,214,167,0.4)',
+    borderTopColor: 'rgba(27,94,32,0.06)',
+  },
+  progressFill: { height: '100%', borderRadius: 999 },
+  budgetRemain: { fontSize: 13, color: '#558B2F', fontWeight: '700' },
 
   // Stop card
   stopRow: { flexDirection: 'row', marginBottom: 0 },
@@ -583,59 +589,69 @@ const s = StyleSheet.create({
   stopNum: { color: '#FFF', fontSize: 13, fontWeight: '900' },
   stopStem: { width: 2, flex: 1, backgroundColor: '#C8E6C9', marginTop: 4, minHeight: 16 },
   stopBody: {
-    flex: 1, backgroundColor: '#FFFFFF', borderRadius: 20, padding: 14,
-    marginLeft: 10, marginBottom: 0,
-    shadowColor: 'rgba(76,175,80,0.14)', shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1, shadowRadius: 14, elevation: 4,
-    borderWidth: 1, borderColor: 'rgba(200,230,201,0.5)',
+    flex: 1, backgroundColor: '#FFFFFF', borderRadius: 28, padding: 16,
+    marginLeft: 12, marginBottom: 0,
+    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
+    borderBottomColor: 'rgba(165,214,167,0.3)',
+    borderRightColor: 'rgba(165,214,167,0.2)',
+    shadowColor: 'rgba(165,214,167,0.45)', shadowOffset: { width: 6, height: 6 },
+    shadowOpacity: 1, shadowRadius: 16, elevation: 6,
   },
-  stopTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
-  stopCity: { fontSize: 17, fontWeight: '900', color: '#1B5E20', letterSpacing: -0.3 },
-  stopMeta: { fontSize: 12, color: '#558B2F', marginTop: 2 },
-  stopCost: { fontSize: 16, fontWeight: '900', color: '#2E7D32' },
-  stopCostLabel: { fontSize: 10, color: '#81C784', marginTop: 1 },
-  stopDesc: { fontSize: 12, color: '#2E7D32', lineHeight: 17, marginBottom: 10 },
-  tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tag: { backgroundColor: '#F0FAF1', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(200,230,201,0.7)' },
-  tagText: { color: '#2E7D32', fontSize: 11, fontWeight: '600' },
+  stopTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
+  stopCity: { fontSize: 18, fontWeight: '900', color: '#1B5E20', letterSpacing: -0.3 },
+  stopMeta: { fontSize: 12, color: '#558B2F', marginTop: 3 },
+  stopCost: { fontSize: 17, fontWeight: '900', color: '#2E7D32' },
+  stopCostLabel: { fontSize: 10, color: '#81C784', marginTop: 2 },
+  stopDesc: { fontSize: 13, color: '#2E7D32', lineHeight: 18, marginBottom: 12 },
+  tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  tag: { backgroundColor: '#F0FAF1', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)' },
+  tagText: { color: '#2E7D32', fontSize: 11, fontWeight: '700' },
   tagMore: { backgroundColor: '#C8E6C9' },
-  tagMoreText: { color: '#1B5E20', fontSize: 11, fontWeight: '700' },
+  tagMoreText: { color: '#1B5E20', fontSize: 11, fontWeight: '800' },
 
   // Path row
   pathRow: {
     flexDirection: 'row', alignItems: 'center',
-    marginLeft: 36, marginVertical: 6,
-    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 12,
-    shadowColor: 'rgba(76,175,80,0.12)', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1, shadowRadius: 10, elevation: 3,
-    borderWidth: 1, borderColor: 'rgba(200,230,201,0.5)', gap: 10,
+    marginLeft: 38, marginVertical: 6,
+    backgroundColor: '#FFFFFF', borderRadius: 22, padding: 14,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)',
+    borderBottomColor: 'rgba(165,214,167,0.3)',
+    shadowColor: 'rgba(165,214,167,0.35)', shadowOffset: { width: 5, height: 5 },
+    shadowOpacity: 1, shadowRadius: 12, elevation: 5,
+    gap: 12,
   },
-  pathIconWrap: { width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  pathIconText: { fontSize: 16 },
-  pathMode: { fontSize: 13, fontWeight: '800', color: '#1B5E20' },
-  pathLabel: { fontSize: 11, color: '#558B2F', marginTop: 1 },
-  pathCost: { fontSize: 14, fontWeight: '900', color: '#2E7D32' },
-  pathDur: { fontSize: 11, color: '#81C784', marginTop: 1 },
-  pathChevron: { fontSize: 20, color: '#C8E6C9' },
+  pathIconWrap: {
+    width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)',
+  },
+  pathIconText: { fontSize: 17 },
+  pathMode: { fontSize: 14, fontWeight: '900', color: '#1B5E20' },
+  pathLabel: { fontSize: 12, color: '#558B2F', marginTop: 2 },
+  pathCost: { fontSize: 15, fontWeight: '900', color: '#2E7D32' },
+  pathDur: { fontSize: 12, color: '#81C784', marginTop: 2 },
+  pathChevron: { fontSize: 22, color: '#C8E6C9' },
 
   // Summary
   summaryCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 24, padding: 16, marginTop: 12,
-    shadowColor: 'rgba(76,175,80,0.18)', shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1, shadowRadius: 20, elevation: 6,
-    borderWidth: 1, borderColor: 'rgba(200,230,201,0.5)',
+    backgroundColor: '#FFFFFF', borderRadius: 32, padding: 18, marginTop: 14,
+    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
+    borderBottomColor: 'rgba(165,214,167,0.3)',
+    borderRightColor: 'rgba(165,214,167,0.2)',
+    shadowColor: 'rgba(165,214,167,0.5)', shadowOffset: { width: 8, height: 8 },
+    shadowOpacity: 1, shadowRadius: 24, elevation: 10,
   },
-  summaryTitle: { fontSize: 14, fontWeight: '900', color: '#1B5E20', marginBottom: 12 },
+  summaryTitle: { fontSize: 15, fontWeight: '900', color: '#1B5E20', marginBottom: 14 },
   summaryRow: {
     flexDirection: 'row', justifyContent: 'space-between',
-    paddingVertical: 10, paddingHorizontal: 12,
-    backgroundColor: '#F0FAF1', borderRadius: 14, marginBottom: 6,
+    paddingVertical: 12, paddingHorizontal: 14,
+    backgroundColor: '#F0FAF1', borderRadius: 18, marginBottom: 7,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)',
   },
-  summaryRowHL: { backgroundColor: '#C8E6C9', borderWidth: 1, borderColor: 'rgba(255,255,255,0.8)' },
-  summaryLabel: { fontSize: 13, color: '#558B2F', fontWeight: '500' },
-  summaryLabelHL: { color: '#1B5E20', fontWeight: '700' },
-  summaryVal: { fontSize: 13, fontWeight: '700', color: '#1B5E20' },
-  summaryValHL: { fontSize: 15, fontWeight: '900', color: '#2E7D32' },
+  summaryRowHL: { backgroundColor: '#C8E6C9', borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)' },
+  summaryLabel: { fontSize: 14, color: '#558B2F', fontWeight: '600' },
+  summaryLabelHL: { color: '#1B5E20', fontWeight: '800' },
+  summaryVal: { fontSize: 14, fontWeight: '800', color: '#1B5E20' },
+  summaryValHL: { fontSize: 16, fontWeight: '900', color: '#2E7D32' },
 
   // Popular route card
   routeCard: {

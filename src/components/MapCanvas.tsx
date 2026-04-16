@@ -13,7 +13,7 @@ const INDIA_REGION = {
 };
 
 export function MapCanvas() {
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<InstanceType<typeof MapView>>(null);
   const nodes = useTripStore((s) => s.nodes);
   const paths = useTripStore((s) => s.paths);
   const selectPath = useTripStore((s) => s.selectPath);

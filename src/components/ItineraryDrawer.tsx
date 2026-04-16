@@ -44,12 +44,12 @@ export function ItineraryDrawer() {
       <TouchableOpacity style={styles.handle} onPress={toggle} activeOpacity={0.8}>
         <View style={styles.handleBar} />
         <View style={styles.headerRow}>
-          <Text style={styles.headerTitle}>🗺️ Itinerary · {nodes.length} cities</Text>
+          <Text style={styles.headerTitle}>Itinerary -- {nodes.length} cities</Text>
           <View style={styles.headerRight}>
             <Text style={styles.totalCost}>${spentBudget.toFixed(0)} total</Text>
             {lockedCount > 0 && (
               <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{lockedCount} 🔒</Text>
+                <Text style={styles.cartBadgeText}>{lockedCount} Lk</Text>
               </View>
             )}
             <Text style={styles.chevron}>{expanded ? '▼' : '▲'}</Text>
@@ -84,7 +84,7 @@ export function ItineraryDrawer() {
                       <Text style={styles.nodeIndexText}>{index + 1}</Text>
                     </View>
                     <View style={styles.nodeInfo}>
-                      <Text style={styles.nodeCityText}>{node.city}{node.isLocked ? ' 🔒' : ''}</Text>
+                      <Text style={styles.nodeCityText}>{node.city}{node.isLocked ? ' [Lk]' : ''}</Text>
                       <Text style={styles.nodeSubText}>{node.stayNights} nights · ${node.hotelCostPerNight}/night</Text>
                     </View>
                     <Text style={styles.nodeCost}>${node.totalStayCost}</Text>
@@ -114,7 +114,7 @@ export function ItineraryDrawer() {
             {lockedCount > 0 && (
               <TouchableOpacity style={styles.checkoutBtn} activeOpacity={0.85}>
                 <Text style={styles.checkoutText}>
-                  🛒 Checkout {lockedCount} locked stop{lockedCount > 1 ? 's' : ''}
+                  Checkout {lockedCount} locked stop{lockedCount > 1 ? 's' : ''}
                 </Text>
               </TouchableOpacity>
             )}

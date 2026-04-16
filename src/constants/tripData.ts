@@ -94,8 +94,8 @@ export const TRANSPORT_COLORS: Record<string, string> = {
 };
 
 export const TRANSPORT_ICONS: Record<string, string> = {
-  flight: '✈️',
-  train: '🚆',
-  road: '🚗',
-  bus: '🚌',
+  flight: 'FL',
+  train: 'TR',
+  road: 'CA',
+  bus: 'BU',
 };
