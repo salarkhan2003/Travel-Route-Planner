@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, TouchableOpacity } from 'react-native';
 
 interface Props {
   value: boolean;
@@ -7,41 +7,45 @@ interface Props {
   activeColor?: string;
 }
 
-export function ClayToggle({ value, onToggle, activeColor = '#81C784' }: Props) {
-  const translateX = useRef(new Animated.Value(value ? 26 : 2)).current;
+export function ClayToggle({ value, onToggle, activeColor = '#1B5E20' }: Props) {
+  const translateX = useRef(new Animated.Value(value ? 28 : 3)).current;
+  const trackColor = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.spring(translateX, {
-      toValue: value ? 26 : 2,
-      useNativeDriver: true,
-      damping: 15,
-      stiffness: 120,
-    }).start();
+    Animated.parallel([
+      Animated.spring(translateX, { toValue: value ? 28 : 3, useNativeDriver: true, damping: 14, stiffness: 180 }),
+      Animated.timing(trackColor, { toValue: value ? 1 : 0, duration: 200, useNativeDriver: false }),
+    ]).start();
   }, [value]);
+
+  const bg = trackColor.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#D4E6D6', activeColor],
+  });
 
   return (
     <TouchableOpacity onPress={onToggle} activeOpacity={0.9}>
-      <View style={[styles.track, { backgroundColor: value ? activeColor : '#C8E6C9' }]}>
-        <Animated.View style={[styles.thumb, { transform: [{ translateX }] }]} />
-      </View>
+      <Animated.View style={[s.track, { backgroundColor: bg }]}>
+        <Animated.View style={[s.thumb, { transform: [{ translateX }] }]} />
+      </Animated.View>
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   track: {
-    width: 56, height: 30, borderRadius: 15,
+    width: 60, height: 32, borderRadius: 16,
     justifyContent: 'center',
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)',
-    shadowColor: 'rgba(129,199,132,0.4)',
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1, shadowRadius: 6, elevation: 3,
+    shadowColor: 'rgba(27,94,32,0.20)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1, shadowRadius: 8, elevation: 4,
   },
   thumb: {
-    width: 24, height: 24, borderRadius: 12,
-    backgroundColor: '#FFF',
-    shadowColor: '#81C784',
-    shadowOffset: { width: 1, height: 2 },
-    shadowOpacity: 0.4, shadowRadius: 4, elevation: 4,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: '#FFFFFF',
+    shadowColor: 'rgba(27,94,32,0.25)',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 1, shadowRadius: 6, elevation: 5,
   },
 });

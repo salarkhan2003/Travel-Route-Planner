@@ -1,12 +1,6 @@
-/**
- * ClayButton — Nomad Canvas clay-button recipe
- * box-shadow: 10px 20px 30px rgba(42,49,39,0.08),
- *             inset 2px 2px 4px rgba(255,255,255,0.8),
- *             inset -4px -4px 8px rgba(52,96,59,0.2)
- * :active → inset shadow inverts (pressed clay)
- */
 import React, { useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
+import { NC } from '../../constants/theme';
 
 interface Props {
   label: string;
@@ -16,21 +10,22 @@ interface Props {
   style?: ViewStyle;
   small?: boolean;
   ghost?: boolean;
+  emoji?: string;
 }
 
-export function ClayButton({ label, onPress, color, textColor, style, small, ghost }: Props) {
+export function ClayButton({ label, onPress, color, textColor, style, small, ghost, emoji }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
 
   const onPressIn = () =>
-    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, damping: 20, stiffness: 300 }).start();
+    Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, damping: 20, stiffness: 300 }).start();
 
   const onPressOut = () => {
     Animated.spring(scale, { toValue: 1, useNativeDriver: true, damping: 20, stiffness: 300 }).start();
     onPress();
   };
 
-  const bg = color ?? (ghost ? '#f2f9ea' : '#39653f');
-  const fg = textColor ?? (ghost ? '#39653f' : '#cfffcf');
+  const bg = color ?? (ghost ? NC.surfaceLow : NC.primary);
+  const fg = textColor ?? (ghost ? NC.primary : NC.onPrimary);
 
   return (
     <Animated.View style={[{ transform: [{ scale }] }, style]}>
@@ -38,14 +33,11 @@ export function ClayButton({ label, onPress, color, textColor, style, small, gho
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         activeOpacity={1}
-        style={[
-          s.btn,
-          small && s.small,
-          ghost && s.ghost,
-          { backgroundColor: bg },
-        ]}
+        style={[s.btn, small && s.small, ghost && s.ghost, { backgroundColor: bg }]}
       >
-        <Text style={[s.label, small && s.smallLabel, { color: fg }]}>{label}</Text>
+        <Text style={[s.label, small && s.smallLabel, { color: fg }]}>
+          {emoji ? `${emoji}  ` : ''}{label}
+        </Text>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -53,26 +45,25 @@ export function ClayButton({ label, onPress, color, textColor, style, small, gho
 
 const s = StyleSheet.create({
   btn: {
-    borderRadius: 50,
+    borderRadius: 999,
     paddingVertical: 16,
     paddingHorizontal: 32,
     alignItems: 'center',
-    // Clay button outer shadow
-    shadowColor: 'rgba(42,49,39,0.12)',
-    shadowOffset: { width: 0, height: 8 },
+    shadowColor: 'rgba(27,94,32,0.30)',
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
+    shadowRadius: 22,
+    elevation: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.45)',
   },
   small: { paddingVertical: 10, paddingHorizontal: 20 },
   ghost: {
     borderWidth: 1.5,
-    borderColor: 'rgba(57,101,63,0.3)',
-    shadowColor: 'rgba(42,49,39,0.06)',
+    borderColor: 'rgba(27,94,32,0.25)',
+    shadowColor: 'rgba(27,94,32,0.10)',
     shadowRadius: 10,
-    elevation: 2,
+    elevation: 3,
   },
   label: { fontSize: 15, fontWeight: '800', letterSpacing: 0.2 },
   smallLabel: { fontSize: 13 },
