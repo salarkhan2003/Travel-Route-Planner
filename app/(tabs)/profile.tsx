@@ -4,11 +4,13 @@ import {
   TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ClayCard } from '../../src/components/clay/ClayCard';
 import { ClayButton } from '../../src/components/clay/ClayButton';
 import { useFamilyStore } from '../../src/store/familyStore';
 import { useTripStore } from '../../src/store/tripStore';
+import { useToastStore } from '../../src/store/toastStore';
 import { NC } from '../../src/constants/theme';
 
 const BADGES = [
@@ -27,14 +29,21 @@ export default function ProfileScreen() {
   const fulfillVow = useFamilyStore((s) => s.fulfillVow);
   const addMember = useFamilyStore((s) => s.addMember);
   const removeMember = useFamilyStore((s) => s.removeMember);
+  const addVow = useFamilyStore((s) => s.addVow);
+  const removeVow = useFamilyStore((s) => s.removeVow);
   const nodes = useTripStore((s) => s.nodes);
   const spentBudget = useTripStore((s) => s.spentBudget);
+  const showToast = useToastStore((s) => s.showToast);
 
   const [showMembers, setShowMembers] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newRelation, setNewRelation] = useState('');
   const [newAge, setNewAge] = useState('');
+
+  const [showAddVow, setShowAddVow] = useState(false);
+  const [vowTitle, setVowTitle] = useState('');
+  const [vowLoc, setVowLoc] = useState('');
 
   const leader = members.find((m) => m.isLeader);
   const totalNights = nodes.reduce((s, n) => s + n.stayNights, 0);
@@ -147,10 +156,15 @@ export default function ProfileScreen() {
                     {vow.fulfilled ? 'Done' : 'Pending'}
                   </Text>
                 </View>
+                <TouchableOpacity style={{ marginLeft: 12 }} onPress={() => removeVow(vow.id)}>
+                  <Ionicons name="trash-outline" size={18} color={NC.error} />
+                </TouchableOpacity>
               </View>
             </ClayCard>
           </TouchableOpacity>
         ))}
+        {vows.length === 0 && <Text style={ps.emptyText}>No promises added yet</Text>}
+        <ClayButton label="Add Promise" onPress={() => setShowAddVow(true)} color={NC.surfaceLow} textColor={NC.primary} small style={{ marginBottom: 12 }} />
 
         {/* Spend overview */}
         <Text style={ps.heading}>Spend Overview</Text>
@@ -185,10 +199,10 @@ export default function ProfileScreen() {
         </View>
 
         <ClayButton label="Broadcast to Family"
-          onPress={() => Alert.alert('Broadcast', 'Live location sent to all members!')}
+          onPress={() => showToast('Live location securely broadcasted!', 'radio')}
           color={NC.primary} style={{ marginTop: 8 }} />
         <ClayButton label="Share Itinerary"
-          onPress={() => Alert.alert('Share', 'Itinerary link copied!')}
+          onPress={() => showToast('Itinerary securely copied to clipboard', 'copy')}
           color={NC.primaryFixed} textColor={NC.onPrimaryFixed} style={{ marginTop: 10 }} />
 
         <View style={{ height: 110 }} />
@@ -212,6 +226,28 @@ export default function ProfileScreen() {
               <ClayButton label="Cancel" onPress={() => setShowAddModal(false)}
                 color={NC.surfaceLow} textColor={NC.onSurface} small />
               <ClayButton label="Add Member" onPress={handleAddMember} color={NC.primary} small />
+            </View>
+          </ClayCard>
+        </View>
+      </Modal>
+
+      {/* Add Promise Modal */}
+      <Modal visible={showAddVow} transparent animationType="slide">
+        <View style={ps.modalOverlay}>
+          <ClayCard style={ps.modalCard}>
+            <Text style={ps.modalTitle}>Trip Promise</Text>
+            <Text style={ps.inputLabel}>Promise (e.g. Try Local Food)</Text>
+            <TextInput style={ps.input} value={vowTitle} onChangeText={setVowTitle}
+              placeholder="Promise title" placeholderTextColor={NC.outlineVariant} />
+            <Text style={ps.inputLabel}>Location</Text>
+            <TextInput style={ps.input} value={vowLoc} onChangeText={setVowLoc}
+              placeholder="e.g. Singapore" placeholderTextColor={NC.outlineVariant} />
+            <View style={ps.modalBtns}>
+              <ClayButton label="Cancel" onPress={() => setShowAddVow(false)}
+                color={NC.surfaceLow} textColor={NC.onSurface} small />
+              <ClayButton label="Save Promise" onPress={() => {
+                if (vowTitle) { addVow({ title: vowTitle, location: vowLoc || 'Unknown', emoji: 'T' }); setVowTitle(''); setVowLoc(''); setShowAddVow(false); }
+              }} color={NC.primary} small />
             </View>
           </ClayCard>
         </View>

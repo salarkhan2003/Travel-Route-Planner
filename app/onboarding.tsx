@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NC } from '../src/constants/theme';
 
 // Lottie animation support
@@ -25,7 +26,7 @@ const SLIDES = [
     id: '1', title: 'Plan Your\nDream Trip',
     subtitle: 'Build beautiful itineraries across India & Singapore with smart route planning.',
     source: require('../animations/Man Planning A Sightseeing Route.json'),
-    accent: '#2E7D32', cardBg: '#C8E6C9', icon: '◎',
+    accent: '#2E7D32', cardBg: '#C8E6C9', icon: 'P',
   },
   {
     id: '2', title: 'Fly & Explore\nThe World',
@@ -37,19 +38,25 @@ const SLIDES = [
     id: '3', title: 'Ride the Rails\nAcross India',
     subtitle: 'Plan your rail journey, compare classes and book the perfect seat instantly.',
     source: require('../animations/Train Minimalist Animation.json'),
-    accent: '#2E7D32', cardBg: '#C8E6C9', icon: '≡',
+    accent: '#2E7D32', cardBg: '#C8E6C9', icon: 'TR',
   },
   {
-    id: '4', title: 'Travel as\nOne Family',
+    id: '4', title: 'Bus Routes\nEverywhere',
+    subtitle: 'Discover intercity bus routes, compare prices and travel comfortably.',
+    source: require('../animations/BUS.json'),
+    accent: '#1565C0', cardBg: '#BBDEFB', icon: 'BU',
+  },
+  {
+    id: '5', title: 'Travel as\nOne Family',
     subtitle: 'Manage all members, split expenses, broadcast alerts and stay in sync.',
     source: require('../animations/Adding Guests Interaction.json'),
-    accent: '#388E3C', cardBg: '#DCEDC8', icon: '◈',
+    accent: '#388E3C', cardBg: '#DCEDC8', icon: 'FM',
   },
   {
-    id: '5', title: "Let's Get\nStarted",
+    id: '6', title: "Let's Get\nStarted",
     subtitle: 'Your journey begins now. Open Nomad Canvas and start planning.',
-    source: require('../animations/Hey lets get started.json'),
-    accent: '#1B5E20', cardBg: '#A5D6A7', icon: '▶',
+    source: require('../animations/airport.json'),
+    accent: '#1B5E20', cardBg: '#A5D6A7', icon: 'GO',
   },
 ];
 
@@ -101,10 +108,12 @@ function SlideCard({ slide, isActive }: { slide: typeof SLIDES[0]; isActive: boo
         <LottieView
           ref={lottieRef}
           source={slide.source}
-          autoPlay
+          autoPlay={true}
           loop
           style={ob.lottie}
           resizeMode="contain"
+          hardwareAccelerationAndroid={true}
+          renderMode="AUTOMATIC"
         />
       ) : (
         <View style={ob.fallback}>
@@ -131,8 +140,17 @@ export default function OnboardingScreen() {
     Animated.spring(progressAnim, { toValue: i, useNativeDriver: false, damping: 18, stiffness: 120 }).start();
   };
 
-  const goNext = () => current < SLIDES.length - 1 ? goTo(current + 1) : router.replace('/(tabs)/home');
-  const skip = () => router.replace('/(tabs)/home');
+  const completeOnboarding = async () => {
+    try {
+      await AsyncStorage.setItem('ROAMIO_FIRST_LAUNCH', 'true');
+    } catch (e) {
+      console.error('Failed to set first launch flag', e);
+    }
+    router.replace('/(tabs)/home');
+  };
+
+  const goNext = () => current < SLIDES.length - 1 ? goTo(current + 1) : completeOnboarding();
+  const skip = () => completeOnboarding();
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems.length > 0) {

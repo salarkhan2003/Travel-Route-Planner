@@ -35,6 +35,7 @@ export interface TripState {
   spentBudget: number;
   selectedPathId: string | null;
   selectedNodeId: string | null;
+  homeCity: string;
   reorderNode: (fromIndex: number, toIndex: number) => void;
   selectPath: (pathId: string | null) => void;
   selectNode: (nodeId: string | null) => void;
@@ -45,4 +46,5 @@ export interface TripState {
   addNode: (node: TripNode) => void;
   removeNode: (nodeId: string) => void;
   clearTrip: () => void;
+  setHomeCity: (city: string) => void;
 }

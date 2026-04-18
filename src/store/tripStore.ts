@@ -21,6 +21,22 @@ function applyBudgetFilter(nodes: TripNode[], paths: TripPath[], budget: number)
   };
 }
 
+  selectedPathId: string | null;
+  selectedNodeId: string | null;
+  homeCity: string;
+  reorderNode: (fromIndex: number, toIndex: number) => void;
+  selectPath: (pathId: string | null) => void;
+  selectNode: (nodeId: string | null) => void;
+  swapTransport: (pathId: string, mode: TransportMode) => void;
+  toggleLockNode: (nodeId: string) => void;
+  setBudget: (amount: number) => void;
+  updateNodeStay: (nodeId: string, nights: number) => void;
+  addNode: (node: TripNode) => void;
+  removeNode: (nodeId: string) => void;
+  clearTrip: () => void;
+  setHomeCity: (city: string) => void;
+}
+
 export const useTripStore = create<TripState>()((set, get) => ({
   nodes: [],
   paths: [],
@@ -28,6 +44,7 @@ export const useTripStore = create<TripState>()((set, get) => ({
   spentBudget: 0,
   selectedPathId: null,
   selectedNodeId: null,
+  homeCity: 'Ajmer',
 
   reorderNode: (fromIndex, toIndex) => {
     const { nodes, paths } = get();
@@ -132,4 +149,5 @@ export const useTripStore = create<TripState>()((set, get) => ({
     nodes: [], paths: [], spentBudget: 0,
     selectedPathId: null, selectedNodeId: null,
   }),
+  setHomeCity: (city) => set({ homeCity: city }),
 }));

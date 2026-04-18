@@ -8,13 +8,15 @@
 import { Tabs } from 'expo-router';
 import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 import { useRef } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 
 const TABS = [
-  { name: 'home',      label: 'Home',    icon: 'H',   iconActive: 'H'  },
-  { name: 'explore',   label: 'Map',     icon: 'M',   iconActive: 'M'  },
-  { name: 'itinerary', label: 'Routes',  icon: 'R',   iconActive: 'R'  },
-  { name: 'saved',     label: 'Saved',   icon: 'S',   iconActive: 'S'  },
-  { name: 'booking',   label: 'Booking', icon: 'B',   iconActive: 'B'  },
+  { name: 'home',      label: 'Home',    icon: 'home-outline',        iconActive: 'home'  },
+  { name: 'explore',   label: 'Map',     icon: 'map-outline',         iconActive: 'map'  },
+  { name: 'itinerary', label: 'Routes',  icon: 'git-network-outline', iconActive: 'git-network'  },
+  { name: 'expenses',  label: 'Expenses',icon: 'wallet-outline',      iconActive: 'wallet'  },
+  { name: 'saved',     label: 'Saved',   icon: 'heart-outline',       iconActive: 'heart'  },
+  { name: 'booking',   label: 'Booking', icon: 'ticket-outline',      iconActive: 'ticket'  },
 ] as const;
 
 // Clay tab icon — inflates on active with squish spring
@@ -34,9 +36,12 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
       {/* Inner sheen glow on active */}
       {focused && <View style={st.glow} />}
       {focused && <View style={st.sheenTop} />}
-      <Text style={[st.icon, focused && st.iconActive]}>
-        {focused ? tab.iconActive : tab.icon}
-      </Text>
+      <Ionicons 
+        name={focused ? tab.iconActive : tab.icon as any} 
+        size={24} 
+        color={focused ? '#1B5E20' : '#7CB87F'} 
+        style={{ zIndex: 1 }} 
+      />
       <Text style={[st.label, focused && st.labelActive]} numberOfLines={1}>
         {tab.label}
       </Text>

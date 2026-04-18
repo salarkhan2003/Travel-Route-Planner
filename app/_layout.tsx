@@ -3,6 +3,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
 
+import CustomToast from '../src/components/CustomToast';
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -13,6 +15,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="settings" options={{ presentation: 'card', animation: 'slide_from_right' }} />
       </Stack>
+      <CustomToast />
     </GestureHandlerRootView>
   );
 }

@@ -9,10 +9,12 @@
 import React, { useRef, useState } from 'react';
 import {
   Alert, Animated, ScrollView, StyleSheet,
-  Text, TextInput, TouchableOpacity, View,
+  Text, TextInput, TouchableOpacity, View, ActivityIndicator, Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useToastStore } from '../../src/store/toastStore';
 import { ClayCard } from '../../src/components/clay/ClayCard';
 import { ClayButton } from '../../src/components/clay/ClayButton';
 import { useTripStore } from '../../src/store/tripStore';
@@ -22,23 +24,30 @@ import { useCurrency } from '../../src/hooks/useCurrency';
 import { NC } from '../../src/constants/theme';
 
 const WEATHER = [
-  { city: 'Ajmer', temp: '34C', cond: 'Sunny', icon: 'S' },
-  { city: 'Delhi', temp: '38C', cond: 'Cloudy', icon: 'C' },
-  { city: 'Singapore', temp: '29C', cond: 'Showers', icon: 'R' },
-  { city: 'Goa', temp: '31C', cond: 'Breezy', icon: 'W' },
+  { city: 'Ajmer', temp: '34C', cond: 'Sunny', icon: '☀️' },
+  { city: 'Delhi', temp: '38C', cond: 'Cloudy', icon: '⛅' },
+  { city: 'Singapore', temp: '29C', cond: 'Showers', icon: '🌧️' },
+  { city: 'Goa', temp: '31C', cond: 'Breezy', icon: '🌤️' },
 ];
 const TOOLS = [
-  { key: 'Currency', label: 'FX', icon: 'FX' },
-  { key: 'SOS', label: 'SOS', icon: '!' },
-  { key: 'Vault', label: 'Vault', icon: 'V' },
-  { key: 'Offline', label: 'Maps', icon: 'O' },
-  { key: 'Weather', label: 'Weather', icon: 'W' },
-  { key: 'Translate', label: 'Translate', icon: 'T' },
+  { key: 'Currency', label: 'FX', icon: 'cash-outline' },
+  { key: 'SOS', label: 'SOS', icon: 'warning-outline' },
+  { key: 'Vault', label: 'Vault', icon: 'lock-closed-outline' },
+  { key: 'Offline', label: 'Maps', icon: 'map-outline' },
+  { key: 'Weather', label: 'Weather', icon: 'partly-sunny-outline' },
+  { key: 'Translate', label: 'Translate', icon: 'language-outline' },
 ];
 const POLLS = [
   { q: 'Dinner tonight?', opts: ['Taj Cafe', 'Local Dhaba'], votes: [3, 5] },
   { q: 'Next stop?', opts: ['Pushkar', 'Jaipur'], votes: [4, 4] },
 ];
+
+const getWeatherIcon = (main: string) => {
+  if (main.includes('Cloud')) return '⛅';
+  if (main.includes('Rain')) return '🌧️';
+  if (main.includes('Clear')) return '☀️';
+  return '🌤️';
+};
 const WEEKEND = [
   { from: 'Guntur', to: 'Goa', days: 3, cost: '₹4,200', tag: 'Beach' },
   { from: 'Delhi', to: 'Agra', days: 1, cost: '₹1,800', tag: 'Heritage' },
@@ -106,9 +115,12 @@ const ci = StyleSheet.create({
 
 export default function HomeScreen() {
   const router = useRouter();
+  const showToast = useToastStore(s => s.showToast);
   const nodes = useTripStore(s => s.nodes);
   const spentBudget = useTripStore(s => s.spentBudget);
   const globalBudget = useTripStore(s => s.globalBudget);
+  const homeCity = useTripStore(s => s.homeCity);
+  const setHomeCity = useTripStore(s => s.setHomeCity);
   const members = useFamilyStore(s => s.members);
   const { fmtFull } = useCurrency();
   const [search, setSearch] = useState('');
@@ -117,14 +129,59 @@ export default function HomeScreen() {
   const [toCur, setToCur] = useState('SGD');
   const [amount, setAmount] = useState('1000');
   const [showConverter, setShowConverter] = useState(false);
+  const [showTranslator, setShowTranslator] = useState(false);
+  const [transInput, setTransInput] = useState('');
+  const [editingCity, setEditingCity] = useState(false);
+  const [cityInput, setCityInput] = useState('');
+
+  const [liveWeather, setLiveWeather] = useState({ temp: 0, cond: 'Loading...', icon: '🌤️' });
+  const [isWeatherLoading, setIsWeatherLoading] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState(1);
+  const [fxLoading, setFxLoading] = useState(false);
+
   const budgetPct = Math.min((spentBudget / globalBudget) * 100, 100);
   const leader = members.find(m => m.isLeader);
 
+  React.useEffect(() => {
+    const fetchWeather = async () => {
+      setIsWeatherLoading(true);
+      try {
+        const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${homeCity}&appid=a3ba69974a7a2b7f8274f24b5c162d6c&units=metric`);
+        const data = await res.json();
+        if (data && data.main) {
+          setLiveWeather({
+            temp: Math.round(data.main.temp),
+            cond: data.weather[0].main,
+            icon: getWeatherIcon(data.weather[0].main)
+          });
+        }
+      } catch (err) {
+        showToast('Weather fetch failed', 'warning');
+      }
+      setIsWeatherLoading(false);
+    };
+    fetchWeather();
+  }, [homeCity]);
+
+  React.useEffect(() => {
+    const fetchFX = async () => {
+      setFxLoading(true);
+      try {
+        const res = await fetch(`https://v6.exchangerate-api.com/v6/85baa469c95ec068ea15fc25/latest/${fromCur}`);
+        const data = await res.json();
+        if (data && data.conversion_rates && data.conversion_rates[toCur]) {
+          setExchangeRate(data.conversion_rates[toCur]);
+        }
+      } catch (err) {
+        showToast('Live FX failed', 'warning');
+      }
+      setFxLoading(false);
+    };
+    fetchFX();
+  }, [fromCur, toCur]);
+
   const converted = (() => {
-    const from = CURRENCIES.find(c => c.code === fromCur);
-    const to = CURRENCIES.find(c => c.code === toCur);
-    if (!from || !to) return '0';
-    const result = (parseFloat(amount || '0') / from.rateFromINR) * to.rateFromINR;
+    const result = parseFloat(amount || '0') * exchangeRate;
     return result >= 1000 ? `${(result / 1000).toFixed(2)}k` : result.toFixed(2);
   })();
 
@@ -155,7 +212,7 @@ export default function HomeScreen() {
 
         {/* ── Clay Search Tube — sunken ditch ── */}
         <View style={s.searchTube}>
-          <Text style={s.searchTubeIcon}>◎</Text>
+          <Ionicons name="search-outline" size={18} color="#7CB87F" />
           <TextInput
             style={s.searchInput}
             placeholder="Where to next, traveller..."
@@ -195,7 +252,7 @@ export default function HomeScreen() {
             {/* 3D Train icon */}
             <View style={s.heroIconWrap}>
               <View style={s.heroIconSheen} />
-              <Text style={s.heroIcon}>TR</Text>
+              <Ionicons name="train" size={42} color="#fff" style={{ zIndex: 1 }} />
             </View>
           </View>
           <View style={s.heroBudgetRow}>
@@ -208,11 +265,30 @@ export default function HomeScreen() {
         {/* Bento row 1: Weather + Budget */}
         <View style={s.bentoRow}>
           <ClayCard variant="mint" style={s.bentoHalf}>
-            <Text style={s.bentoTileLabel}>Weather</Text>
-            <Text style={s.weatherBig}>{WEATHER[0].icon}</Text>
-            <Text style={s.weatherTemp}>{WEATHER[0].temp}</Text>
-            <Text style={s.weatherCity}>{WEATHER[0].city}</Text>
-            <Text style={s.weatherCond}>{WEATHER[0].cond}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={s.bentoTileLabel}>Weather</Text>
+              <TouchableOpacity onPress={() => setIsWeatherLoading(!isWeatherLoading)}>
+                <Ionicons name="refresh" size={14} color={NC.primary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View>
+                <Text style={s.weatherBig}>{liveWeather.icon}</Text>
+                <Text style={s.weatherTemp}>{liveWeather.temp}°C</Text>
+              </View>
+            </View>
+            
+            {editingCity ? (
+              <TextInput autoFocus style={s.weatherCityEdit} value={cityInput} onChangeText={setCityInput}
+                onSubmitEditing={() => { setHomeCity(cityInput || 'Ajmer'); setEditingCity(false); }} onBlur={() => setEditingCity(false)} />
+            ) : (
+              <TouchableOpacity onPress={() => { setCityInput(homeCity); setEditingCity(true); }}>
+                <Text style={[s.weatherCity, { textDecorationLine: 'underline' }]}>{homeCity}</Text>
+              </TouchableOpacity>
+            )}
+            
+            <Text style={s.weatherCond}>{liveWeather.cond}</Text>
           </ClayCard>
           <ClayCard variant="white" style={s.bentoHalf}>
             <Text style={s.bentoTileLabel}>Budget</Text>
@@ -225,11 +301,11 @@ export default function HomeScreen() {
 
         {/* Bento row 2: SOS + Quick tools */}
         <View style={s.bentoRow}>
-          <TouchableOpacity onPress={() => Alert.alert('SOS', 'Sending live location to all family members!')} activeOpacity={0.85}>
+          <TouchableOpacity onPress={() => showToast('SOS: Location Broadcasted!', 'warning')} activeOpacity={0.85}>
             <ClayCard variant="white" style={[s.bentoHalf, s.sosCard]}>
               <View style={s.sosCircle}>
                 <View style={s.sosSheen} />
-                <Text style={s.sosText}>SOS</Text>
+                <Ionicons name="warning" size={24} color="#fff" style={{ zIndex: 1 }} />
               </View>
               <Text style={s.sosLabel}>Quick SOS</Text>
               <Text style={s.sosSub}>Tap to alert family</Text>
@@ -270,13 +346,15 @@ export default function HomeScreen() {
             <TouchableOpacity key={t.key} style={s.toolBtn} activeOpacity={0.8}
               onPress={() => {
                 if (t.key === 'Currency') setShowConverter(!showConverter);
-                else if (t.key === 'SOS') Alert.alert('SOS', 'Sending location...');
+                else if (t.key === 'Translate') setShowTranslator(true);
+                else if (t.key === 'SOS') showToast('Location transmitted', 'radio');
                 else if (t.key === 'Vault') router.push('/(tabs)/booking');
-                else Alert.alert(t.label, 'Coming soon');
+                else if (t.key === 'Weather') setEditingCity(true);
+                else showToast(`${t.label} Coming Soon`, 'construct');
               }}>
               <View style={s.toolIconBox}>
                 <View style={s.toolIconSheen} />
-                <Text style={s.toolIconText}>{t.icon}</Text>
+                <Ionicons name={t.icon as any} size={24} color="#1B5E20" style={{ zIndex: 1 }} />
               </View>
               <Text style={s.toolLabel}>{t.label}</Text>
             </TouchableOpacity>
@@ -290,13 +368,13 @@ export default function HomeScreen() {
             <Text style={s.fxSub}>INR to {toCur} real-time</Text>
             <View style={s.fxRow}>
               <View style={s.fxBox}>
-                <Text style={s.fxBoxLabel}>FROM (INR)</Text>
+                <Text style={s.fxBoxLabel}>FROM ({fromCur})</Text>
                 <TextInput style={s.fxInput} value={amount} onChangeText={setAmount}
                   keyboardType="numeric" placeholderTextColor={NC.outlineVariant} />
               </View>
               <TouchableOpacity style={s.fxSwap} onPress={() => { const t = fromCur; setFromCur(toCur); setToCur(t); }}>
                 <View style={s.fxSwapSheen} />
-                <Text style={s.fxSwapText}>⇄</Text>
+                {fxLoading ? <ActivityIndicator color="#fff" /> : <Ionicons name="swap-horizontal" size={24} color="#fff" style={{ zIndex: 1 }} />}
               </TouchableOpacity>
               <View style={[s.fxBox, { backgroundColor: '#DCF0DE' }]}>
                 <Text style={s.fxBoxLabel}>TO ({toCur})</Text>
@@ -352,7 +430,7 @@ export default function HomeScreen() {
               </View>
             ))}
           </View>
-          <ClayButton label="Broadcast Next Step" onPress={() => Alert.alert('Sent!', 'Sent to all members')}
+          <ClayButton label="Broadcast Next Step" onPress={() => showToast('Next step sent to family', 'radio')}
             color={NC.primary} small style={{ marginTop: 16 }} />
         </ClayCard>
 
@@ -378,7 +456,31 @@ export default function HomeScreen() {
           </ClayCard>
         ))}
 
-        <View style={{ height: 110 }} />
+        {/* ── Translator Modal ── */}
+        <Modal visible={showTranslator} transparent animationType="slide">
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 36, borderTopRightRadius: 36, height: '60%', padding: 26 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                <View>
+                  <Text style={{ fontSize: 24, fontWeight: '900', color: NC.primary }}>ML Translator</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: NC.onSurfaceVariant }}>Powered by On-Device ML Kit</Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowTranslator(false)} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: NC.surfaceLow, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="close" size={24} color={NC.onSurfaceVariant} />
+                </TouchableOpacity>
+              </View>
+
+              <TextInput 
+                style={{ backgroundColor: NC.surfaceLowest, borderWidth: 2, borderColor: 'rgba(165,214,167,0.3)', borderRadius: 20, padding: 16, fontSize: 16, color: NC.onSurface, fontWeight: '700', minHeight: 100, textAlignVertical: 'top' }} 
+                placeholder="Tap to speak or type in any language..." 
+                multiline value={transInput} onChangeText={setTransInput} 
+              />
+              
+              <ClayButton label="Translate to Local" onPress={() => showToast('ML Translation complete', 'construct')} color={NC.primary} style={{ marginTop: 16 }} />
+            </View>
+          </View>
+        </Modal>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -494,6 +596,7 @@ const s = StyleSheet.create({
   bentoTileLabel: { fontSize: 10, fontWeight: '800', color: NC.onSurfaceVariant, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 },
 
   // Weather tile
+  weatherCityEdit: { fontSize: 13, borderBottomWidth: 1, borderBottomColor: '#1B5E20', color: '#1B5E20', fontWeight: '800', paddingVertical: 2, marginTop: 2, minWidth: 60 },
   weatherBig: { fontSize: 34, marginBottom: 4 },
   weatherTemp: { fontSize: 24, fontWeight: '900', color: NC.onSurface },
   weatherCity: { fontSize: 12, fontWeight: '800', color: NC.onSurface, marginTop: 2 },

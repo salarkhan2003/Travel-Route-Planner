@@ -27,6 +27,7 @@ export interface FamilyState {
   removeMember: (id: string) => void;
   fulfillVow: (id: string) => void;
   addVow: (v: Omit<TripVow, 'id' | 'fulfilled'>) => void;
+  removeVow: (id: string) => void;
   setTotalBudget: (n: number) => void;
 }
 
@@ -38,15 +39,12 @@ export const useFamilyStore = create<FamilyState>()((set) => ({
     { id: 'm3', name: 'Sister 1', relation: 'Sister', age: 25, emoji: 'S1', isLeader: false },
     { id: 'm4', name: 'Sister 2', relation: 'Sister', age: 20, emoji: 'S2', isLeader: false },
   ],
-  vows: [
-    { id: 'v1', title: 'Visit Ajmer Dargah', location: 'Ajmer', fulfilled: false, emoji: 'AD' },
-    { id: 'v2', title: 'Pray at Taj Mahal', location: 'Agra', fulfilled: false, emoji: 'TM' },
-    { id: 'v3', title: 'See Marina Bay Sands', location: 'Singapore', fulfilled: false, emoji: 'MB' },
-  ],
+  vows: [],
   totalBudget: 150000,
   addMember: (m) => set((s) => ({ members: [...s.members, { ...m, id: `m${Date.now()}` }] })),
   removeMember: (id) => set((s) => ({ members: s.members.filter((m) => m.id !== id) })),
   fulfillVow: (id) => set((s) => ({ vows: s.vows.map((v) => v.id === id ? { ...v, fulfilled: true } : v) })),
   addVow: (v) => set((s) => ({ vows: [...s.vows, { ...v, id: `vow${Date.now()}`, fulfilled: false }] })),
+  removeVow: (id) => set((s) => ({ vows: s.vows.filter(v => v.id !== id) })),
   setTotalBudget: (totalBudget) => set({ totalBudget }),
 }));
