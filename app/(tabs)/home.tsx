@@ -41,7 +41,7 @@ const TRIP_SUGGESTIONS = [
   {title:'Northeast Explorer',route:'Guwahati → Darjeeling → Gangtok',days:6},
 ];
 
-const WEATHER = [
+const INITIAL_WEATHER = [
   { city: 'Ajmer', temp: '34C', cond: 'Sunny', icon: '☀️' },
   { city: 'Delhi', temp: '38C', cond: 'Cloudy', icon: '⛅' },
   { city: 'Singapore', temp: '29C', cond: 'Showers', icon: '🌧️' },
@@ -167,6 +167,10 @@ export default function HomeScreen() {
   const [isWeatherLoading, setIsWeatherLoading] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(1);
   const [fxLoading, setFxLoading] = useState(false);
+  
+  const [routeWeathers, setRouteWeathers] = useState(INITIAL_WEATHER);
+  const [showAddWeather, setShowAddWeather] = useState(false);
+  const [newWeatherCity, setNewWeatherCity] = useState('');
 
   const budgetPct = Math.min((spentBudget / globalBudget) * 100, 100);
   const leader = members.find(m => m.isLeader);
@@ -356,7 +360,7 @@ export default function HomeScreen() {
           <LiquidBar pct={budgetPct} color={budgetPct > 80 ? NC.warning : NC.primaryFixed} />
         </ClayCard>
 
-        {/* Bento row 1: Weather + Budget (editable) */}
+        {/* Bento row 1: Weather + Stats */}
         <View style={s.bentoRow}>
           <ClayCard variant="mint" style={s.bentoHalf}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -384,32 +388,6 @@ export default function HomeScreen() {
             
             <Text style={s.weatherCond}>{liveWeather.cond}</Text>
           </ClayCard>
-          <TouchableOpacity activeOpacity={0.85} onPress={() => { setBudgetInput(String(globalBudget)); setShowBudgetEdit(true); }}>
-            <ClayCard variant="white" style={s.bentoHalf}>
-              <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-                <Text style={s.bentoTileLabel}>Budget</Text>
-                <Ionicons name="pencil-outline" size={12} color={NC.outlineVariant}/>
-              </View>
-              <Text style={s.budgetBig}>{budgetPct.toFixed(0)}%</Text>
-              <Text style={s.budgetSub}>utilized</Text>
-              <LiquidBar pct={budgetPct} color={budgetPct > 80 ? NC.warning : NC.primary} />
-              <Text style={s.budgetRemain}>{fmtFull(globalBudget - spentBudget)} left</Text>
-            </ClayCard>
-          </TouchableOpacity>
-        </View>
-
-        {/* Bento row 2: SOS + Quick tools */}
-        <View style={s.bentoRow}>
-          <TouchableOpacity onPress={() => showToast('SOS: Location Broadcasted!', 'warning')} activeOpacity={0.85}>
-            <ClayCard variant="white" style={[s.bentoHalf, s.sosCard]}>
-              <View style={s.sosCircle}>
-                <View style={s.sosSheen} />
-                <Ionicons name="warning" size={24} color="#fff" style={{ zIndex: 1 }} />
-              </View>
-              <Text style={s.sosLabel}>Quick SOS</Text>
-              <Text style={s.sosSub}>Tap to alert family</Text>
-            </ClayCard>
-          </TouchableOpacity>
           <ClayCard variant="mint" style={s.bentoHalf}>
             <Text style={s.bentoTileLabel}>Trip Stats</Text>
             {[
@@ -425,17 +403,63 @@ export default function HomeScreen() {
           </ClayCard>
         </View>
 
+        {/* Bento row 2: Budget Utilized (Full Width) */}
+        <TouchableOpacity activeOpacity={0.85} onPress={() => { setBudgetInput(String(globalBudget)); setShowBudgetEdit(true); }} style={{ marginBottom: 16 }}>
+          <ClayCard variant="white">
+            <View style={{flexDirection:'row',justifyContent:'space-between', alignItems:'center'}}>
+              <Text style={s.bentoTileLabel}>Budget Utilized</Text>
+              <Ionicons name="pencil-outline" size={14} color={NC.outlineVariant}/>
+            </View>
+            <View style={{flexDirection:'row',justifyContent:'space-between', alignItems:'flex-end', marginBottom: 16, marginTop: 4}}>
+               <View>
+                 <Text style={s.budgetBig}>{budgetPct.toFixed(0)}%</Text>
+                 <Text style={s.budgetSub}>of {fmtFull(globalBudget)}</Text>
+               </View>
+               <Text style={[s.budgetRemain, {fontSize: 16, marginBottom: 8}]}>{fmtFull(globalBudget - spentBudget)} left</Text>
+            </View>
+            <LiquidBar pct={budgetPct} color={budgetPct > 80 ? NC.warning : NC.primary} />
+          </ClayCard>
+        </TouchableOpacity>
+
+        {/* Bento row 3: SOS */}
+        <View style={s.bentoRow}>
+          <TouchableOpacity onPress={() => showToast('SOS: Location Broadcasted!', 'warning')} activeOpacity={0.85} style={{flex: 1}}>
+            <ClayCard variant="white" style={s.sosCard}>
+              <View style={s.sosCircle}>
+                <View style={s.sosSheen} />
+                <Ionicons name="warning" size={24} color="#fff" style={{ zIndex: 1 }} />
+              </View>
+              <Text style={s.sosLabel}>Quick SOS</Text>
+              <Text style={s.sosSub}>Tap to alert family</Text>
+            </ClayCard>
+          </TouchableOpacity>
+        </View>
+
         {/* ── Weather Strip ── */}
-        <Text style={s.sectionHead}>Route Weather</Text>
+        <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom: 14, marginTop: 6}}>
+          <Text style={[s.sectionHead, {marginBottom:0, marginTop:0}]}>Route Weather</Text>
+          <TouchableOpacity onPress={() => setShowAddWeather(true)}>
+            <Ionicons name="add-circle" size={24} color={NC.primary} />
+          </TouchableOpacity>
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.hScroll}>
-          {WEATHER.map(w => (
+          {routeWeathers.map(w => (
             <ClayCard key={w.city} variant="white" style={s.weatherCard}>
+              <TouchableOpacity style={{position:'absolute', top: 5, right: 5, padding: 4}} onPress={() => setRouteWeathers(routeWeathers.filter(rw => rw.city !== w.city))}>
+                <Ionicons name="close-circle" size={18} color={NC.outlineVariant} />
+              </TouchableOpacity>
               <Text style={s.weatherCardIcon}>{w.icon}</Text>
               <Text style={s.weatherCardTemp}>{w.temp}</Text>
               <Text style={s.weatherCardCity}>{w.city}</Text>
               <Text style={s.weatherCardCond}>{w.cond}</Text>
             </ClayCard>
           ))}
+          <TouchableOpacity onPress={() => setShowAddWeather(true)}>
+            <ClayCard variant="white" style={[s.weatherCard, {paddingTop: 30, paddingBottom: 30}]}>
+              <Ionicons name="add" size={32} color={NC.primary} style={{marginBottom:4}}/>
+              <Text style={[s.weatherCardCity, {color:NC.primary}]}>Add</Text>
+            </ClayCard>
+          </TouchableOpacity>
         </ScrollView>
 
         {/* ── Traveller Tools ── */}
@@ -482,8 +506,13 @@ export default function HomeScreen() {
             </View>
             {/* FX Sparkline */}
             {fxHistory.length > 2 && (
-              <View style={{marginTop:14,alignItems:'center'}}>
-                <Text style={{fontSize:10,fontWeight:'700',color:NC.onSurfaceVariant,marginBottom:6}}>14-Day Trend ({fromCur} → {toCur})</Text>
+              <TouchableOpacity activeOpacity={0.8} onPress={() => {
+                const max = Math.max(...fxHistory).toFixed(2);
+                const min = Math.min(...fxHistory).toFixed(2);
+                showToast(`High: ${max} | Low: ${min}`, 'analytics-outline');
+              }} style={{marginTop:14,alignItems:'center'}}>
+                <Text style={{fontSize:10,fontWeight:'700',color:NC.onSurfaceVariant,marginBottom:4}}>14-Day Trend ({fromCur} → {toCur}) · Tap for High/Low</Text>
+                <Text style={{fontSize:12,fontWeight:'800',color:NC.primary,marginBottom:8}}>High: {Math.max(...fxHistory).toFixed(2)}  •  Low: {Math.min(...fxHistory).toFixed(2)}</Text>
                 <Svg width={260} height={50}>
                   <SvgPolyline
                     points={fxHistory.map((v,i) => {
@@ -491,11 +520,11 @@ export default function HomeScreen() {
                       const maxV = Math.max(...fxHistory);
                       const range = maxV - minV || 1;
                       return `${(i/(fxHistory.length-1))*258+1},${48 - ((v-minV)/range)*46}`;
-                    }).join(' ')}
+                    }).join(' ') + ` 260,${48 - ((fxHistory[fxHistory.length-1]-Math.min(...fxHistory))/(Math.max(...fxHistory)-Math.min(...fxHistory) || 1))*46}`}
                     fill="none" stroke={NC.primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                   />
                 </Svg>
-              </View>
+              </TouchableOpacity>
             )}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
               {CURRENCIES.slice(0, 8).map(c => (
@@ -624,6 +653,30 @@ export default function HomeScreen() {
                   <Text style={{ fontSize: 18, fontWeight: '800', color: NC.primary, lineHeight: 26 }}>{transResult}</Text>
                 </View>
               ) : null}
+            </View>
+          </View>
+        </Modal>
+
+        {/* Add Weather Modal */}
+        <Modal visible={showAddWeather} transparent animationType="fade">
+          <View style={{flex:1,backgroundColor:'rgba(0,0,0,0.5)',justifyContent:'center',alignItems:'center'}}>
+            <View style={{backgroundColor:'#FFF',borderRadius:28,padding:24,width:'80%'}}>
+               <Text style={{fontSize:20,fontWeight:'900',color:NC.primary,marginBottom:16}}>Add Weather</Text>
+               <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:16,fontSize:18,fontWeight:'700',color:NC.onSurface}} placeholder="City name" placeholderTextColor={NC.outlineVariant} value={newWeatherCity} onChangeText={setNewWeatherCity}/>
+               <View style={{flexDirection:'row',gap:10,marginTop:20}}>
+                 <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.surfaceLow,alignItems:'center'}} onPress={() => setShowAddWeather(false)}>
+                   <Text style={{fontWeight:'800',color:NC.onSurfaceVariant}}>Cancel</Text>
+                 </TouchableOpacity>
+                 <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.primary,alignItems:'center'}} onPress={() => {
+                   if(newWeatherCity.trim()){
+                     setRouteWeathers([...routeWeathers, {city: newWeatherCity, temp: '30C', cond:'Sunny', icon:'☀️'}]);
+                     setNewWeatherCity('');
+                   }
+                   setShowAddWeather(false);
+                 }}>
+                   <Text style={{fontWeight:'900',color:'#FFF'}}>Add</Text>
+                 </TouchableOpacity>
+               </View>
             </View>
           </View>
         </Modal>

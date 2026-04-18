@@ -82,8 +82,21 @@ export default function BookingHubScreen() {
         const stored = await AsyncStorage.getItem(STORE_KEY);
         if (stored) {
           const data = JSON.parse(stored);
-          setActiveTickets(data.active || []);
-          setCompletedTickets(data.completed || []);
+          setActiveTickets(data.active && data.active.length ? data.active : [
+            { id: 'd1', type: 'flight', title: 'Flight to Goa', status: 'CONFIRMED', pnr: 'IX7721', from: 'DEL', to: 'GOA', date: '24 May 2026', pax: '1 Adult' },
+            { id: 'd2', type: 'train', title: 'Rajdhani Exp', status: 'WL 12', pnr: '24871923', from: 'NDLS', to: 'BCT', date: '28 May 2026', pax: '2 Adults' }
+          ]);
+          setCompletedTickets(data.completed && data.completed.length ? data.completed : [
+            { id: 'c1', type: 'hotel', title: 'Taj Lands End', status: 'COMPLETED', pnr: 'BK-9912', from: 'Mumbai', to: 'Mumbai', date: '10 Jan 2026', pax: '2 Adults' }
+          ]);
+        } else {
+          setActiveTickets([
+            { id: 'd1', type: 'flight', title: 'Flight to Goa', status: 'CONFIRMED', pnr: 'IX7721', from: 'DEL', to: 'GOA', date: '24 May 2026', pax: '1 Adult' },
+            { id: 'd2', type: 'train', title: 'Rajdhani Exp', status: 'WL 12', pnr: '24871923', from: 'NDLS', to: 'BCT', date: '28 May 2026', pax: '2 Adults' }
+          ]);
+          setCompletedTickets([
+            { id: 'c1', type: 'hotel', title: 'Taj Lands End', status: 'COMPLETED', pnr: 'BK-9912', from: 'Mumbai', to: 'Mumbai', date: '10 Jan 2026', pax: '2 Adults' }
+          ]);
         }
       } catch {}
     })();
