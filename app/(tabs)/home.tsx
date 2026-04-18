@@ -14,6 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Speech from 'expo-speech';
+import Svg, { Polyline as SvgPolyline } from 'react-native-svg';
 import { useToastStore } from '../../src/store/toastStore';
 import { ClayCard } from '../../src/components/clay/ClayCard';
 import { ClayButton } from '../../src/components/clay/ClayButton';
@@ -22,6 +24,22 @@ import { useFamilyStore } from '../../src/store/familyStore';
 import { CURRENCIES } from '../../src/constants/currencies';
 import { useCurrency } from '../../src/hooks/useCurrency';
 import { NC } from '../../src/constants/theme';
+
+const POPULAR_CITIES = [
+  'Mumbai','Delhi','Bangalore','Goa','Jaipur','Udaipur','Varanasi','Manali',
+  'Shimla','Rishikesh','Darjeeling','Ooty','Kochi','Agra','Amritsar','Leh',
+];
+
+const TRIP_SUGGESTIONS = [
+  {title:'Golden Triangle',route:'Delhi → Agra → Jaipur',days:5},
+  {title:'Kerala Backwaters',route:'Kochi → Alleppey → Munnar',days:6},
+  {title:'Rajasthan Royal',route:'Jaipur → Jodhpur → Udaipur',days:7},
+  {title:'Himalayan Trail',route:'Delhi → Shimla → Manali',days:5},
+  {title:'South India',route:'Chennai → Ooty → Mysore',days:4},
+  {title:'Goa Beach Trip',route:'Mumbai → Goa',days:3},
+  {title:'Spiritual Circuit',route:'Varanasi → Rishikesh',days:4},
+  {title:'Northeast Explorer',route:'Guwahati → Darjeeling → Gangtok',days:6},
+];
 
 const WEATHER = [
   { city: 'Ajmer', temp: '34C', cond: 'Sunny', icon: '☀️' },
@@ -131,10 +149,21 @@ export default function HomeScreen() {
   const [showConverter, setShowConverter] = useState(false);
   const [showTranslator, setShowTranslator] = useState(false);
   const [transInput, setTransInput] = useState('');
+  const [transResult, setTransResult] = useState('');
+  const [transLang, setTransLang] = useState('hi');
+  const [transLoading, setTransLoading] = useState(false);
   const [editingCity, setEditingCity] = useState(false);
   const [cityInput, setCityInput] = useState('');
+  const [showBudgetEdit, setShowBudgetEdit] = useState(false);
+  const [budgetInput, setBudgetInput] = useState('');
+  const [showHeroEdit, setShowHeroEdit] = useState(false);
+  const [heroTitle, setHeroTitle] = useState('Next: Train to\nGoa');
+  const [heroDeparts, setHeroDeparts] = useState('02h 45m');
+  const [heroPlatform, setHeroPlatform] = useState('4B');
+  const [searchSuggestions, setSearchSuggestions] = useState<typeof TRIP_SUGGESTIONS>([]);
+  const [fxHistory, setFxHistory] = useState<number[]>([]);
 
-  const [liveWeather, setLiveWeather] = useState({ temp: 0, cond: 'Loading...', icon: '🌤️' });
+  const [liveWeather, setLiveWeather] = useState({ temp: 0, cond: 'Loading...', icon: '☀️' });
   const [isWeatherLoading, setIsWeatherLoading] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(1);
   const [fxLoading, setFxLoading] = useState(false);
@@ -142,26 +171,71 @@ export default function HomeScreen() {
   const budgetPct = Math.min((spentBudget / globalBudget) * 100, 100);
   const leader = members.find(m => m.isLeader);
 
-  React.useEffect(() => {
-    const fetchWeather = async () => {
-      setIsWeatherLoading(true);
-      try {
-        const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${homeCity}&appid=a3ba69974a7a2b7f8274f24b5c162d6c&units=metric`);
-        const data = await res.json();
-        if (data && data.main) {
-          setLiveWeather({
-            temp: Math.round(data.main.temp),
-            cond: data.weather[0].main,
-            icon: getWeatherIcon(data.weather[0].main)
-          });
-        }
-      } catch (err) {
-        showToast('Weather fetch failed', 'warning');
+  const fetchWeather = async () => {
+    setIsWeatherLoading(true);
+    try {
+      const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${homeCity}&appid=a3ba69974a7a2b7f8274f24b5c162d6c&units=metric`);
+      const data = await res.json();
+      if (data && data.main) {
+        setLiveWeather({
+          temp: Math.round(data.main.temp),
+          cond: data.weather[0].main,
+          icon: getWeatherIcon(data.weather[0].main)
+        });
       }
-      setIsWeatherLoading(false);
+    } catch (err) {
+      showToast('Weather fetch failed', 'warning');
+    }
+    setIsWeatherLoading(false);
+  };
+
+  React.useEffect(() => { fetchWeather(); }, [homeCity]);
+
+  // FX history for sparkline
+  React.useEffect(() => {
+    const generateHistory = () => {
+      const base = exchangeRate || 1;
+      const hist = Array.from({length:14}, (_,i) => base * (0.96 + Math.random() * 0.08));
+      hist.push(base);
+      setFxHistory(hist);
     };
-    fetchWeather();
-  }, [homeCity]);
+    if (exchangeRate > 0) generateHistory();
+  }, [exchangeRate, toCur]);
+
+  // Search suggestions
+  const handleSearchChange = (text: string) => {
+    setSearch(text);
+    if (text.length >= 2) {
+      setSearchSuggestions(TRIP_SUGGESTIONS.filter(t => 
+        t.title.toLowerCase().includes(text.toLowerCase()) || t.route.toLowerCase().includes(text.toLowerCase())
+      ).slice(0,4));
+    } else {
+      setSearchSuggestions([]);
+    }
+  };
+
+  const speakText = (text: string) => {
+    Speech.speak(text, { language: transLang === 'hi' ? 'hi-IN' : transLang, rate: 0.9 });
+  };
+
+  const setBudget = useTripStore(s => s.setBudget);
+
+  const translateText = async () => {
+    if (!transInput.trim()) return;
+    setTransLoading(true);
+    try {
+      const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(transInput)}&langpair=en|${transLang}`);
+      const data = await res.json();
+      if (data?.responseData?.translatedText) {
+        setTransResult(data.responseData.translatedText);
+      } else {
+        setTransResult('Translation unavailable');
+      }
+    } catch {
+      setTransResult('Network error');
+    }
+    setTransLoading(false);
+  };
 
   React.useEffect(() => {
     const fetchFX = async () => {
@@ -218,34 +292,54 @@ export default function HomeScreen() {
             placeholder="Where to next, traveller..."
             placeholderTextColor={NC.outlineVariant}
             value={search}
-            onChangeText={setSearch}
+            onChangeText={handleSearchChange}
           />
-          <TouchableOpacity style={s.planBtn} onPress={() => router.push('/(tabs)/explore')}>
+          <TouchableOpacity style={s.planBtn} onPress={() => router.push({pathname:'/(tabs)/explore',params:{q:search}})}>
             <View style={s.planBtnSheen} />
             <Text style={s.planBtnText}>Plan</Text>
           </TouchableOpacity>
         </View>
 
+        {/* Search Suggestions */}
+        {searchSuggestions.length > 0 && (
+          <View style={{backgroundColor:NC.surfaceLowest,borderRadius:20,marginBottom:16,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',overflow:'hidden'}}>
+            {searchSuggestions.map((sg,i) => (
+              <TouchableOpacity key={i} style={{flexDirection:'row',alignItems:'center',padding:14,borderBottomWidth:1,borderBottomColor:'rgba(0,0,0,0.04)'}}
+                onPress={() => { setSearch(sg.route.split(' → ')[0]); setSearchSuggestions([]); router.push({pathname:'/(tabs)/explore',params:{q:sg.route.split(' → ')[0]}}); }}>
+                <Ionicons name="compass" size={18} color={NC.primary} style={{marginRight:10}}/>
+                <View style={{flex:1}}>
+                  <Text style={{fontSize:14,fontWeight:'800',color:NC.onSurface}}>{sg.title}</Text>
+                  <Text style={{fontSize:11,color:NC.onSurfaceVariant,fontWeight:'600'}}>{sg.route} • {sg.days} Days</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={16} color={NC.outlineVariant}/>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         {/* ── BENTO GRID ── */}
 
-        {/* Hero card — large trip tile */}
+        {/* Hero card — editable */}
         <ClayCard variant="green" style={s.heroCard}>
           <View style={s.heroBadgeRow}>
             <View style={s.livePill}><Text style={s.livePillText}>LIVE TRIP</Text></View>
             <Text style={s.dayPill}>Day 1 of 9</Text>
           </View>
+          <TouchableOpacity activeOpacity={0.9} onPress={() => setShowHeroEdit(true)} style={{position:'absolute',top:10,right:10,zIndex:5}}>
+            <Ionicons name="pencil" size={16} color="rgba(255,255,255,0.6)"/>
+          </TouchableOpacity>
           <View style={s.heroBody}>
             <View style={s.heroLeft}>
-              <Text style={s.heroTitle}>Next: Train to{'\n'}Goa</Text>
+              <Text style={s.heroTitle}>{heroTitle}</Text>
               <View style={s.heroMetaRow}>
                 <View>
                   <Text style={s.heroMetaLabel}>DEPARTS IN</Text>
-                  <Text style={s.heroMetaVal}>02h 45m</Text>
+                  <Text style={s.heroMetaVal}>{heroDeparts}</Text>
                 </View>
                 <View style={s.heroMetaDivider} />
                 <View>
                   <Text style={s.heroMetaLabel}>PLATFORM</Text>
-                  <Text style={s.heroMetaVal}>4B</Text>
+                  <Text style={s.heroMetaVal}>{heroPlatform}</Text>
                 </View>
               </View>
             </View>
@@ -262,12 +356,12 @@ export default function HomeScreen() {
           <LiquidBar pct={budgetPct} color={budgetPct > 80 ? NC.warning : NC.primaryFixed} />
         </ClayCard>
 
-        {/* Bento row 1: Weather + Budget */}
+        {/* Bento row 1: Weather + Budget (editable) */}
         <View style={s.bentoRow}>
           <ClayCard variant="mint" style={s.bentoHalf}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text style={s.bentoTileLabel}>Weather</Text>
-              <TouchableOpacity onPress={() => setIsWeatherLoading(!isWeatherLoading)}>
+              <TouchableOpacity onPress={() => fetchWeather()}>
                 <Ionicons name="refresh" size={14} color={NC.primary} />
               </TouchableOpacity>
             </View>
@@ -290,13 +384,18 @@ export default function HomeScreen() {
             
             <Text style={s.weatherCond}>{liveWeather.cond}</Text>
           </ClayCard>
-          <ClayCard variant="white" style={s.bentoHalf}>
-            <Text style={s.bentoTileLabel}>Budget</Text>
-            <Text style={s.budgetBig}>{budgetPct.toFixed(0)}%</Text>
-            <Text style={s.budgetSub}>utilized</Text>
-            <LiquidBar pct={budgetPct} color={budgetPct > 80 ? NC.warning : NC.primary} />
-            <Text style={s.budgetRemain}>{fmtFull(globalBudget - spentBudget)} left</Text>
-          </ClayCard>
+          <TouchableOpacity activeOpacity={0.85} onPress={() => { setBudgetInput(String(globalBudget)); setShowBudgetEdit(true); }}>
+            <ClayCard variant="white" style={s.bentoHalf}>
+              <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+                <Text style={s.bentoTileLabel}>Budget</Text>
+                <Ionicons name="pencil-outline" size={12} color={NC.outlineVariant}/>
+              </View>
+              <Text style={s.budgetBig}>{budgetPct.toFixed(0)}%</Text>
+              <Text style={s.budgetSub}>utilized</Text>
+              <LiquidBar pct={budgetPct} color={budgetPct > 80 ? NC.warning : NC.primary} />
+              <Text style={s.budgetRemain}>{fmtFull(globalBudget - spentBudget)} left</Text>
+            </ClayCard>
+          </TouchableOpacity>
         </View>
 
         {/* Bento row 2: SOS + Quick tools */}
@@ -381,7 +480,24 @@ export default function HomeScreen() {
                 <Text style={s.fxResult}>{converted}</Text>
               </View>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 14 }}>
+            {/* FX Sparkline */}
+            {fxHistory.length > 2 && (
+              <View style={{marginTop:14,alignItems:'center'}}>
+                <Text style={{fontSize:10,fontWeight:'700',color:NC.onSurfaceVariant,marginBottom:6}}>14-Day Trend ({fromCur} → {toCur})</Text>
+                <Svg width={260} height={50}>
+                  <SvgPolyline
+                    points={fxHistory.map((v,i) => {
+                      const minV = Math.min(...fxHistory);
+                      const maxV = Math.max(...fxHistory);
+                      const range = maxV - minV || 1;
+                      return `${(i/(fxHistory.length-1))*258+1},${48 - ((v-minV)/range)*46}`;
+                    }).join(' ')}
+                    fill="none" stroke={NC.primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                  />
+                </Svg>
+              </View>
+            )}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
               {CURRENCIES.slice(0, 8).map(c => (
                 <TouchableOpacity key={c.code} onPress={() => setToCur(c.code)}
                   style={[s.fxChip, toCur === c.code && s.fxChipOn]}>
@@ -459,28 +575,112 @@ export default function HomeScreen() {
         {/* ── Translator Modal ── */}
         <Modal visible={showTranslator} transparent animationType="slide">
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-            <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 36, borderTopRightRadius: 36, height: '60%', padding: 26 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+            <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 36, borderTopRightRadius: 36, height: '70%', padding: 26 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                 <View>
-                  <Text style={{ fontSize: 24, fontWeight: '900', color: NC.primary }}>ML Translator</Text>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: NC.onSurfaceVariant }}>Powered by On-Device ML Kit</Text>
+                  <Text style={{ fontSize: 22, fontWeight: '900', color: NC.primary }}>Live Translator</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: NC.onSurfaceVariant }}>Powered by MyMemory API</Text>
                 </View>
-                <TouchableOpacity onPress={() => setShowTranslator(false)} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: NC.surfaceLow, alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="close" size={24} color={NC.onSurfaceVariant} />
+                <TouchableOpacity onPress={() => { setShowTranslator(false); setTransResult(''); }} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: NC.surfaceLow, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="close" size={22} color={NC.onSurfaceVariant} />
                 </TouchableOpacity>
               </View>
 
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14, maxHeight: 40 }}>
+                {[{c:'hi',l:'Hindi'},{c:'ta',l:'Tamil'},{c:'te',l:'Telugu'},{c:'kn',l:'Kannada'},{c:'mr',l:'Marathi'},{c:'bn',l:'Bengali'},{c:'fr',l:'French'},{c:'es',l:'Spanish'},{c:'ja',l:'Japanese'},{c:'ar',l:'Arabic'},{c:'zh-CN',l:'Chinese'}].map(lang => (
+                  <TouchableOpacity key={lang.c} onPress={() => setTransLang(lang.c)}
+                    style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, marginRight: 8,
+                      backgroundColor: transLang === lang.c ? NC.primary : NC.surfaceLow }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: transLang === lang.c ? '#FFF' : NC.onSurfaceVariant }}>{lang.l}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
               <TextInput 
-                style={{ backgroundColor: NC.surfaceLowest, borderWidth: 2, borderColor: 'rgba(165,214,167,0.3)', borderRadius: 20, padding: 16, fontSize: 16, color: NC.onSurface, fontWeight: '700', minHeight: 100, textAlignVertical: 'top' }} 
-                placeholder="Tap to speak or type in any language..." 
+                style={{ backgroundColor: NC.surfaceLowest, borderWidth: 2, borderColor: 'rgba(165,214,167,0.3)', borderRadius: 20, padding: 16, fontSize: 15, color: NC.onSurface, fontWeight: '700', minHeight: 80, textAlignVertical: 'top' }} 
+                placeholder="Type text in English..." 
                 multiline value={transInput} onChangeText={setTransInput} 
               />
               
-              <ClayButton label="Translate to Local" onPress={() => showToast('ML Translation complete', 'construct')} color={NC.primary} style={{ marginTop: 16 }} />
+              <View style={{flexDirection:'row',gap:10,marginTop:14}}>
+                <TouchableOpacity style={{flex:1}} onPress={translateText}>
+                  <View style={{backgroundColor:NC.primary,padding:14,borderRadius:18,alignItems:'center'}}>
+                    <Text style={{color:'#FFF',fontWeight:'900',fontSize:14}}>{transLoading ? 'Translating...' : 'Translate'}</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { if(transInput.trim()) speakText(transInput); }} style={{width:50,height:50,borderRadius:25,backgroundColor:NC.surfaceLow,alignItems:'center',justifyContent:'center'}}>
+                  <Ionicons name="volume-high" size={22} color={NC.primary}/>
+                </TouchableOpacity>
+              </View>
+
+              {transResult ? (
+                <View style={{ backgroundColor: '#E8F5E9', borderRadius: 20, padding: 18, marginTop: 16, borderWidth: 2, borderColor: 'rgba(165,214,167,0.4)' }}>
+                  <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: NC.onSurfaceVariant, letterSpacing: 1 }}>TRANSLATION</Text>
+                    <TouchableOpacity onPress={() => speakText(transResult)}>
+                      <Ionicons name="volume-high" size={20} color={NC.primary}/>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: NC.primary, lineHeight: 26 }}>{transResult}</Text>
+                </View>
+              ) : null}
             </View>
           </View>
         </Modal>
 
+        {/* Budget Edit Modal */}
+        <Modal visible={showBudgetEdit} transparent animationType="fade">
+          <View style={{flex:1,backgroundColor:'rgba(0,0,0,0.5)',justifyContent:'center',alignItems:'center'}}>
+            <View style={{backgroundColor:'#FFF',borderRadius:28,padding:24,width:'80%'}}>
+              <Text style={{fontSize:20,fontWeight:'900',color:NC.primary,marginBottom:16}}>Edit Budget</Text>
+              <Text style={{fontSize:11,fontWeight:'800',color:NC.onSurfaceVariant,marginBottom:8}}>Total Budget (₹)</Text>
+              <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:16,fontSize:22,fontWeight:'900',color:NC.onSurface,textAlign:'center'}} keyboardType="numeric" value={budgetInput} onChangeText={setBudgetInput}/>
+              <View style={{flexDirection:'row',gap:10,marginTop:20}}>
+                <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.surfaceLow,alignItems:'center'}} onPress={() => setShowBudgetEdit(false)}>
+                  <Text style={{fontWeight:'800',color:NC.onSurfaceVariant}}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.primary,alignItems:'center'}} onPress={() => {
+                  const val = parseInt(budgetInput);
+                  if(val > 0){ setBudget(val); showToast('Budget updated!','construct'); }
+                  setShowBudgetEdit(false);
+                }}>
+                  <Text style={{fontWeight:'900',color:'#FFF'}}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Hero Edit Modal */}
+        <Modal visible={showHeroEdit} transparent animationType="fade">
+          <View style={{flex:1,backgroundColor:'rgba(0,0,0,0.5)',justifyContent:'center',alignItems:'center'}}>
+            <View style={{backgroundColor:'#FFF',borderRadius:28,padding:24,width:'85%'}}>
+              <Text style={{fontSize:20,fontWeight:'900',color:NC.primary,marginBottom:16}}>Edit Trip Card</Text>
+              <Text style={{fontSize:11,fontWeight:'800',color:NC.onSurfaceVariant,marginBottom:6}}>Title</Text>
+              <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontWeight:'700',color:NC.onSurface,marginBottom:14}} value={heroTitle} onChangeText={setHeroTitle}/>
+              <View style={{flexDirection:'row',gap:10}}>
+                <View style={{flex:1}}>
+                  <Text style={{fontSize:11,fontWeight:'800',color:NC.onSurfaceVariant,marginBottom:6}}>Departs In</Text>
+                  <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontWeight:'700',color:NC.onSurface}} value={heroDeparts} onChangeText={setHeroDeparts}/>
+                </View>
+                <View style={{flex:1}}>
+                  <Text style={{fontSize:11,fontWeight:'800',color:NC.onSurfaceVariant,marginBottom:6}}>Platform</Text>
+                  <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontWeight:'700',color:NC.onSurface}} value={heroPlatform} onChangeText={setHeroPlatform}/>
+                </View>
+              </View>
+              <View style={{flexDirection:'row',gap:10,marginTop:20}}>
+                <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.surfaceLow,alignItems:'center'}} onPress={() => setShowHeroEdit(false)}>
+                  <Text style={{fontWeight:'800',color:NC.onSurfaceVariant}}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.primary,alignItems:'center'}} onPress={() => { setShowHeroEdit(false); showToast('Trip updated!','construct'); }}>
+                  <Text style={{fontWeight:'900',color:'#FFF'}}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        <View style={{ height: 130 }} />
       </ScrollView>
     </SafeAreaView>
   );

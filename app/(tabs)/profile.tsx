@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Alert, Modal, ScrollView, StyleSheet, Text,
-  TextInput, TouchableOpacity, View,
+  TextInput, TouchableOpacity, View, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,6 +60,7 @@ export default function ProfileScreen() {
     });
     setNewName(''); setNewRelation(''); setNewAge('');
     setShowAddModal(false);
+    showToast('Member added to family group!', 'construct');
   };
 
   return (
@@ -210,6 +211,7 @@ export default function ProfileScreen() {
 
       {/* Add Member Modal */}
       <Modal visible={showAddModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={ps.modalOverlay}>
           <ClayCard style={ps.modalCard}>
             <Text style={ps.modalTitle}>Add Family Member</Text>
@@ -229,10 +231,12 @@ export default function ProfileScreen() {
             </View>
           </ClayCard>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Add Promise Modal */}
       <Modal visible={showAddVow} transparent animationType="slide">
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={ps.modalOverlay}>
           <ClayCard style={ps.modalCard}>
             <Text style={ps.modalTitle}>Trip Promise</Text>
@@ -246,11 +250,16 @@ export default function ProfileScreen() {
               <ClayButton label="Cancel" onPress={() => setShowAddVow(false)}
                 color={NC.surfaceLow} textColor={NC.onSurface} small />
               <ClayButton label="Save Promise" onPress={() => {
-                if (vowTitle) { addVow({ title: vowTitle, location: vowLoc || 'Unknown', emoji: 'T' }); setVowTitle(''); setVowLoc(''); setShowAddVow(false); }
+                if (vowTitle) {
+                  addVow({ title: vowTitle, location: vowLoc || 'Unknown', emoji: 'T' });
+                  setVowTitle(''); setVowLoc(''); setShowAddVow(false);
+                  showToast('Promise saved successfully!', 'construct');
+                }
               }} color={NC.primary} small />
             </View>
           </ClayCard>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

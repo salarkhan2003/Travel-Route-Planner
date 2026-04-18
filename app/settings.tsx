@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ClayCard } from '../src/components/clay/ClayCard';
@@ -7,6 +7,7 @@ import { ClayToggle } from '../src/components/clay/ClayToggle';
 import { useSettingsStore } from '../src/store/settingsStore';
 import { CURRENCIES } from '../src/constants/currencies';
 import { NC } from '../src/constants/theme';
+import { useToastStore } from '../src/store/toastStore';
 
 function Row({ label, sub, right }: { label: string; sub?: string; right: React.ReactNode }) {
   return (
@@ -36,6 +37,7 @@ function Chips<T extends string>({ options, value, onSelect }: { options: readon
 export default function SettingsScreen() {
   const router = useRouter();
   const store = useSettingsStore();
+  const showToast = useToastStore(s => s.showToast);
 
   const [draft, setDraft] = useState({
     currency: store.currency,
@@ -67,7 +69,7 @@ export default function SettingsScreen() {
     if (draft.biometricLock !== store.biometricLock) store.toggleBiometric();
     if (draft.cloudSync !== store.cloudSync) store.toggleCloudSync();
     if (draft.notifications !== store.notifications) store.toggleNotifications();
-    Alert.alert('Saved', 'Preferences applied across the app.');
+    showToast('Preferences saved successfully!', 'construct');
   };
 
   return (
