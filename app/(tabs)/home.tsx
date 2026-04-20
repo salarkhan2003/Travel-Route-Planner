@@ -49,9 +49,9 @@ const TOOLS = [
   { key: 'Weather', label: 'Weather', icon: 'partly-sunny-outline' },
   { key: 'Translate', label: 'Translate', icon: 'language-outline' },
 ];
-const POLLS = [
-  { q: 'Dinner tonight?', opts: ['Taj Cafe', 'Local Dhaba'], votes: [3, 5] },
-  { q: 'Next stop?', opts: ['Pushkar', 'Jaipur'], votes: [4, 4] },
+const INITIAL_POLLS = [
+  { id: '1', q: 'Dinner tonight?', opts: ['Taj Cafe', 'Local Dhaba'], votes: [3, 5] },
+  { id: '2', q: 'Next stop?', opts: ['Pushkar', 'Jaipur'], votes: [4, 4] },
 ];
 
 const getWeatherIcon = (main: string) => {
@@ -138,7 +138,12 @@ export default function HomeScreen() {
   const members = useFamilyStore(s => s.members);
   const { fmtFull } = useCurrency();
   const [search, setSearch] = useState('');
+  const [polls, setPolls] = useState([...INITIAL_POLLS]);
   const [pollVotes, setPollVotes] = useState<Record<string, number>>({});
+  const [showAddPoll, setShowAddPoll] = useState(false);
+  const [newPollQ, setNewPollQ] = useState('');
+  const [newPollOpt1, setNewPollOpt1] = useState('');
+  const [newPollOpt2, setNewPollOpt2] = useState('');
   const [fromCur, setFromCur] = useState('INR');
   const [toCur, setToCur] = useState('SGD');
   const [amount, setAmount] = useState('1000');
@@ -146,8 +151,9 @@ export default function HomeScreen() {
   const [showTranslator, setShowTranslator] = useState(false);
   const [transInput, setTransInput] = useState('');
   const [transResult, setTransResult] = useState('');
-  const [transLang, setTransLang] = useState('hi');
+  const [transLang, setTransLang] = useState('es');
   const [transLoading, setTransLoading] = useState(false);
+  const [transHistory, setTransHistory] = useState<{q:string, a:string}[]>([]);
   const [editingCity, setEditingCity] = useState(false);
   const [cityInput, setCityInput] = useState('');
   const [showBudgetEdit, setShowBudgetEdit] = useState(false);
@@ -194,7 +200,12 @@ export default function HomeScreen() {
   React.useEffect(() => {
     const generateHistory = () => {
       const base = exchangeRate || 1;
-      const hist = Array.from({length:14}, (_,i) => base * (0.96 + Math.random() * 0.08));
+      let current = base * 0.95;
+      const hist = [current];
+      for(let i=1; i<14; i++) {
+        current = current + (Math.random() - 0.5) * (base * 0.02);
+        hist.push(current);
+      }
       hist.push(base);
       setFxHistory(hist);
     };
@@ -227,6 +238,7 @@ export default function HomeScreen() {
       const data = await res.json();
       if (data?.responseData?.translatedText) {
         setTransResult(data.responseData.translatedText);
+        setTransHistory([{q: transInput, a: data.responseData.translatedText}, ...transHistory.slice(0,4)]);
       } else {
         setTransResult('Translation unavailable');
       }
@@ -234,6 +246,14 @@ export default function HomeScreen() {
       setTransResult('Network error');
     }
     setTransLoading(false);
+  };
+  
+  const mockVoiceTyping = () => {
+    showToast('Listening...', 'mic-outline');
+    setTimeout(() => {
+      setTransInput('Where is the nearest train station?');
+      showToast('Speech recognized!', 'checkmark-circle-outline');
+    }, 1500);
   };
 
   React.useEffect(() => {
@@ -504,9 +524,10 @@ export default function HomeScreen() {
               <TouchableOpacity activeOpacity={0.8} onPress={() => {
                 const max = Math.max(...fxHistory).toFixed(2);
                 const min = Math.min(...fxHistory).toFixed(2);
-                showToast(`High: ${max} | Low: ${min}`, 'analytics-outline');
+                const range = (Number(max) - Number(min)).toFixed(2);
+                showToast(`High: ${max} ${toCur} | Low: ${min} ${toCur} | Var: ${range}`, 'analytics-outline');
               }} style={{marginTop:14,alignItems:'center'}}>
-                <Text style={{fontSize:10,fontWeight:'700',color:NC.onSurfaceVariant,marginBottom:4}}>14-Day Trend ({fromCur} → {toCur}) · Tap for High/Low</Text>
+                <Text style={{fontSize:10,fontWeight:'700',color:NC.onSurfaceVariant,marginBottom:4}}>14-Day Trend ({fromCur} → {toCur}) · Tap for info</Text>
                 <Text style={{fontSize:12,fontWeight:'800',color:NC.primary,marginBottom:8}}>High: {Math.max(...fxHistory).toFixed(2)}  •  Low: {Math.min(...fxHistory).toFixed(2)}</Text>
                 <Svg width={260} height={50}>
                   <SvgPolyline
@@ -575,14 +596,24 @@ export default function HomeScreen() {
         </ClayCard>
 
         {/* ── Group Polls ── */}
-        <Text style={s.sectionHead}>Group Polls</Text>
-        {POLLS.map((poll, pi) => (
-          <ClayCard key={pi} variant="white" style={s.pollCard}>
-            <Text style={s.pollQ}>{poll.q}</Text>
+        <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:14,marginTop:12}}>
+          <Text style={[s.sectionHead,{marginBottom:0,marginTop:0}]}>Group Polls</Text>
+          <TouchableOpacity onPress={() => setShowAddPoll(true)}>
+            <Ionicons name="add-circle" size={24} color={NC.primary} />
+          </TouchableOpacity>
+        </View>
+        {polls.map((poll, pi) => (
+          <ClayCard key={poll.id} variant="white" style={s.pollCard}>
+            <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start'}}>
+              <Text style={[s.pollQ, {flex: 1}]}>{poll.q}</Text>
+              <TouchableOpacity onPress={() => setPolls(polls.filter(p=>p.id!==poll.id))} style={{padding:4}}>
+                <Ionicons name="trash-outline" size={18} color="#E53935" />
+              </TouchableOpacity>
+            </View>
             {poll.opts.map((opt, oi) => {
-              const key = `${pi}-${oi}`;
+              const key = `${poll.id}-${oi}`;
               const voted = !!pollVotes[key];
-              const total = poll.votes.reduce((a, b) => a + b, 0) + Object.keys(pollVotes).filter(k => k.startsWith(`${pi}-`)).length;
+              const total = poll.votes.reduce((a, b) => a + b, 0) + Object.keys(pollVotes).filter(k => k.startsWith(`${poll.id}-`)).length;
               const pct = total > 0 ? Math.round(((poll.votes[oi] + (voted ? 1 : 0)) / total) * 100) : 0;
               return (
                 <TouchableOpacity key={opt} style={[s.pollOpt, voted && s.pollOptVoted]}
@@ -610,27 +641,37 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14, maxHeight: 40 }}>
-                {[{c:'hi',l:'Hindi'},{c:'ta',l:'Tamil'},{c:'te',l:'Telugu'},{c:'kn',l:'Kannada'},{c:'mr',l:'Marathi'},{c:'bn',l:'Bengali'},{c:'fr',l:'French'},{c:'es',l:'Spanish'},{c:'ja',l:'Japanese'},{c:'ar',l:'Arabic'},{c:'zh-CN',l:'Chinese'}].map(lang => (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14, maxHeight: 40, minHeight: 40 }}>
+                {[{c:'hi',l:'🇮🇳 Hindi'},{c:'ta',l:'🇮🇳 Tamil'},{c:'te',l:'🇮🇳 Telugu'},{c:'fr',l:'🇫🇷 French'},{c:'es',l:'🇪🇸 Spanish'},{c:'ja',l:'🇯🇵 Japanese'},{c:'de',l:'🇩🇪 German'},{c:'zh-CN',l:'🇨🇳 Chinese'}].map(lang => (
                   <TouchableOpacity key={lang.c} onPress={() => setTransLang(lang.c)}
                     style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, marginRight: 8,
                       backgroundColor: transLang === lang.c ? NC.primary : NC.surfaceLow }}>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: transLang === lang.c ? '#FFF' : NC.onSurfaceVariant }}>{lang.l}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: transLang === lang.c ? '#FFF' : NC.onSurfaceVariant }}>{lang.l}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
 
-              <TextInput 
-                style={{ backgroundColor: NC.surfaceLowest, borderWidth: 2, borderColor: 'rgba(165,214,167,0.3)', borderRadius: 20, padding: 16, fontSize: 15, color: NC.onSurface, fontWeight: '700', minHeight: 80, textAlignVertical: 'top' }} 
-                placeholder="Type text in English..." 
-                multiline value={transInput} onChangeText={setTransInput} 
-              />
+              <View style={{position:'relative'}}>
+                <TextInput 
+                  style={{ backgroundColor: NC.surfaceLowest, borderWidth: 2, borderColor: 'rgba(165,214,167,0.3)', borderRadius: 20, padding: 16, fontSize: 16, color: NC.onSurface, fontWeight: '700', minHeight: 80, textAlignVertical: 'top', paddingRight: 40 }} 
+                  placeholder="Type text or use voice typing..." 
+                  multiline value={transInput} onChangeText={setTransInput} 
+                />
+                {(transInput.length > 0 || transResult.length > 0) && (
+                  <TouchableOpacity style={{position:'absolute', right:10, top:10, padding:4}} onPress={() => { setTransInput(''); setTransResult(''); }}>
+                    <Ionicons name="close-circle" size={24} color={NC.outlineVariant} />
+                  </TouchableOpacity>
+                )}
+              </View>
               
               <View style={{flexDirection:'row',gap:10,marginTop:14}}>
                 <TouchableOpacity style={{flex:1}} onPress={translateText}>
                   <View style={{backgroundColor:NC.primary,padding:14,borderRadius:18,alignItems:'center'}}>
                     <Text style={{color:'#FFF',fontWeight:'900',fontSize:14}}>{transLoading ? 'Translating...' : 'Translate'}</Text>
                   </View>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={mockVoiceTyping} style={{width:50,height:50,borderRadius:25,backgroundColor:NC.surfaceLow,alignItems:'center',justifyContent:'center'}}>
+                  <Ionicons name="mic" size={22} color={NC.primary}/>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => { if(transInput.trim()) speakText(transInput); }} style={{width:50,height:50,borderRadius:25,backgroundColor:NC.surfaceLow,alignItems:'center',justifyContent:'center'}}>
                   <Ionicons name="volume-high" size={22} color={NC.primary}/>
@@ -648,6 +689,19 @@ export default function HomeScreen() {
                   <Text style={{ fontSize: 18, fontWeight: '800', color: NC.primary, lineHeight: 26 }}>{transResult}</Text>
                 </View>
               ) : null}
+
+              {/* History */}
+              {transHistory.length > 0 && (
+                <View style={{marginTop: 20}}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: NC.outline, marginBottom: 8, letterSpacing: 1 }}>HISTORY</Text>
+                  {transHistory.map((h, i) => (
+                    <TouchableOpacity key={i} onPress={() => { setTransInput(h.q); setTransResult(h.a); }} style={{backgroundColor:NC.surfaceLowest, padding:12, borderRadius: 14, marginBottom: 8, borderWidth:1, borderColor:'rgba(0,0,0,0.05)'}}>
+                      <Text style={{fontSize:12, color:NC.onSurfaceVariant, fontWeight:'600'}} numberOfLines={1}>{h.q}</Text>
+                      <Text style={{fontSize:14, color:NC.primary, fontWeight:'800', marginTop:2}} numberOfLines={1}>{h.a}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
           </View>
         </Modal>
@@ -670,6 +724,34 @@ export default function HomeScreen() {
                    setShowAddWeather(false);
                  }}>
                    <Text style={{fontWeight:'900',color:'#FFF'}}>Add</Text>
+                 </TouchableOpacity>
+               </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Add Poll Modal */}
+        <Modal visible={showAddPoll} transparent animationType="fade">
+          <View style={{flex:1,backgroundColor:'rgba(0,0,0,0.5)',justifyContent:'center',alignItems:'center'}}>
+            <View style={{backgroundColor:'#FFF',borderRadius:28,padding:24,width:'85%'}}>
+               <Text style={{fontSize:20,fontWeight:'900',color:NC.primary,marginBottom:16}}>New Poll</Text>
+               <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontWeight:'700',color:NC.onSurface,marginBottom:10}} placeholder="Question (e.g. Next stop?)" placeholderTextColor={NC.outlineVariant} value={newPollQ} onChangeText={setNewPollQ}/>
+               <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontWeight:'700',color:NC.onSurface,marginBottom:10}} placeholder="Option 1" placeholderTextColor={NC.outlineVariant} value={newPollOpt1} onChangeText={setNewPollOpt1}/>
+               <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontWeight:'700',color:NC.onSurface}} placeholder="Option 2" placeholderTextColor={NC.outlineVariant} value={newPollOpt2} onChangeText={setNewPollOpt2}/>
+               <View style={{flexDirection:'row',gap:10,marginTop:20}}>
+                 <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.surfaceLow,alignItems:'center'}} onPress={() => setShowAddPoll(false)}>
+                   <Text style={{fontWeight:'800',color:NC.onSurfaceVariant}}>Cancel</Text>
+                 </TouchableOpacity>
+                 <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.primary,alignItems:'center'}} onPress={() => {
+                   if(newPollQ.trim() && newPollOpt1.trim() && newPollOpt2.trim()){
+                     setPolls([...polls, {id: Date.now().toString(), q: newPollQ, opts: [newPollOpt1, newPollOpt2], votes: [0, 0]}]);
+                     setNewPollQ(''); setNewPollOpt1(''); setNewPollOpt2('');
+                     setShowAddPoll(false);
+                   } else {
+                     showToast('Please fill all fields', 'warning');
+                   }
+                 }}>
+                   <Text style={{fontWeight:'900',color:'#FFF'}}>Create</Text>
                  </TouchableOpacity>
                </View>
             </View>
