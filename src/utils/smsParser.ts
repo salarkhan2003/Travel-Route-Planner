@@ -19,8 +19,8 @@ export function parseTransactionalSMS(message: string): ParsedTransaction | null
     type = 'credit';
   }
 
-  // Find amount: matches rs., inr, or ₹ followed by digits/decimals
-  const amtMatch = message.match(/(?:rs\.?|inr|₹)\s*([0-9,]+(?:\.[0-9]+)?)/i);
+  // Find amount: matches rs., inr, ₹, amt, or amount followed by digits/decimals
+  const amtMatch = message.match(/(?:rs\.?|inr|₹|amt|amount)\s*[:]?\s*([0-9,]+(?:\.[0-9]+)?)/i);
   if (!amtMatch && type === 'unknown') return null; // Very likely not a financial SMS
   
   const amountStr = amtMatch ? amtMatch[1] : '0';

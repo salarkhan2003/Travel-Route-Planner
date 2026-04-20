@@ -11,6 +11,7 @@ import {
   Alert, Animated, ScrollView, StyleSheet,
   Text, TextInput, TouchableOpacity, View, ActivityIndicator, Modal
 } from 'react-native';
+import { useSpeechRecognitionEvent, ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -164,6 +165,21 @@ export default function HomeScreen() {
   const [heroPlatform, setHeroPlatform] = useState('4B');
   const [searchSuggestions, setSearchSuggestions] = useState<typeof TRIP_SUGGESTIONS>([]);
   const [fxHistory, setFxHistory] = useState<number[]>([]);
+  const [recognizing, setRecognizing] = useState(false);
+
+  useSpeechRecognitionEvent("start", () => setRecognizing(true));
+  useSpeechRecognitionEvent("end", () => setRecognizing(false));
+  useSpeechRecognitionEvent("result", (event) => {
+    if (event.results && event.results[0]?.transcript) {
+      setTransInput(event.results[0].transcript);
+    }
+  });
+  useSpeechRecognitionEvent("error", (event) => {
+    setRecognizing(false);
+    if (event.error !== 'no-speech') {
+      showToast("Voice typing failed", "warning");
+    }
+  });
 
   const [liveWeather, setLiveWeather] = useState({ temp: 0, cond: 'Loading...', icon: '☀️' });
   const [isWeatherLoading, setIsWeatherLoading] = useState(false);
@@ -248,12 +264,21 @@ export default function HomeScreen() {
     setTransLoading(false);
   };
   
-  const mockVoiceTyping = () => {
-    showToast('Listening...', 'mic-outline');
-    setTimeout(() => {
-      setTransInput('Where is the nearest train station?');
-      showToast('Speech recognized!', 'checkmark-circle-outline');
-    }, 1500);
+  const handleVoiceTyping = async () => {
+    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!result.granted) {
+      showToast("Microphone permission required", "warning");
+      return;
+    }
+
+    if (recognizing) {
+      ExpoSpeechRecognitionModule.stop();
+    } else {
+      ExpoSpeechRecognitionModule.start({
+        lang: "en-US",
+        interimResults: true,
+      });
+    }
   };
 
   React.useEffect(() => {
@@ -642,7 +667,14 @@ export default function HomeScreen() {
               </View>
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14, maxHeight: 40, minHeight: 40 }}>
-                {[{c:'hi',l:'🇮🇳 Hindi'},{c:'ta',l:'🇮🇳 Tamil'},{c:'te',l:'🇮🇳 Telugu'},{c:'fr',l:'🇫🇷 French'},{c:'es',l:'🇪🇸 Spanish'},{c:'ja',l:'🇯🇵 Japanese'},{c:'de',l:'🇩🇪 German'},{c:'zh-CN',l:'🇨🇳 Chinese'}].map(lang => (
+                {[
+                  {c:'en',l:'🇬🇧 English'}, {c:'hi',l:'🇮🇳 Hindi'}, {c:'ta',l:'🇮🇳 Tamil'}, {c:'te',l:'🇮🇳 Telugu'},
+                  {c:'mr',l:'🇮🇳 Marathi'}, {c:'bn',l:'🇮🇳 Bengali'}, {c:'gu',l:'🇮🇳 Gujarati'}, {c:'fr',l:'🇫🇷 French'},
+                  {c:'es',l:'🇪🇸 Spanish'}, {c:'de',l:'🇩🇪 German'}, {c:'it',l:'🇮🇹 Italian'}, {c:'pt',l:'🇵🇹 Portuguese'},
+                  {c:'ja',l:'🇯🇵 Japanese'}, {c:'ko',l:'🇰🇷 Korean'}, {c:'zh-CN',l:'🇨🇳 Chinese'}, {c:'ar',l:'🇸🇦 Arabic'},
+                  {c:'ru',l:'🇷🇺 Russian'}, {c:'nl',l:'🇳🇱 Dutch'}, {c:'tr',l:'🇹🇷 Turkish'}, {c:'id',l:'🇮🇩 Indonesian'},
+                  {c:'th',l:'🇹🇭 Thai'}, {c:'vi',l:'🇻🇳 Vietnamese'}
+                ].map(lang => (
                   <TouchableOpacity key={lang.c} onPress={() => setTransLang(lang.c)}
                     style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, marginRight: 8,
                       backgroundColor: transLang === lang.c ? NC.primary : NC.surfaceLow }}>
@@ -670,8 +702,8 @@ export default function HomeScreen() {
                     <Text style={{color:'#FFF',fontWeight:'900',fontSize:14}}>{transLoading ? 'Translating...' : 'Translate'}</Text>
                   </View>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={mockVoiceTyping} style={{width:50,height:50,borderRadius:25,backgroundColor:NC.surfaceLow,alignItems:'center',justifyContent:'center'}}>
-                  <Ionicons name="mic" size={22} color={NC.primary}/>
+                <TouchableOpacity onPress={handleVoiceTyping} style={{width:50,height:50,borderRadius:25,backgroundColor:recognizing ? '#FF1744' : NC.surfaceLow,alignItems:'center',justifyContent:'center'}}>
+                  <Ionicons name={recognizing ? "stop" : "mic"} size={22} color={recognizing ? "#FFF" : NC.primary}/>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => { if(transInput.trim()) speakText(transInput); }} style={{width:50,height:50,borderRadius:25,backgroundColor:NC.surfaceLow,alignItems:'center',justifyContent:'center'}}>
                   <Ionicons name="volume-high" size={22} color={NC.primary}/>

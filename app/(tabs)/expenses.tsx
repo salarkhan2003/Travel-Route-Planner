@@ -136,19 +136,42 @@ export default function ExpensesScreen() {
     if (Platform.OS === 'android') {
       try {
         const granted = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.READ_SMS, PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
+          PermissionsAndroid.PERMISSIONS.READ_SMS, 
+          PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
         ]);
-        if (granted[PermissionsAndroid.PERMISSIONS.READ_SMS] === PermissionsAndroid.RESULTS.GRANTED && SmsListener) {
+        if (granted[PermissionsAndroid.PERMISSIONS.READ_SMS] === PermissionsAndroid.RESULTS.GRANTED) {
           setListening(true);
-          SmsListener.addListener((msg: any) => {
-            const parsed = parseTransactionalSMS(msg.body);
-            if (parsed) addTransaction(parsed);
-          });
           showToast('SMS Tracker active', 'construct');
+        } else {
+          showToast('SMS permission denied', 'warning');
         }
-      } catch {}
+      } catch (err) {
+        console.warn(err);
+      }
+    } else {
+      showToast('SMS Tracking only on Android', 'warning');
     }
   };
+
+  useEffect(() => {
+    let subscription: any;
+    if (listening && SmsListener) {
+      subscription = SmsListener.addListener((msg: any) => {
+        try {
+          const parsed = parseTransactionalSMS(msg.body);
+          if (parsed) {
+            addTransaction(parsed);
+            showToast(`New transaction: ₹${parsed.amount}`, 'construct');
+          }
+        } catch (e) {
+          console.error('SMS Parse Error:', e);
+        }
+      });
+    }
+    return () => {
+      if (subscription) subscription.remove();
+    };
+  }, [listening]);
 
   const simulateIncomingSMS = () => {
     const msgs = [

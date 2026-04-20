@@ -338,16 +338,24 @@ export default function BookingHubScreen() {
 
         {/* PNR Sync */}
         <ClayCard variant="white" style={st.syncCard}>
-          <View style={{flexDirection:'row',alignItems:'center',marginBottom:8}}>
+          <View style={{flexDirection:'row',alignItems:'center',marginBottom:12}}>
             <Ionicons name="link" size={16} color="#1565C0"/>
-            <Text style={st.syncTitle}>  Sync Ticket via PNR</Text>
+            <Text style={[st.syncTitle, {flex: 1}]}>  Sync Ticket via ID</Text>
+            
+            <View style={{flexDirection:'row',backgroundColor:'rgba(21,101,192,0.1)',borderRadius:12,padding:3}}>
+              <TouchableOpacity onPress={() => setSyncType('train')} style={{paddingHorizontal:10,paddingVertical:6,borderRadius:10,backgroundColor:syncType==='train'?'#FFF':'transparent'}}>
+                <Text style={{fontSize:10,fontWeight:'800',color:syncType==='train'?'#1565C0':NC.onSurfaceVariant}}>Train</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSyncType('flight')} style={{paddingHorizontal:10,paddingVertical:6,borderRadius:10,backgroundColor:syncType==='flight'?'#FFF':'transparent'}}>
+                <Text style={{fontSize:10,fontWeight:'800',color:syncType==='flight'?'#1565C0':NC.onSurfaceVariant}}>Flight</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSyncType('bus')} style={{paddingHorizontal:10,paddingVertical:6,borderRadius:10,backgroundColor:syncType==='bus'?'#FFF':'transparent'}}>
+                <Text style={{fontSize:10,fontWeight:'800',color:syncType==='bus'?'#1565C0':NC.onSurfaceVariant}}>Bus</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <View style={{flexDirection:'row',gap:8}}>
-            <TouchableOpacity onPress={() => setSyncType(syncType==='train'?'flight':syncType==='flight'?'bus':'train')} 
-              style={{backgroundColor:'#E3F2FD',paddingHorizontal:16,justifyContent:'center',borderRadius:16,borderWidth:2,borderColor:'rgba(21,101,192,0.2)'}}>
-              <Ionicons name={syncType==='flight'?'airplane':syncType==='bus'?'bus':'train'} size={20} color="#1565C0"/>
-            </TouchableOpacity>
-            <TextInput style={[st.input,{flex:1,paddingVertical:12}]} placeholder="Enter PNR / ID"
+            <TextInput style={[st.input,{flex:1,paddingVertical:12}]} placeholder={syncType==='train'?"Enter PNR Number":syncType==='flight'?"Enter PNR / Ref ID":"Enter Ticket ID"}
               value={syncPnr} onChangeText={setSyncPnr}/>
             <TouchableOpacity style={st.syncBtn} onPress={handlePnrSync} disabled={syncLoading}>
               {syncLoading ? <ActivityIndicator color="#FFF" size="small"/> : <Ionicons name="add" size={24} color="#FFF"/>}

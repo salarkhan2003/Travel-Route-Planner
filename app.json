@@ -28,7 +28,10 @@
         "READ_SMS",
         "RECEIVE_SMS",
         "android.permission.READ_SMS",
-        "android.permission.RECEIVE_SMS"
+        "android.permission.RECEIVE_SMS",
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "ios": {
@@ -36,7 +39,8 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Roamio uses your location to show nearby destinations and provide navigation.",
-        "NSLocationAlwaysUsageDescription": "Roamio uses your location for navigation."
+        "NSLocationAlwaysUsageDescription": "Roamio uses your location for navigation.",
+        "NSMicrophoneUsageDescription": "Roamio uses your microphone for real-time voice typing and translator features."
       }
     },
     "plugins": [
@@ -46,7 +50,8 @@
         {
           "locationWhenInUsePermission": "Allow Roamio to use your location for navigation and nearby suggestions."
         }
-      ]
+      ],
+      "expo-speech-recognition"
     ],
     "experiments": {
       "typedRoutes": true
