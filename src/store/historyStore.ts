@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type TripStatus = 'booked' | 'ongoing' | 'completed' | 'cancelled';
 
@@ -20,7 +22,9 @@ export interface HistoryState {
   updateStatus: (id: string, status: TripStatus) => void;
 }
 
-export const useHistoryStore = create<HistoryState>()((set) => ({
+export const useHistoryStore = create<HistoryState>()(
+  persist(
+    (set) => ({
   trips: [],
   addTrip: (trip) => set((s) => ({
     trips: [{ ...trip, id: `trip-${Date.now()}` }, ...s.trips],
@@ -28,4 +32,9 @@ export const useHistoryStore = create<HistoryState>()((set) => ({
   updateStatus: (id, status) => set((s) => ({
     trips: s.trips.map((t) => t.id === id ? { ...t, status } : t),
   })),
-}));
+}),
+{
+  name: 'history-storage',
+  storage: createJSONStorage(() => AsyncStorage),
+}
+));

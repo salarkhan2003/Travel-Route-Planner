@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface SavedState {
   savedIds: string[];
@@ -6,7 +8,9 @@ export interface SavedState {
   isSaved: (id: string) => boolean;
 }
 
-export const useSavedStore = create<SavedState>()((set, get) => ({
+export const useSavedStore = create<SavedState>()(
+  persist(
+    (set, get) => ({
   savedIds: [],
   toggle: (id) => set((s) => ({
     savedIds: s.savedIds.includes(id)
@@ -14,4 +18,9 @@ export const useSavedStore = create<SavedState>()((set, get) => ({
       : [...s.savedIds, id],
   })),
   isSaved: (id) => get().savedIds.includes(id),
-}));
+}),
+{
+  name: 'saved-storage',
+  storage: createJSONStorage(() => AsyncStorage),
+}
+));

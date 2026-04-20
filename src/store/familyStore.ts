@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface FamilyMember {
   id: string;
@@ -31,7 +33,9 @@ export interface FamilyState {
   setTotalBudget: (n: number) => void;
 }
 
-export const useFamilyStore = create<FamilyState>()((set) => ({
+export const useFamilyStore = create<FamilyState>()(
+  persist(
+    (set) => ({
   members: [
     { id: 'me', name: 'Salar Khan', relation: 'Trip Leader', age: 22, emoji: 'SK', isLeader: true },
     { id: 'm1', name: 'Dad', relation: 'Father', age: 52, emoji: 'D', isLeader: false },
@@ -47,4 +51,9 @@ export const useFamilyStore = create<FamilyState>()((set) => ({
   addVow: (v) => set((s) => ({ vows: [...s.vows, { ...v, id: `vow${Date.now()}`, fulfilled: false }] })),
   removeVow: (id) => set((s) => ({ vows: s.vows.filter(v => v.id !== id) })),
   setTotalBudget: (totalBudget) => set({ totalBudget }),
-}));
+}),
+{
+  name: 'family-storage',
+  storage: createJSONStorage(() => AsyncStorage),
+}
+));

@@ -1,5 +1,19 @@
 export type TransportMode = 'flight' | 'train' | 'road' | 'bus';
 
+export interface TripWeather {
+  city: string;
+  temp: string;
+  cond: string;
+  icon: string;
+}
+
+export interface TripExpense {
+  id: string;
+  amount: number;
+  text: string;
+  date: string;
+}
+
 export interface TransportOption {
   mode: TransportMode;
   cost: number;
@@ -36,6 +50,8 @@ export interface TripState {
   selectedPathId: string | null;
   selectedNodeId: string | null;
   homeCity: string;
+  routeWeathers: TripWeather[];
+  extraExpenses: TripExpense[];
   reorderNode: (fromIndex: number, toIndex: number) => void;
   selectPath: (pathId: string | null) => void;
   selectNode: (nodeId: string | null) => void;
@@ -47,4 +63,6 @@ export interface TripState {
   removeNode: (nodeId: string) => void;
   clearTrip: () => void;
   setHomeCity: (city: string) => void;
+  setRouteWeathers: (weathers: TripWeather[]) => void;
+  addExtraExpense: (expense: Omit<TripExpense, 'id' | 'date'>) => void;
 }

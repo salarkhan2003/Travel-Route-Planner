@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface SettingsState {
   darkMode: boolean;
@@ -21,7 +23,9 @@ export interface SettingsState {
   toggleNotifications: () => void;
 }
 
-export const useSettingsStore = create<SettingsState>()((set) => ({
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set) => ({
   darkMode: true,
   currency: 'INR',
   mapStyle: 'standard',
@@ -40,4 +44,9 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
   toggleBiometric: () => set((s) => ({ biometricLock: !s.biometricLock })),
   toggleCloudSync: () => set((s) => ({ cloudSync: !s.cloudSync })),
   toggleNotifications: () => set((s) => ({ notifications: !s.notifications })),
-}));
+}),
+{
+  name: 'settings-storage',
+  storage: createJSONStorage(() => AsyncStorage),
+}
+));

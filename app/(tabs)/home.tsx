@@ -41,12 +41,6 @@ const TRIP_SUGGESTIONS = [
   {title:'Northeast Explorer',route:'Guwahati → Darjeeling → Gangtok',days:6},
 ];
 
-const INITIAL_WEATHER = [
-  { city: 'Ajmer', temp: '34C', cond: 'Sunny', icon: '☀️' },
-  { city: 'Delhi', temp: '38C', cond: 'Cloudy', icon: '⛅' },
-  { city: 'Singapore', temp: '29C', cond: 'Showers', icon: '🌧️' },
-  { city: 'Goa', temp: '31C', cond: 'Breezy', icon: '🌤️' },
-];
 const TOOLS = [
   { key: 'Currency', label: 'FX', icon: 'cash-outline' },
   { key: 'SOS', label: 'SOS', icon: 'warning-outline' },
@@ -139,6 +133,8 @@ export default function HomeScreen() {
   const globalBudget = useTripStore(s => s.globalBudget);
   const homeCity = useTripStore(s => s.homeCity);
   const setHomeCity = useTripStore(s => s.setHomeCity);
+  const routeWeathers = useTripStore(s => s.routeWeathers);
+  const setRouteWeathers = useTripStore(s => s.setRouteWeathers);
   const members = useFamilyStore(s => s.members);
   const { fmtFull } = useCurrency();
   const [search, setSearch] = useState('');
@@ -168,7 +164,6 @@ export default function HomeScreen() {
   const [exchangeRate, setExchangeRate] = useState(1);
   const [fxLoading, setFxLoading] = useState(false);
   
-  const [routeWeathers, setRouteWeathers] = useState(INITIAL_WEATHER);
   const [showAddWeather, setShowAddWeather] = useState(false);
   const [newWeatherCity, setNewWeatherCity] = useState('');
 

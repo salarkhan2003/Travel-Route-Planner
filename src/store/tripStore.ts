@@ -1,13 +1,16 @@
 import { create } from 'zustand';
-import type { TripState, TripNode, TripPath, TransportMode } from '../types/trip';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { TripState, TripNode, TripPath, TransportMode, TripExpense } from '../types/trip';
 
-function computeSpent(nodes: TripNode[], paths: TripPath[]): number {
+function computeSpent(nodes: TripNode[], paths: TripPath[], extraExpenses: TripExpense[] = []): number {
   const stay = nodes.reduce((s, n) => s + n.totalStayCost, 0);
   const transport = paths.reduce((s, p) => {
     const opt = p.options.find((o) => o.mode === p.selectedMode);
     return s + (opt?.cost ?? 0);
   }, 0);
-  return stay + transport;
+  const extras = extraExpenses.reduce((s, e) => s + e.amount, 0);
+  return stay + transport + extras;
 }
 
 function applyBudgetFilter(nodes: TripNode[], paths: TripPath[], budget: number) {
@@ -21,7 +24,9 @@ function applyBudgetFilter(nodes: TripNode[], paths: TripPath[], budget: number)
   };
 }
 
-export const useTripStore = create<TripState>()((set, get) => ({
+export const useTripStore = create<TripState>()(
+  persist(
+    (set, get) => ({
   nodes: [],
   paths: [],
   globalBudget: 50000,
@@ -29,6 +34,13 @@ export const useTripStore = create<TripState>()((set, get) => ({
   selectedPathId: null,
   selectedNodeId: null,
   homeCity: 'Ajmer',
+  routeWeathers: [
+    { city: 'Ajmer', temp: '34C', cond: 'Sunny', icon: '☀️' },
+    { city: 'Delhi', temp: '38C', cond: 'Cloudy', icon: '⛅' },
+    { city: 'Singapore', temp: '29C', cond: 'Showers', icon: '🌧️' },
+    { city: 'Goa', temp: '31C', cond: 'Breezy', icon: '🌤️' },
+  ],
+  extraExpenses: [],
 
   reorderNode: (fromIndex, toIndex) => {
     const { nodes, paths } = get();
@@ -51,17 +63,17 @@ export const useTripStore = create<TripState>()((set, get) => ({
             options: [{ mode: 'train' as TransportMode, cost: 500, durationHrs: 5, label: 'Train' }],
           };
     });
-    set({ nodes: reordered, paths: newPaths, spentBudget: computeSpent(reordered, newPaths) });
+    set({ nodes: reordered, paths: newPaths, spentBudget: computeSpent(reordered, newPaths, get().extraExpenses) });
   },
 
   selectPath: (pathId) => set({ selectedPathId: pathId, selectedNodeId: null }),
   selectNode: (nodeId) => set({ selectedNodeId: nodeId, selectedPathId: null }),
 
   swapTransport: (pathId, mode) => {
-    const { paths, nodes, globalBudget } = get();
+    const { paths, nodes, globalBudget, extraExpenses } = get();
     const updated = paths.map((p) => p.id === pathId ? { ...p, selectedMode: mode } : p);
     const { nodes: fn, paths: fp } = applyBudgetFilter(nodes, updated, globalBudget);
-    set({ paths: fp, nodes: fn, spentBudget: computeSpent(fn, fp) });
+    set({ paths: fp, nodes: fn, spentBudget: computeSpent(fn, fp, extraExpenses) });
   },
 
   toggleLockNode: (nodeId) => {
@@ -70,18 +82,18 @@ export const useTripStore = create<TripState>()((set, get) => ({
   },
 
   setBudget: (amount) => {
-    const { nodes, paths } = get();
+    const { nodes, paths, extraExpenses } = get();
     const { nodes: fn, paths: fp } = applyBudgetFilter(nodes, paths, amount);
-    set({ globalBudget: amount, nodes: fn, paths: fp, spentBudget: computeSpent(fn, fp) });
+    set({ globalBudget: amount, nodes: fn, paths: fp, spentBudget: computeSpent(fn, fp, extraExpenses) });
   },
 
   updateNodeStay: (nodeId, nights) => {
-    const { nodes, paths, globalBudget } = get();
+    const { nodes, paths, globalBudget, extraExpenses } = get();
     const updated = nodes.map((n) =>
       n.id === nodeId ? { ...n, stayNights: nights, totalStayCost: nights * n.hotelCostPerNight } : n
     );
     const { nodes: fn, paths: fp } = applyBudgetFilter(updated, paths, globalBudget);
-    set({ nodes: fn, paths: fp, spentBudget: computeSpent(fn, fp) });
+    set({ nodes: fn, paths: fp, spentBudget: computeSpent(fn, fp, extraExpenses) });
   },
 
   addNode: (node) => {
@@ -105,7 +117,7 @@ export const useTripStore = create<TripState>()((set, get) => ({
       });
     }
     const { nodes: fn, paths: fp } = applyBudgetFilter(newNodes, newPaths, globalBudget);
-    set({ nodes: fn, paths: fp, spentBudget: computeSpent(fn, fp) });
+    set({ nodes: fn, paths: fp, spentBudget: computeSpent(fn, fp, get().extraExpenses) });
   },
 
   removeNode: (nodeId) => {
@@ -126,12 +138,26 @@ export const useTripStore = create<TripState>()((set, get) => ({
       };
     });
     const { nodes: fn, paths: fp } = applyBudgetFilter(newNodes, newPaths, globalBudget);
-    set({ nodes: fn, paths: fp, spentBudget: computeSpent(fn, fp) });
+    set({ nodes: fn, paths: fp, spentBudget: computeSpent(fn, fp, get().extraExpenses) });
   },
 
   clearTrip: () => set({
     nodes: [], paths: [], spentBudget: 0,
     selectedPathId: null, selectedNodeId: null,
+    extraExpenses: [],
   }),
   setHomeCity: (city) => set({ homeCity: city }),
-}));
+  setRouteWeathers: (weathers) => set({ routeWeathers: weathers }),
+  addExtraExpense: (expense) => set((s) => {
+    const newExpenses = [...s.extraExpenses, { ...expense, id: `exp-${Date.now()}`, date: new Date().toISOString() }];
+    return {
+      extraExpenses: newExpenses,
+      spentBudget: computeSpent(s.nodes, s.paths, newExpenses)
+    };
+  }),
+}),
+{
+  name: 'trip-storage',
+  storage: createJSONStorage(() => AsyncStorage),
+}
+));

@@ -7,15 +7,15 @@
     "scheme": "roamio",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "icon": "./logo/Roamio_logo.png",
+    "icon": "./logo/ROAMIO_LOGO-NEW.png",
     "splash": {
-      "image": "./logo/Roamio_logo.png",
+      "image": "./logo/ROAMIO_LOGO-NEW.png",
       "backgroundColor": "#E8F5E9",
       "resizeMode": "contain"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./logo/Roamio_logo.png",
+        "foregroundImage": "./logo/ROAMIO_LOGO-NEW.png",
         "backgroundColor": "#E8F5E9"
       },
       "package": "com.roamio.app",
