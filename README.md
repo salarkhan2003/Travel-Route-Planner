@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=220&section=header&text=Nomad%20Canvas&fontSize=64&fontColor=ffffff&fontAlignY=38&desc=Spatial%20Travel%20Planner%20%E2%80%94%20India%20%E2%86%92%20Singapore&descAlignY=58&descSize=18&animation=fadeIn" width="100%"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=220&section=header&text=Roamio&fontSize=80&fontColor=ffffff&fontAlignY=38&desc=Spatial%20Travel%20Planner%20%E2%80%94%20India%20%E2%86%92%20Singapore&descAlignY=58&descSize=18&animation=fadeIn" width="100%"/>
 
 <p>
   <img src="https://img.shields.io/badge/Expo-54.0.33-000020?style=for-the-badge&logo=expo&logoColor=white"/>
@@ -11,7 +11,7 @@
 
 <p>
   <img src="https://img.shields.io/badge/Maps-TomTom%20SDK-FF6B35?style=for-the-badge"/>
-  <img src="https://img.shields.io/badge/State-Zustand-FF4154?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/State-Zustand%20+%20AsyncStorage-FF4154?style=for-the-badge"/>
   <img src="https://img.shields.io/badge/UI-Liquid%20Clay%203D-39653f?style=for-the-badge"/>
   <img src="https://img.shields.io/badge/Router-Expo%20Router-000020?style=for-the-badge&logo=expo"/>
 </p>
@@ -19,7 +19,7 @@
 <br/>
 
 <a href="https://git.io/typing-svg">
-  <img src="https://readme-typing-svg.demolab.com?font=Plus+Jakarta+Sans&weight=700&size=20&pause=1200&color=39653F&center=true&vCenter=true&width=650&lines=Plan+multi-city+trips+across+India+%26+Singapore;Real-time+TomTom+maps+%2B+turn-by-turn+navigation;Manage+your+entire+family+in+one+app;Track+budgets%2C+split+expenses%2C+convert+currency;Book+tickets+%26+hotels+with+beautiful+UI" alt="Typing SVG" />
+  <img src="https://readme-typing-svg.demolab.com?font=Plus+Jakarta+Sans&weight=700&size=20&pause=1200&color=39653F&center=true&vCenter=true&width=650&lines=Plan+multi-city+trips+across+India+%26+Global;Real-time+TomTom+maps+%2B+turn-by-turn+navigation;Manage+your+entire+family+in+one+app;Live+Translator%2C+Weather%2C+14-Day+FX+Sparklines;Book+tickets+%26+hotels+with+beautiful+UI" alt="Typing SVG" />
 </a>
 
 <br/><br/>
@@ -37,7 +37,7 @@ Planning a multi-city family trip across India and Singapore is genuinely hard:
 - **Family chaos** — managing 5–11 people with different ages, dietary needs, and document requirements across multiple cities is a logistical nightmare.
 - **Budget blindness** — you don't know how much you've spent vs. how much is left until it's too late.
 
-**Nomad Canvas solves all of this in one app.**
+**Roamio solves all of this in one app.**
 
 ---
 
@@ -81,13 +81,6 @@ The map is powered by **TomTom Maps JS SDK v6** rendered inside a React Native W
 - **Navigation** — tap Navigate on any city to get real turn-by-turn directions via TomTom Routing API (driving, walking, transit modes)
 - **Travel Guide** — tap Guide on any city for best season, getting there options, must-see highlights
 
-**How the WebView bridge works:**
-```
-React Native ──postMessage──► WebView (TomTom JS SDK)
-WebView ──onMessage──► React Native (marker press, map ready)
-```
-Commands like `flyTo`, `setMarker`, `setPolyline`, `fitBounds` are sent as JSON messages and executed inside the WebView's JavaScript context.
-
 ---
 
 ### 2. Route Planner (Itinerary Tab)
@@ -111,7 +104,7 @@ Three sub-sections:
 
 Each popular route has a full **day-by-day itinerary** with activities, stays, and transport. Tap "Book This Trip" to add it to your history.
 
-**History** — all booked trips with status (Booked / Ongoing / Completed / Cancelled), dates, cities, and total spend.
+**History** — persistent state powered by **AsyncStorage**, bringing all booked trips with status (Booked / Ongoing / Completed / Cancelled), dates, cities, and total spend efficiently over sessions.
 
 ---
 
@@ -128,14 +121,9 @@ Built for **group travel with up to 11 members**:
 - **Broadcast** — send live location to all family members
 - **Share Itinerary** — share trip link
 
-**Default family pre-loaded:**
-```
-Salar Khan (Leader, 22) · Dad (52) · Mom (48) · Sister 1 (25) · Sister 2 (20)
-```
-
 ---
 
-### 4. Budget & Currency System
+### 4. Smart Financials & Localization
 
 **Real-time budget tracking:**
 - Global budget set in settings (default ₹50,000)
@@ -144,51 +132,33 @@ Salar Khan (Leader, 22) · Dad (52) · Mom (48) · Sister 1 (25) · Sister 2 (20
 - `spentBudget` recomputes instantly on any change
 - Items exceeding 80% of budget threshold are flagged as "over budget" (greyed out)
 
-**Currency conversion:**
+**Currency Conversation & FX Sparklines:**
 - Supported: INR, SGD, USD, EUR, GBP
-- All prices displayed in your selected currency
-- Change currency in Settings → Save → all price displays update instantly across every screen
-- Live FX rates table in Settings
+- Visual 14-day FX sparklines indicating exchange rate trends.
+- Changes propagate instantly across every app screen using reactive hooks and Zustand state.
 
-**How currency flows through the app:**
-```
-settingsStore.currency
-      ↓
-useCurrency() hook (subscribes to store)
-      ↓
-fmtFull(amountINR) → converts + formats
-      ↓
-Every screen that shows prices re-renders automatically
-```
+**Real-Time Language Translation:**
+- Functional voice translations supporting Speech-to-Text & Text-to-Speech (utilizing `expo-speech`). Translate quickly between global languages while on the road via the unified live translator tool.
+
+**Weather Management:**
+- User-driven route weather synchronization. Add destinations manually and see real-time forecasts.
 
 ---
 
 ### 5. Booking Manager (Booking Tab)
 
-Three sections with dummy data pre-loaded for demonstration:
+Three sections with advanced dummy operations pre-loaded for demonstration:
 
 **Tickets** — 3 pre-loaded tickets:
-- Rajdhani Express: Guntur → Ajmer (Train, 3AC, 11h 35m, ₹2,670)
-- IndiGo 6E-85: Delhi → Singapore (Flight, Economy, 5h 25m, ₹55,500)
-- RSRTC Volvo: Ajmer → Delhi (Bus, AC Sleeper, 6h 30m, ₹1,350)
-
-Tap any ticket → **full-screen detail modal** with:
-- Colored header strip (transport-type color)
-- Departure/arrival times with city codes
-- Perforated tear-line divider (like a real ticket)
-- PNR, class, coach, seat, passenger count, total fare
-- QR code placeholder
+- Featuring a functional Calendar and fully interactive dropdown-based Search System.
+- Tracks Active vs. Historical tickets (Syncs securely onto device storage).
+- Tap any ticket → **full-screen detail modal** with perforated tear-line divider (like a real ticket)
 
 **Hotels** — 3 pre-loaded hotels:
-- The Ajmer Grand (5 nights, ₹28,000)
-- Marina Bay Suites Singapore (6 nights, S$2,160)
-- Hotel Janpath Delhi (1 night, ₹3,500)
+- The Ajmer Grand, Marina Bay Suites Singapore, Hotel Janpath Delhi.
+- Details modal outlining check-in/out schedules, amenity chips, and explicit addresses.
 
-Tap any hotel → detail modal with check-in/out, room type, amenities chips, address.
-
-**Wallet** — budget breakdown:
-- Total trip cost hero card (dark green)
-- Per-category spend: Train, Flight, Bus, Hotels with percentage bars
+**Wallet** — budget breakdown featuring liquid percentage bars.
 
 ---
 
@@ -215,35 +185,10 @@ This prevents accidental changes from immediately affecting the whole app. The S
 
 ---
 
-## City Database
+## Technical Features: App Boot & Resilience
 
-The app includes **20+ pre-loaded cities** across India and Singapore:
-
-| Region | Cities |
-|---|---|
-| North India | Delhi, Agra, Ajmer, Jaipur, Varanasi, Pushkar |
-| West India | Mumbai, Goa |
-| South India | Hyderabad, Guntur, Chennai, Kochi, Madurai |
-| East India | Kolkata |
-| Rajasthan | Jodhpur, Udaipur, Bikaner |
-| Singapore | Marina Bay, Sentosa, Orchard, Chinatown, Little India |
-
-Each city has: coordinates, description, tags, average hotel cost (USD), highlights array.
-
----
-
-## Transport Options
-
-Every route between two cities offers multiple transport modes:
-
-| Mode | Color | Use case |
-|---|---|---|
-| Train | Green `#4CAF50` | Long-distance India travel, 3AC/2AC/Sleeper |
-| Flight | Blue `#1565C0` | International + domestic air travel |
-| Bus | Orange `#FF7043` | Budget travel, short distances |
-| Road | Amber `#FFB300` | Self-drive, cab, road trips |
-
-Swapping transport on any leg instantly recalculates the total trip cost.
+* **Persistent Onboarding**: Tracks first-launch events using `AsyncStorage`. Users only see the onboarding animated flow once!
+* **Robust Lottie Render Engine**: All Lotties automatically resort to fallback native components on error during onboarding to avoid unmounting blocks.
 
 ---
 
@@ -254,16 +199,15 @@ Swapping transport on any leg instantly recalculates the total trip cost.
 | **Expo SDK 54** | Managed workflow, EAS cloud builds, no Android Studio needed for CI |
 | **React Native 0.81.5** | New Architecture enabled (`newArchEnabled: true`) for better performance |
 | **Expo Router** | File-based routing, deep linking, typed routes |
-| **Zustand** | Minimal boilerplate state management, reactive subscriptions |
+| **Zustand + AsyncStorage**| Minimal boilerplate state management, reactive subscriptions, persisting storage |
 | **TomTom Maps JS SDK** | No Google Maps billing, generous free tier, dotLottie-quality vector tiles |
-| **WebView bridge** | Lets us use the full TomTom JS SDK without a native React Native wrapper |
 | **TypeScript** | Full type safety across stores, components, and API responses |
 
 ---
 
-## Design System — Liquid Clay
+## Design System — Liquid Clay 3D
 
-Every UI element follows the **Nomad Canvas Liquid Clay** design token system:
+Every UI element follows the **Roamio Liquid Clay 3D** design token system:
 
 ```typescript
 // From src/constants/theme.ts
@@ -280,60 +224,12 @@ export const NC = {
 **Clay card recipe** (approximated in React Native):
 ```
 backgroundColor: #ffffff
-borderRadius: 28
+borderRadius: 40
 borderColor: rgba(255,255,255,0.95)   ← top-left highlight
 shadowColor: rgba(42,49,39,0.10–0.18)
 shadowOffset: { width: 0, height: 12–20 }
 shadowRadius: 28–40
 elevation: 8–12
-```
-
-**Navigation bar** — floating white pill with:
-- `rgba(42,49,39,0.14)` outer drop shadow at y:16, blur:32
-- Active tab: `#c5f8c7` pill background (inset clay pressed effect)
-- Rendered via `tabBarBackground` for full visual control
-
----
-
-## Project Structure
-
-```
-spatial-travel-planner/
-├── app/
-│   ├── (tabs)/
-│   │   ├── home.tsx        # Dashboard: live trip card, weather, polls, family hub
-│   │   ├── explore.tsx     # TomTom map, search, navigation, travel guides
-│   │   ├── itinerary.tsx   # Route timeline, popular routes, trip history
-│   │   ├── booking.tsx     # Tickets + hotels with full detail modals
-│   │   ├── saved.tsx       # Saved places with category filters
-│   │   ├── profile.tsx     # Profile, family, vows, badges, spend overview
-│   │   └── _layout.tsx     # Floating clay navigation bar
-│   ├── onboarding.tsx      # 4-slide animated welcome (pure RN animations)
-│   ├── settings.tsx        # Draft-based preferences with Save button
-│   └── _layout.tsx         # Root layout with gesture handler
-├── src/
-│   ├── components/
-│   │   ├── clay/
-│   │   │   ├── ClayCard.tsx    # White surface + green shadow card
-│   │   │   ├── ClayButton.tsx  # Animated press clay button
-│   │   │   └── ClayToggle.tsx  # Spring-animated toggle switch
-│   │   └── TomTomMap.tsx       # WebView + TomTom JS SDK bridge
-│   ├── constants/
-│   │   ├── theme.ts            # NC design tokens
-│   │   ├── locations.ts        # 20+ city database
-│   │   ├── popularRoutes.ts    # 6 curated itineraries with day plans
-│   │   ├── currencies.ts       # INR/SGD/USD/EUR/GBP rates
-│   │   └── tripData.ts         # Transport colors, icons
-│   ├── hooks/
-│   │   ├── useGoogleMaps.ts    # TomTom Search + Routing API
-│   │   └── useCurrency.ts      # Reactive currency conversion
-│   └── store/
-│       ├── tripStore.ts        # Nodes, paths, budget, transport swap
-│       ├── familyStore.ts      # Members, vows, total budget
-│       ├── savedStore.ts       # Saved city IDs
-│       ├── historyStore.ts     # Booked trip history
-│       └── settingsStore.ts    # Currency, class, map style, toggles
-└── animations/                 # Lottie files (airport, train, planning, bus)
 ```
 
 ---
@@ -354,7 +250,8 @@ cd spatial-travel-planner
 
 npm install --legacy-peer-deps
 
-npx expo start --clear
+# Use custom helper batch scripts:
+RUN-APP.bat
 ```
 
 > Scan the QR with **Expo Go** on Android.
@@ -381,21 +278,8 @@ eas build --platform android --profile apk
 | Service | Location | Purpose |
 |---|---|---|
 | TomTom Maps | `src/hooks/useGoogleMaps.ts` → `TOMTOM_API_KEY` | Map tiles, place search, routing |
-
-No Google Maps, no Firebase, no Supabase required. The app works fully offline except for map tiles and search.
-
----
-
-## Roadmap
-
-- [ ] Supabase real-time sync — share itinerary with family members live
-- [ ] Push notifications — departure reminders, budget alerts
-- [ ] Offline map tiles — download city maps for no-internet travel
-- [ ] AI itinerary builder — describe your trip, get a full plan
-- [ ] IRCTC / MakeMyTrip deep links — one-tap booking
-- [ ] Expense photo scan — snap a bill, auto-split among members
-- [ ] iOS build support
-- [ ] Multi-language support (Hindi, Tamil, Telugu)
+| MyMemory API | Translation API endpoint | Free language mapping endpoint |
+| ExchangeRate| `src/hooks/useCurrency` or similar | Fetch real-time FX mappings |
 
 ---
 
