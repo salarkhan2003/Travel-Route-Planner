@@ -295,7 +295,6 @@ export default function BookingHubScreen() {
     setMovieLoading(false);
   };
 
-
   // Train Tracking API Functions
   const fetchTrainRunningStatus = async (trainNo: string) => {
     if (!trainNo.trim()) {
@@ -304,57 +303,53 @@ export default function BookingHubScreen() {
     }
     setTrainLoading(true);
     try {
-      // Using Indian Railway Train Running Status API
-      const res = await fetch(`https://irctc1.p.rapidapi.com/v1/live/train/${trainNo.trim()}`, {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const departureDate = `${yyyy}${mm}${dd}`;
+
+      // Using Indian Railway Train Running Status API as requested
+      const res = await fetch(`https://indian-railway-irctc.p.rapidapi.com/api/trains/v1/train/status?train_number=${trainNo.trim()}&departure_date=${departureDate}&client=web`, {
         method: 'GET',
         headers: {
-          'X-RapidAPI-Key': RAPID_API_KEYS.trainRunningStatus,
-          'X-RapidAPI-Host': 'irctc1.p.rapidapi.com'
+          'X-RapidAPI-Key': RAPID_API_KEYS.trainRunningStatus, // uses: 8a021ae6c0mshd4cbdcccfa6bc4cp18270djsn09bb26c0b8bb
+          'X-RapidAPI-Host': 'indian-railway-irctc.p.rapidapi.com'
         }
       });
       const data = await res.json();
       console.log('Train status response:', data);
       
-      // Check if we got valid data
-      if (data && data.train_number) {
-        setTrainStatus({
-          train_number: data.train_number || trainNo,
-          train_name: data.train_name || 'Express',
-          current_station: data.current_station || 'En Route',
-          status: data.running_status || data.status || 'Running',
-          delay: data.delay || 0,
-          next_station: data.next_station || 'Next Station',
-          expected_arrival: data.expected_arrival || '--:--'
-        });
-        showToast(`Train ${data.train_number} status loaded`, 'construct');
-      } else if (data && data.message) {
-        showToast(data.message, 'warning');
-        setTrainStatus(null);
-      } else {
-        // Try alternative format
+      if (res.status === 200 && data && data.body) {
         setTrainStatus({
           train_number: trainNo,
-          train_name: data?.train_name || `${trainNo} Express`,
-          current_station: data?.current_station_name || 'Running',
-          status: data?.status || 'On Time',
-          delay: data?.delay || 0,
-          next_station: data?.next_station || 'En Route',
-          expected_arrival: data?.eta || '--:--'
+          train_name: typeof data.train_name === 'string' ? data.train_name : `Train ${trainNo}`,
+          current_station: data.body.current_station || 'En Route',
+          status: data.body.train_status_message || data.status?.message?.title || 'Running',
+          delay: data.body.delay || 0,
+          next_station: data.body.stations && data.body.stations.length > 0 ? (data.body.stations.find((s:any)=>!s.hasDeparted)?.stationName || 'Next Station') : 'En Route',
+          expected_arrival: data.body.stations && data.body.stations.length > 0 ? (data.body.stations[data.body.stations.length-1]?.arrivalTime || '--:--') : '--:--',
+          raw: data.body
         });
+        showToast(`Train ${trainNo} status loaded`, 'construct');
+      } else if (data && data.message) {
+        showToast(data.message.title || 'Error fetching status', 'warning');
+        setTrainStatus(null);
+      } else {
+        throw new Error('Invalid schema from IRCTC');
       }
     } catch (err) {
       console.error('Train status error:', err);
-      // Show meaningful error with fallback
       setTrainStatus({
         train_number: trainNo,
         train_name: `${trainNo} Express`,
         current_station: 'Data unavailable',
-        status: 'Please check IRCTC',
+        status: 'Please check official IRCTC',
         delay: 0,
         next_station: 'Check official app',
         expected_arrival: '--:--'
       });
-      showToast('Live data unavailable - check IRCTC', 'warning');
+      showToast('Live data unavailable - check network', 'warning');
     }
     setTrainLoading(false);
   };
@@ -1011,31 +1006,69 @@ export default function BookingHubScreen() {
                   </View>
 
                   {trainStatus && (
-                    <ClayCard variant="mint" style={{marginBottom:16,padding:16,borderLeftWidth:4,borderLeftColor:trainStatus.delay > 0 ? '#E53935' : '#4CAF50'}}>
-                      <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-                        <View>
-                          <Text style={{fontSize:18,fontWeight:'900',color:'#1B5E20'}}>{trainStatus.train_name}</Text>
-                          <Text style={{fontSize:13,color:'#558B2F',marginTop:2}}>Train #{trainStatus.train_number}</Text>
+                    <ClayCard variant="white" style={{marginBottom: 20, padding: 0, borderRadius: 24, overflow: 'hidden'}}>
+                      {/* Premium Header */}
+                      <View style={{backgroundColor: '#1E293B', padding: 20, paddingTop: 24}}>
+                        <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start'}}>
+                          <View style={{flex: 1}}>
+                            <View style={{flexDirection:'row',alignItems:'center',gap:8,marginBottom:4}}>
+                              <Ionicons name="train" size={22} color="#4ADE80" />
+                              <Text style={{fontSize: 22, fontWeight: '900', color: '#F8FAFC', letterSpacing: -0.5}} numberOfLines={1}>{trainStatus.train_name}</Text>
+                            </View>
+                            <Text style={{fontSize: 14, fontWeight: '600', color: '#94A3B8', letterSpacing: 1}}>No. {trainStatus.train_number}</Text>
+                          </View>
+                          <View style={{backgroundColor: trainStatus.delay > 0 ? '#EF444420' : '#22C55E20', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: trainStatus.delay > 0 ? '#EF444440' : '#22C55E40'}}>
+                            <Text style={{fontSize: 13, fontWeight: '800', color: trainStatus.delay > 0 ? '#FCA5A5' : '#86EFAC'}}>
+                              {trainStatus.delay > 0 ? `LATE ${trainStatus.delay}M` : 'ON TIME'}
+                            </Text>
+                          </View>
                         </View>
-                        <View style={{backgroundColor:trainStatus.delay > 0 ? '#FFEBEE' : '#E8F5E9',paddingHorizontal:10,paddingVertical:5,borderRadius:8}}>
-                          <Text style={{fontSize:12,fontWeight:'900',color:trainStatus.delay > 0 ? '#E53935' : '#2E7D32'}}>
-                            {trainStatus.delay > 0 ? `${trainStatus.delay}m delay` : 'On Time'}
+                      </View>
+
+                      {/* Info Section */}
+                      <View style={{padding: 20, backgroundColor: '#FFFFFF'}}>
+                        {/* Live Status Message Highlight */}
+                        <View style={{backgroundColor: '#F0FDF4', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#DCFCE7', marginBottom: 20}}>
+                          <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6}}>
+                            <View style={{width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E', shadowColor: '#22C55E', shadowOffset: {width:0, height:0}, shadowRadius: 6, shadowOpacity: 0.8}} />
+                            <Text style={{fontSize: 12, fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: 1}}>Live Update</Text>
+                          </View>
+                          <Text style={{fontSize: 15, fontWeight: '600', color: '#14532D', lineHeight: 22}}>
+                            {/* Remove HTML tags if any from the API message */}
+                            {(trainStatus.status || '').replace(/<[^>]+>/g, '') || `Train passed ${trainStatus.current_station}`}
                           </Text>
                         </View>
-                      </View>
-                      
-                      <View style={{flexDirection:'row',alignItems:'center',marginTop:8,gap:8}}>
-                        <View style={{width:10,height:10,borderRadius:5,backgroundColor:'#4CAF50'}} />
-                        <Text style={{fontSize:14,fontWeight:'700',color:'#2E7D32'}}>Current: {trainStatus.current_station}</Text>
-                      </View>
-                      
-                      <View style={{flexDirection:'row',alignItems:'center',marginTop:6,gap:8}}>
-                        <View style={{width:10,height:10,borderRadius:5,backgroundColor:'#FFC107'}} />
-                        <Text style={{fontSize:13,color:'#558B2F'}}>Next: {trainStatus.next_station}</Text>
-                      </View>
-                      
-                      <View style={{marginTop:10,paddingTop:10,borderTopWidth:1,borderTopColor:'#C8E6C9'}}>
-                        <Text style={{fontSize:12,color:'#558B2F'}}>Expected Arrival: <Text style={{fontWeight:'800'}}>{trainStatus.expected_arrival}</Text></Text>
+
+                        {/* Station Timeline */}
+                        <View style={{position: 'relative', paddingLeft: 10}}>
+                          {/* Timeline Line */}
+                          <View style={{position: 'absolute', top: 12, bottom: 20, left: 15, width: 2, backgroundColor: '#E2E8F0'}} />
+                          
+                          {/* Current Station */}
+                          <View style={{flexDirection: 'row', alignItems: 'flex-start', marginBottom: 24}}>
+                            <View style={{width: 12, height: 12, borderRadius: 6, backgroundColor: '#3B82F6', borderWidth: 2, borderColor: '#FFFFFF', marginTop: 4, marginLeft: -1, zIndex: 2}} />
+                            <View style={{marginLeft: 16, flex: 1}}>
+                              <Text style={{fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 2, textTransform: 'uppercase'}}>Currently At</Text>
+                              <Text style={{fontSize: 18, fontWeight: '800', color: '#0F172A'}} numberOfLines={1}>{trainStatus.current_station}</Text>
+                              {trainStatus.raw?.time_of_availability && (
+                                <Text style={{fontSize: 12, color: '#64748B', marginTop: 2, fontStyle: 'italic'}}>Updated {trainStatus.raw.time_of_availability}</Text>
+                              )}
+                            </View>
+                          </View>
+
+                          {/* Next Station */}
+                          <View style={{flexDirection: 'row', alignItems: 'flex-start'}}>
+                            <View style={{width: 12, height: 12, borderRadius: 6, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#CBD5E1', marginTop: 4, marginLeft: -1, zIndex: 2}} />
+                            <View style={{marginLeft: 16, flex: 1}}>
+                              <Text style={{fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 2, textTransform: 'uppercase'}}>Next Station</Text>
+                              <Text style={{fontSize: 16, fontWeight: '700', color: '#334155'}} numberOfLines={1}>{trainStatus.next_station}</Text>
+                              <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4}}>
+                                <Ionicons name="time-outline" size={14} color="#0F172A" />
+                                <Text style={{fontSize: 14, fontWeight: '800', color: '#0F172A'}}>ETA: {trainStatus.expected_arrival}</Text>
+                              </View>
+                            </View>
+                          </View>
+                        </View>
                       </View>
                     </ClayCard>
                   )}
