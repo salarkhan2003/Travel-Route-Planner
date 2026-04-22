@@ -4,6 +4,8 @@ import {
   StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from 'expo-router';
+import { useTranslation } from '../../src/hooks/useTranslation';
 import { useTripStore } from '../../src/store/tripStore';
 import {
   ALL_LOCATIONS, INDIA_LOCATIONS, SINGAPORE_LOCATIONS,
@@ -16,6 +18,8 @@ import {
   PlacePrediction, PlaceDetail, DirectionsResult,
 } from '../../src/hooks/useGoogleMaps';
 import { TomTomMap, TomTomMapRef } from '../../src/components/TomTomMap';
+import { MasterGuide } from '../../src/components/travel-guide/MasterGuide';
+import { useToastStore } from '../../src/store/toastStore';
 
 let ExpoLocation: any = null;
 try { ExpoLocation = require('expo-location'); } catch (_) {}
@@ -64,6 +68,10 @@ export default function ExploreScreen() {
   const paths = useTripStore(s => s.paths);
   const selectNode = useTripStore(s => s.selectNode);
   const selectPath = useTripStore(s => s.selectPath);
+  const persona = useTripStore(s => s.persona);
+  const { t } = useTranslation();
+  const showToast = useToastStore(s => s.showToast);
+  const params = useLocalSearchParams<{ q?: string; start?: string }>();
   const { toggle, isSaved } = useSavedStore();
 
   const [search, setSearch] = useState('');
@@ -77,6 +85,7 @@ export default function ExploreScreen() {
   const [selectedLoc, setSelectedLoc] = useState<TripLocation | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<PlaceDetail | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [showMasterGuide, setShowMasterGuide] = useState(false);
   const [mapReady, setMapReady] = useState(false);
 
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -105,11 +114,13 @@ export default function ExploreScreen() {
       if (!from || !to) return;
       const color = TRANSPORT_COLORS[path.selectedMode] ?? '#4CAF50';
       const mid = { lat: (from.coordinates[1] + to.coordinates[1]) / 2 + 0.3, lng: (from.coordinates[0] + to.coordinates[0]) / 2 };
+      const pulse = persona === 'family' || persona === 'solo';
+      const width = persona === 'family' ? 10 : 5;
       mapRef.current?.setPolyline(`path_${path.id}`, [
         { lat: from.coordinates[1], lng: from.coordinates[0] },
         mid,
         { lat: to.coordinates[1], lng: to.coordinates[0] },
-      ], color, 4);
+      ], color, width, pulse);
     });
     // Draw discover markers
     visibleLocs.filter(loc => !nodes.find(n => n.city === loc.city)).forEach(loc => {
@@ -129,6 +140,21 @@ export default function ExploreScreen() {
       mapRef.current?.removeMarker('nav_dest');
     }
   }, [mapReady, navRoute, navDest]);
+
+  useEffect(() => {
+    if (params.q) {
+      const loc = ALL_LOCATIONS.find(l => l.city.toLowerCase() === params.q?.toLowerCase());
+      if (loc) {
+        setTimeout(() => openCard(loc), 1000);
+      } else {
+        setSearch(params.q);
+      }
+    }
+    if (params.start && params.q) {
+       // Logic for auto-navigation from start to q
+       showToast(`Calculating route from ${params.start} to ${params.q}`, 'construct');
+    }
+  }, [params.q, params.start]);
 
   useEffect(() => { fetchLocation(); }, []);
 
@@ -249,6 +275,10 @@ export default function ExploreScreen() {
     }
   }, [openCard]);
 
+  const handlePolylinePress = useCallback((id: string) => {
+    setShowMasterGuide(true);
+  }, []);
+
   const showDropdown = (predictions.length > 0 || localResults.length > 0) && search.length >= 2;
   const activeCard = selectedLoc || selectedPlace;
   const cardName = selectedLoc ? selectedLoc.city : selectedPlace?.name ?? '';
@@ -267,6 +297,7 @@ export default function ExploreScreen() {
         initialZoom={5}
         onMapReady={() => setMapReady(true)}
         onMarkerPress={handleMarkerPress}
+        onPolylinePress={handlePolylinePress}
       />
 
       {/* ── Overlay ── */}
@@ -276,7 +307,7 @@ export default function ExploreScreen() {
             <Text style={s.searchIcon}>◎</Text>
             <TextInput
               style={s.searchInput}
-              placeholder="Search any place, city, landmark..."
+              placeholder={t('search_placeholder') || "Search any place, city, landmark..."}
               placeholderTextColor="#81C784"
               value={search}
               onChangeText={handleSearch}
@@ -515,6 +546,12 @@ export default function ExploreScreen() {
           </View>
         </View>
       </Modal>
+
+      <MasterGuide 
+        visible={showMasterGuide} 
+        onClose={() => setShowMasterGuide(false)} 
+        persona={persona} 
+      />
     </View>
   );
 }

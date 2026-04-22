@@ -11,7 +11,7 @@ export interface TomTomMapRef {
   fitBounds: (points: { lat: number; lng: number }[]) => void;
   setMarker: (id: string, lat: number, lng: number, color: string, label: string) => void;
   removeMarker: (id: string) => void;
-  setPolyline: (id: string, coords: { lat: number; lng: number }[], color: string, width: number) => void;
+  setPolyline: (id: string, coords: { lat: number; lng: number }[], color: string, width: number, pulse?: boolean) => void;
   removePolyline: (id: string) => void;
   clearAll: () => void;
   setUserLocation: (lat: number, lng: number) => void;
@@ -23,6 +23,7 @@ interface Props {
   initialLng?: number;
   initialZoom?: number;
   onMarkerPress?: (id: string) => void;
+  onPolylinePress?: (id: string) => void;
   onMapReady?: () => void;
 }
 
@@ -39,6 +40,13 @@ html,body,#map{width:100%;height:100%;background:#f2f9ea;}
 .user-dot{width:20px;height:20px;border-radius:50%;background:#39653f;border:3px solid #fff;box-shadow:0 0 0 4px rgba(57,101,63,0.25),0 4px 12px rgba(0,0,0,0.3);}
 .city-pin{width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2.5px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,0.25);cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .city-pin span{transform:rotate(45deg);color:#fff;font-size:9px;font-weight:800;font-family:sans-serif;text-align:center;line-height:1;}
+
+@keyframes pulse {
+  0% { opacity: 0.6; stroke-width: inherit; }
+  50% { opacity: 1; stroke-width: 8; }
+  100% { opacity: 0.6; stroke-width: inherit; }
+}
+.pulsing { animation: pulse 2s infinite ease-in-out; }
 </style>
 </head>
 <body>
@@ -61,6 +69,15 @@ function init(){
     map.on('load',function(){
       map.addControl(new tt.NavigationControl({showZoom:true,showCompass:false}),'bottom-right');
       postRN({type:'ready'});
+    });
+    map.on('click', function(e) {
+      var features = map.queryRenderedFeatures(e.point);
+      if (features.length) {
+        var f = features[0];
+        if (f.layer.id.startsWith('lay_')) {
+          postRN({type:'polylinePress', id: f.layer.id.replace('lay_', '')});
+        }
+      }
     });
   }catch(e){postRN({type:'error',msg:String(e)});}
 }
@@ -105,6 +122,20 @@ function handle(cmd){
       map.addSource(sid,{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:cmd.coords.map(function(c){return[c.lng,c.lat];})}}});
       map.addLayer({id:lid2,type:'line',source:sid,layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'rgba(255,255,255,0.6)','line-width':(cmd.width||4)+4}});
       map.addLayer({id:lid,type:'line',source:sid,layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':cmd.color,'line-width':cmd.width||4}});
+      
+      if (cmd.pulse) {
+        // Simple visual pulse simulation via width variation if supported, or just label it
+        // Note: Mapbox/TomTom layers don't support CSS animations directly easily, but we can animate properties
+        var w = cmd.width||4;
+        var up = true;
+        setInterval(function() {
+          if (!map.getLayer(lid)) return;
+          w = up ? w + 0.2 : w - 0.2;
+          if (w > (cmd.width||4) + 2) up = false;
+          if (w < (cmd.width||4)) up = true;
+          map.setPaintProperty(lid, 'line-width', w);
+        }, 100);
+      }
       polylines[cmd.id]={sid:sid,lid:lid,lid2:lid2};
       break;
     case 'removePolyline':
@@ -136,7 +167,7 @@ if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded'
 </html>`;
 
 export const TomTomMap = forwardRef<TomTomMapRef, Props>(function TomTomMap(
-  { style, initialLat = 22.5937, initialLng = 78.9629, initialZoom = 5, onMarkerPress, onMapReady },
+  { style, initialLat = 22.5937, initialLng = 78.9629, initialZoom = 5, onMarkerPress, onPolylinePress, onMapReady },
   ref
 ) {
   const webRef = useRef<WebView>(null);
@@ -168,7 +199,7 @@ export const TomTomMap = forwardRef<TomTomMapRef, Props>(function TomTomMap(
     fitBounds: (points) => send({ type: 'fitBounds', points }),
     setMarker: (id, lat, lng, color, label) => send({ type: 'setMarker', id, lat, lng, color, label }),
     removeMarker: (id) => send({ type: 'removeMarker', id }),
-    setPolyline: (id, coords, color, width) => send({ type: 'setPolyline', id, coords, color, width }),
+    setPolyline: (id, coords, color, width, pulse) => send({ type: 'setPolyline', id, coords, color, width, pulse }),
     removePolyline: (id) => send({ type: 'removePolyline', id }),
     clearAll: () => send({ type: 'clearAll' }),
     setUserLocation: (lat, lng) => send({ type: 'setUserLocation', lat, lng, zoom: 12 }),
@@ -196,6 +227,7 @@ export const TomTomMap = forwardRef<TomTomMapRef, Props>(function TomTomMap(
             const msg = JSON.parse(e.nativeEvent.data);
             if (msg.type === 'ready') handleReady();
             if (msg.type === 'markerPress') onMarkerPress?.(msg.id);
+            if (msg.type === 'polylinePress') onPolylinePress?.(msg.id);
           } catch (_) {}
         }}
         javaScriptEnabled

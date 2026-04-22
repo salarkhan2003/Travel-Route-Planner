@@ -12,6 +12,11 @@ export interface TripExpense {
   amount: number;
   text: string;
   date: string;
+  merchant?: string;
+  category?: string;
+  type?: 'debit' | 'credit' | 'unknown';
+  account?: string;
+  raw?: string;
 }
 
 export interface TransportOption {
@@ -52,6 +57,7 @@ export interface TripState {
   homeCity: string;
   routeWeathers: TripWeather[];
   extraExpenses: TripExpense[];
+  persona: 'family' | 'solo' | 'business' | 'spiritual' | 'none';
   reorderNode: (fromIndex: number, toIndex: number) => void;
   selectPath: (pathId: string | null) => void;
   selectNode: (nodeId: string | null) => void;
@@ -64,5 +70,7 @@ export interface TripState {
   clearTrip: () => void;
   setHomeCity: (city: string) => void;
   setRouteWeathers: (weathers: TripWeather[]) => void;
-  addExtraExpense: (expense: Omit<TripExpense, 'id' | 'date'>) => void;
+  addExtraExpense: (expense: Partial<TripExpense> & { amount: number; text: string }) => void;
+  setExtraExpenses: (expenses: TripExpense[]) => void;
+  setPersona: (persona: 'family' | 'solo' | 'business' | 'spiritual') => void;
 }

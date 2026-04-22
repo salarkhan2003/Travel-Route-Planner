@@ -304,12 +304,12 @@ export default function BookingHubScreen() {
       <ScrollView contentContainerStyle={st.scroll} showsVerticalScrollIndicator={false}>
         <View style={st.header}>
           <View>
-            <Text style={st.heading}>Travel Hub</Text>
+            <Text style={st.heading}>{t('travel_hub') || 'Travel Hub'}</Text>
             <Text style={st.sub}>Realtime Aggregation Gateway</Text>
           </View>
           <TouchableOpacity onPress={() => setShowHistory(true)} style={st.historyBtn}>
             <Ionicons name="time-outline" size={18} color={NC.primary}/>
-            <Text style={st.historyBtnText}>History</Text>
+            <Text style={st.historyBtnText}>{t('history') || 'History'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -365,7 +365,7 @@ export default function BookingHubScreen() {
 
         {activeTickets.length > 0 && (
           <>
-            <Text style={st.gridTitle}>Active Bookings ({activeTickets.length})</Text>
+            <Text style={st.gridTitle}>{t('active_bookings') || 'Active Bookings'} ({activeTickets.length})</Text>
             {activeTickets.map(t => renderTicketCard(t))}
           </>
         )}

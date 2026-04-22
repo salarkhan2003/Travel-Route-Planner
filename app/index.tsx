@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LiquidSpinner from '../src/components/LiquidSpinner';
+import LottieView from 'lottie-react-native';
+import { View, StyleSheet } from 'react-native';
 
 export default function Index() {
   const router = useRouter();
@@ -24,14 +26,27 @@ export default function Index() {
       }
     };
     
-    // Add a slight delay to ensure smooth transition and allow the splash to dismiss
+    // Add delay for animation to play
     const t = setTimeout(() => {
       checkFirstLaunch();
-    }, 50);
+    }, 2500); // 2.5s for welcome animation
     
     return () => clearTimeout(t);
   }, []);
 
-  // Show LiquidSpinner while checking
-  return <LiquidSpinner />;
+  return (
+    <View style={st.container}>
+      <LottieView 
+        source={require('../animations/Welcome.json')} 
+        autoPlay 
+        loop={false}
+        style={st.lottie}
+      />
+    </View>
+  );
 }
+
+const st = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center' },
+  lottie: { width: 380, height: 380 }
+});

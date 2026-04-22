@@ -3,11 +3,12 @@ import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, PermissionsAndroid, Platform } from 'react-native';
-import SmsListener from 'react-native-android-sms-listener';
+
 
 import CustomToast from '../src/components/CustomToast';
 import { useTripStore } from '../src/store/tripStore';
 import { useToastStore } from '../src/store/toastStore';
+import { parseTransactionalSMS } from '../src/utils/smsParser';
 
 export default function RootLayout() {
   const addExtraExpense = useTripStore(s => s.addExtraExpense);
@@ -15,45 +16,63 @@ export default function RootLayout() {
 
   useEffect(() => {
     let subscription: any = null;
+    let SmsListener: any = null;
+    
+    // Dynamically load SMS listener only on Android
+    if (Platform.OS === 'android') {
+      try {
+        SmsListener = require('react-native-android-sms-listener').default || require('react-native-android-sms-listener');
+      } catch (e) {
+        console.warn('SmsListener not found', e);
+      }
+    }
+
     async function requestSmsPermission() {
       if (Platform.OS === 'android') {
         try {
-          const granted = await PermissionsAndroid.request(
+          const granted = await PermissionsAndroid.requestMultiple([
             PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
-            {
-              title: 'SMS Permission',
-              message: 'Roamio needs SMS access to automatically track your expenses.',
-              buttonNeutral: 'Ask Me Later',
-              buttonNegative: 'Cancel',
-              buttonPositive: 'OK',
-            }
-          );
-          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+            PermissionsAndroid.PERMISSIONS.READ_SMS,
+          ]);
+
+          const allGranted = 
+            granted[PermissionsAndroid.PERMISSIONS.RECEIVE_SMS] === PermissionsAndroid.RESULTS.GRANTED &&
+            granted[PermissionsAndroid.PERMISSIONS.READ_SMS] === PermissionsAndroid.RESULTS.GRANTED;
+
+          if (allGranted && SmsListener) {
             subscription = SmsListener.addListener((message: any) => {
-              const text = message.body.toLowerCase();
-              if (text.includes('debited') || text.includes('spent') || text.includes('paid')) {
-                 const match = text.match(/(?:inr|rs\.?)\s*(\d+(?:\.\d+)?)/i) || text.match(/(?:debited|spent|paid).*?(?:rs\.?|inr)?\s*(\d+(?:\.\d+)?)/i);
-                 if (match && match[1]) {
-                   const amount = parseFloat(match[1]);
-                   if (!isNaN(amount) && amount > 0) {
-                     addExtraExpense({
-                       amount,
-                       text: `Auto-tracked from SMS: ${message.originatingAddress}`
-                     });
-                     showToast(`Auto-added ₹${amount} from SMS`, 'cash-outline');
-                   }
-                 }
+              try {
+                // Ensure message body exists before parsing
+                const body = message.body || message.messageBody;
+                if (!body) return;
+
+                const parsed = parseTransactionalSMS(body);
+                if (parsed) {
+                  addExtraExpense({
+                    ...parsed,
+                    text: parsed.merchant || 'Unknown Transaction'
+                  });
+                  const icon = parsed.type === 'credit' ? 'arrow-down-circle' : 'cash-outline';
+                  const verb = parsed.type === 'credit' ? 'Received' : 'Spent';
+                  showToast(`${verb} ₹${parsed.amount} - ${parsed.merchant}`, icon);
+                }
+              } catch (e) {
+                console.error('Roamio SMS track error', e);
               }
             });
           }
         } catch (err) {
-          console.warn(err);
+          console.warn('Permission error:', err);
         }
       }
     }
+
     requestSmsPermission();
+
     return () => {
-      if (subscription) subscription.remove();
+      if (subscription) {
+        subscription.remove();
+      }
     };
   }, [addExtraExpense, showToast]);
 
@@ -64,6 +83,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="persona" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="settings" options={{ presentation: 'card', animation: 'slide_from_right' }} />
       </Stack>
       <CustomToast />

@@ -9,7 +9,7 @@
 import React, { useRef, useState } from 'react';
 import {
   Animated, Dimensions, FlatList, StyleSheet,
-  Text, TouchableOpacity, View, ViewToken,
+  Text, TouchableOpacity, View, ViewToken, Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -168,9 +168,14 @@ export default function OnboardingScreen() {
       <SafeAreaView edges={['top']}>
         <View style={ob.topBar}>
           <View style={ob.brandRow}>
-            {/* Clay brand dot */}
-            <View style={[ob.brandDot, { backgroundColor: slide.accent }]}>
-              <View style={ob.brandDotSheen} />
+            {/* Clay logo circle */}
+            <View style={[ob.logoCircle, { backgroundColor: '#FFF' }]}>
+              <View style={ob.logoSheen} />
+              <Image 
+                source={require('../logo/ROAMIO_LOGO-NEW.png')} 
+                style={ob.logoImg}
+                resizeMode="contain"
+              />
             </View>
             <Text style={[ob.brand, { color: slide.accent }]}>Roamio</Text>
           </View>
@@ -243,22 +248,22 @@ const ob = StyleSheet.create({
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 14 },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   
-  // Clay brand dot — inflated sphere
-  brandDot: {
-    width: 14, height: 14, borderRadius: 7,
+  logoCircle: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
     position: 'relative', overflow: 'hidden',
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)',
-    borderBottomColor: 'rgba(0,0,0,0.1)',
-    shadowColor: 'rgba(27,94,32,0.3)',
+    shadowColor: 'rgba(0,0,0,0.1)',
     shadowOffset: { width: 2, height: 2 },
     shadowOpacity: 1, shadowRadius: 4, elevation: 3,
   },
-  brandDotSheen: {
+  logoImg: { width: 22, height: 22, zIndex: 1 },
+  logoSheen: {
     position: 'absolute', top: 0, left: 0, right: 0,
-    height: '50%', backgroundColor: 'rgba(255,255,255,0.4)',
-    borderTopLeftRadius: 7, borderTopRightRadius: 7,
+    height: '45%', backgroundColor: 'rgba(255,255,255,0.3)',
+    borderTopLeftRadius: 16, borderTopRightRadius: 16, zIndex: 2
   },
-  brand: { fontSize: 22, fontWeight: '900', letterSpacing: -0.3 },
+  brand: { fontSize: 20, fontWeight: '900', letterSpacing: -0.3 },
   
   // Skip button — inflated pill
   skipBtn: {

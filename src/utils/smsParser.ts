@@ -6,76 +6,111 @@ export interface ParsedTransaction {
   category: string;
   account: string;
   date: string;
+  raw?: string;
 }
 
+const DEBIT_KEYWORDS = [
+  'debited', 'spent', 'paid', 'withdrawn', 'purchase', 'payment', 'transferred', 'sent', 
+  'upi', 'debit', 'deducted', 'online at', 'vpa', 'charged', 'txn', 'transaction', 
+  'pos', 'atm', 'remitted', 'gpay', 'phonepe', 'paytm', 'swipe', 'money sent',
+  'self transfer', 'internal transfer', 'linked account', 'own account'
+];
+
+const CREDIT_KEYWORDS = [
+  'credited', 'received', 'deposited', 'refund', 'cashback', 'credit', 'reversal', 
+  'reimbursement', 'added', 'top-up', 'salary', 'income', 'interest', 'money received'
+];
+
+const IGNORE_KEYWORDS = ['requested', 'otp', 'attempt', 'failed', 'insufficient', 'declined', 'limit exceeded'];
+
+const BILL_KEYWORDS = ['due by', 'minimum due', 'overdue', 'total amount payable', 'bill generated', 'cycle ending'];
+
 export function parseTransactionalSMS(message: string): ParsedTransaction | null {
+  if (!message) return null;
   const body = message.toLowerCase();
+
+  // 0. Initial Filters
+  if (IGNORE_KEYWORDS.some(k => body.includes(k))) return null;
   
-  // Predict transaction type
+  // 1. Check for Bill Obligations (even if no payment happened yet, we track it as a debit obligation if there's an amount)
+  const isBillNotice = BILL_KEYWORDS.some(k => body.includes(k));
+
+  // 2. Extract Amount
+  // Matches "Rs. 1,000", "INR 500", "₹ 150.50", "Rs 200", etc.
+  const amtMatch = message.match(/(?:rs\.?|inr|₹|amt|amount)\s*[:]?\s*([0-9,]+(?:\.[0-9]{1,2})?)/i) || 
+                   message.match(/([0-9,]+(?:\.[0-9]{1,2})?)\s*(?:rs\.?|inr|₹)/i);
+  
+  if (!amtMatch) return null;
+  const amount = parseFloat(amtMatch[1].replace(/,/g, ''));
+  if (isNaN(amount) || amount <= 0) return null;
+
+  // 3. Predict transaction type
   let type: 'debit' | 'credit' | 'unknown' = 'unknown';
-  if (body.match(/(debited|spent|paid|deducted|sent)/)) {
-    type = 'debit';
-  } else if (body.match(/(credited|received|added|refunded)/)) {
-    type = 'credit';
+  const isDebit = DEBIT_KEYWORDS.some(k => body.includes(k)) || isBillNotice;
+  const isCredit = CREDIT_KEYWORDS.some(k => body.includes(k));
+  
+  if (isDebit) type = 'debit';
+  if (isCredit) type = 'credit';
+  if (isDebit && isCredit) {
+    if (body.includes('credited') || body.includes('received') || body.includes('refund')) type = 'credit';
+    else type = 'debit';
   }
 
-  // Find amount: matches rs., inr, ₹, amt, or amount followed by digits/decimals
-  const amtMatch = message.match(/(?:rs\.?|inr|₹|amt|amount)\s*[:]?\s*([0-9,]+(?:\.[0-9]+)?)/i);
-  if (!amtMatch && type === 'unknown') return null; // Very likely not a financial SMS
-  
-  const amountStr = amtMatch ? amtMatch[1] : '0';
-  const amount = parseFloat(amountStr.replace(/,/g, ''));
-  
-  if (amount === 0) return null;
-
-  // Predict merchant name via regex & context
+  // 4. Predict merchant
   let merchant = 'Unknown Entity';
-  const merchMatch = message.match(/(?:to|at|info|vpa|merchant)\s+([A-Za-z0-9][A-Za-z0-9\s]+)/i);
+  const merchMatch = message.match(/(?:at|to|from|merchant|vpa|info|for)\s+([A-Za-z0-9\s._\-@]{2,40})/i) ||
+                     message.match(/(?:paid to|sent to|transfer to|spent at|received from)\s+([A-Za-z0-9\s@]{2,30})/i) ||
+                     message.match(/(?:purchase at|shop at|order placed at)\s+([A-Za-z0-9\s]{2,25})/i);
+
   if (merchMatch && merchMatch[1]) {
-    merchant = merchMatch[1].trim().split(' ')[0].toUpperCase();
-    if (merchant.length < 3 && merchMatch[1].trim().split(' ').length > 1) {
-      merchant = merchMatch[1].trim().split(' ')[1].toUpperCase();
-    }
-  } else if (body.includes('swiggy')) merchant = 'SWIGGY';
-  else if (body.includes('zomato')) merchant = 'ZOMATO';
-  else if (body.includes('uber')) merchant = 'UBER';
-  else if (body.includes('ola')) merchant = 'OLA';
-  else if (body.includes('amazon')) merchant = 'AMAZON';
+    merchant = merchMatch[1].trim().split(/\s{2,}|\n/)[0].toUpperCase();
+    merchant = merchant.replace(/X+/g, '').replace(/\*+/g, '').trim();
+    if (merchant.length < 2) merchant = 'TRANSACTION';
+  }
 
-  // Account details
-  let account = 'Acc ending ****';
-  const accMatch = message.match(/(?:a\/c|acct|account).{0,5}([0-9A-Za-z*]{4,8})/i);
+  // Self Transfer override
+  if (body.includes('self transfer') || body.includes('own account') || body.includes('internal transfer')) {
+    merchant = 'Self Transfer';
+  }
+
+  // 5. Account details
+  let account = 'Bank Account';
+  const accMatch = message.match(/(?:a\/c|acct?|account|xx|ending|ac)\s*[x\-]*\s*(\d{2,10})/i);
   if (accMatch) {
-    account = 'Acc ' + accMatch[1].trim();
-  } else if (body.includes('upi')) {
-    account = 'UPI Transfer';
+    account = 'A/c ' + accMatch[1].slice(-4);
+  } else if (body.includes('upi') || body.includes('vpa')) {
+    account = 'UPI Wallet';
+  } else if (body.includes('paytm') || body.includes('wallet')) {
+    account = 'Digital Wallet';
   }
 
-  // Categorization via simple NLP rules
-  let category = 'Others';
-  const b = body;
-  const m = merchant.toLowerCase();
-  if (/(swiggy|zomato|kfc|mcdonalds|starbucks|food|dining|restaurant|dominos)/i.test(b) || /(swiggy|zomato)/i.test(m)) {
-    category = 'Food & Dining';
-  } else if (/(uber|ola|rapido|irctc|flight|travel|indigo|makemytrip|cleartrip|train)/i.test(b) || /(uber|ola|rapido)/i.test(m)) {
-    category = 'Travel & Transport';
-  } else if (/(amazon|flipkart|myntra|reliance|mart|dmart|shopping)/i.test(b)) {
-    category = 'Shopping';
-  } else if (/(movie|netflix|prime|hotstar|pvr|inox|spotify)/i.test(b)) {
-    category = 'Entertainment';
-  } else if (/(jio|airtel|vi|recharge|bill|electricity|water|wifi|broadband|bescom|tata sky)/i.test(b)) {
-    category = 'Bills & Utilities';
-  } else if (/(pharmacy|hospital|apollo|medplus|clinic|health)/i.test(b)) {
-    category = 'Healthcare';
-  }
+  // 6. Categorization (Deep Mapping)
+  let category = 'Other';
+  const text = (merchant + ' ' + body).toLowerCase();
+  
+  // Food
+  if (/(zomato|swiggy|food|restaurant|cafe|pizza|burger|kfc|mcdonald|domino|biryani|eat|dine|starbucks)/.test(text)) category = 'Food & Dining';
+  // Travel
+  else if (/(uber|ola|rapido|metro|bus|train|irctc|flight|airline|cab|taxi|petrol|fuel|toll|parking|indigo|pnr|confirmed|railway|bpcl|hpcl|iocl)/.test(text)) category = 'Travel & Transport';
+  // Shopping & Ecommerce
+  else if (/(amazon|flipkart|myntra|meesho|ajio|nykaa|shop|store|mart|mall|retail|fashion|cloth|dmart|bigbasket|blinkit|zepto|order placed|shipped|delivery)/.test(text)) category = 'Shopping';
+  // Entertainment
+  else if (/(netflix|spotify|prime|hotstar|youtube|game|steam|playstation|movie|cinema|pvr|inox|bookmyshow)/.test(text)) category = 'Entertainment';
+  // Health
+  else if (/(hospital|pharmacy|medical|doctor|health|clinic|apollo|medplus|1mg|netmeds)/.test(text)) category = 'Health';
+  // Bills
+  else if (/(electricity|water|gas|broadband|internet|recharge|bill|jio|airtel|bsnl|vi\b|vodafone|dth|tata sky|dish tv|wi-fi)/.test(text)) category = 'Bills & Utilities';
+  // Self Transfer / Same Bank
+  else if (/(self transfer|internal transfer|own account|linked account)/.test(text)) category = 'Transfers';
 
   return { 
-    id: Math.random().toString(36).substr(2, 9),
+    id: `sms_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
     amount, 
     type, 
-    merchant, 
+    merchant: merchant || 'Unknown', 
     category, 
     account, 
-    date: new Date().toISOString() 
+    date: new Date().toISOString(),
+    raw: message
   };
 }

@@ -4,6 +4,9 @@ import {
   TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useTranslation } from '../../src/hooks/useTranslation';
 import { useTripStore } from '../../src/store/tripStore';
 import { TRANSPORT_COLORS } from '../../src/constants/tripData';
 import { ALL_LOCATIONS } from '../../src/constants/locations';
@@ -33,12 +36,20 @@ function RouteDetailModal({
   onClose: () => void;
   onBook: () => void;
 }) {
+  const router = useRouter();
+  const { t } = useTranslation();
   const { fmtFull } = useCurrency();
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
       <View style={md.overlay}>
         <View style={md.sheet}>
           <View style={md.handle} />
+          
+          {/* Top Close Button */}
+          <TouchableOpacity style={md.topClose} onPress={onClose}>
+            <Ionicons name="close" size={24} color={NC.primary} />
+          </TouchableOpacity>
+
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Hero */}
             <View style={[md.hero, { backgroundColor: route.color + '22', borderColor: route.color + '44' }]}>
@@ -76,9 +87,12 @@ function RouteDetailModal({
             </View>
 
             {/* Day-by-day itinerary */}
-            <Text style={md.section}>Day-by-Day Plan</Text>
+            <Text style={md.section}>{t('itinerary') || 'Day-by-Day Plan'}</Text>
             {route.itinerary.map((day) => (
               <View key={day.day} style={md.dayCard}>
+                {/* Clay Sheen for day card */}
+                <View style={md.daySheen} />
+                
                 <View style={[md.dayNum, { backgroundColor: route.color }]}>
                   <Text style={md.dayNumText}>D{day.day}</Text>
                 </View>
@@ -86,19 +100,24 @@ function RouteDetailModal({
                   <View style={md.dayHeader}>
                     <Text style={md.dayCity}>{day.city}</Text>
                     {day.transport && (
-                      <View style={md.transportBadge}>
-                        <Text style={md.transportText}>{day.transport}</Text>
+                      <View style={[md.transportBadge, { backgroundColor: route.color + '22' }]}>
+                        <Text style={[md.transportText, { color: route.color }]}>{day.transport}</Text>
                       </View>
                     )}
                   </View>
-                  {day.activities.map((a) => (
-                    <View key={a} style={md.actRow}>
-                      <View style={[md.actDot, { backgroundColor: route.color }]} />
-                      <Text style={md.actText}>{a}</Text>
-                    </View>
-                  ))}
+                  <View style={md.actList}>
+                    {day.activities.map((a) => (
+                      <View key={a} style={md.actRow}>
+                        <View style={[md.actDot, { backgroundColor: route.color }]} />
+                        <Text style={md.actText}>{a}</Text>
+                      </View>
+                    ))}
+                  </View>
                   {day.stay ? (
-                    <Text style={md.stayText}>Stay: {day.stay}</Text>
+                    <View style={md.stayBox}>
+                      <Ionicons name="bed-outline" size={14} color={route.color} />
+                      <Text style={[md.stayText, { color: route.color }]}>{day.stay}</Text>
+                    </View>
                   ) : null}
                 </View>
               </View>
@@ -121,13 +140,25 @@ function RouteDetailModal({
 
             {/* Actions */}
             <View style={md.actions}>
-              <TouchableOpacity style={[md.bookBtn, { backgroundColor: route.color }]} onPress={onBook}>
-                <Text style={md.bookBtnText}>Book This Trip</Text>
+              <TouchableOpacity style={md.bookBtnSmall} onPress={onBook}>
+                <Ionicons name="bookmark" size={16} color="#fff" style={{marginRight:6}}/>
+                <Text style={md.bookBtnText}>Book</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={md.closeBtn} onPress={onClose}>
-                <Text style={md.closeBtnText}>Close</Text>
+              
+              <TouchableOpacity 
+                style={md.navBtnSmall} 
+                onPress={() => {
+                  onClose();
+                  router.push({ pathname: '/(tabs)/explore', params: { q: route.cities[1] || route.cities[0], start: route.cities[0] } });
+                }}
+              >
+                <Ionicons name="navigate" size={16} color="#fff" style={{marginRight:6}}/>
+                <Text style={md.bookBtnText}>Navigate</Text>
               </TouchableOpacity>
             </View>
+            <TouchableOpacity style={md.closeBtnFull} onPress={onClose}>
+              <Text style={md.closeBtnText}>Close Guide</Text>
+            </TouchableOpacity>
             <View style={{ height: 32 }} />
           </ScrollView>
         </View>
@@ -217,6 +248,8 @@ function SwapModal({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function ItineraryScreen() {
+  const router = useRouter();
+  const { t } = useTranslation();
   const nodes = useTripStore(s => s.nodes);
   const paths = useTripStore(s => s.paths);
   const spentBudget = useTripStore(s => s.spentBudget);
@@ -392,7 +425,7 @@ export default function ItineraryScreen() {
         {/* ── POPULAR ROUTES ── */}
         {tab === 'popular' && (
           <>
-            <Text style={s.heading}>Popular Routes</Text>
+            <Text style={s.heading}>{t('popular_routes') || 'Popular Routes'}</Text>
             <Text style={s.subHeading}>Curated trips across India & Singapore</Text>
             {POPULAR_ROUTES.map(route => (
               <TouchableOpacity
@@ -412,20 +445,23 @@ export default function ItineraryScreen() {
                       <Text style={[s.routeThemeText, { color: route.color }]}>{route.theme}</Text>
                     </View>
                   </View>
-                  <View style={s.routeMeta}>
-                    <View style={s.routeMetaItem}>
+                  
+                  {/* Inflated Metadata Grid */}
+                  <View style={s.routeMetaGrid}>
+                    <View style={s.routeMetaPill}>
                       <Text style={s.routeMetaVal}>{route.days}D</Text>
-                      <Text style={s.routeMetaLabel}>Duration</Text>
+                      <Text style={s.routeMetaLabel}>{t('days')}</Text>
                     </View>
-                    <View style={s.routeMetaItem}>
+                    <View style={s.routeMetaPill}>
                       <Text style={s.routeMetaVal}>{route.cities.length}</Text>
-                      <Text style={s.routeMetaLabel}>Cities</Text>
+                      <Text style={s.routeMetaLabel}>{t('cities')}</Text>
                     </View>
-                    <View style={s.routeMetaItem}>
-                      <Text style={[s.routeMetaVal, { color: route.color }]}>₹{(route.budget / 1000).toFixed(0)}k</Text>
-                      <Text style={s.routeMetaLabel}>Budget</Text>
+                    <View style={[s.routeMetaPill, { backgroundColor: route.color + '15' }]}>
+                      <Text style={[s.routeMetaVal, { color: route.color }]}>{fmtFull(route.budget).replace('.0k','k')}</Text>
+                      <Text style={s.routeMetaLabel}>Est.</Text>
                     </View>
                   </View>
+
                   <View style={s.routeCities}>
                     {route.cities.map((c, i) => (
                       <React.Fragment key={c}>
@@ -435,7 +471,9 @@ export default function ItineraryScreen() {
                     ))}
                   </View>
                 </View>
-                <Text style={[s.routeChevron, { color: route.color }]}>›</Text>
+                <View style={s.routeChevronBox}>
+                  <Ionicons name="chevron-forward" size={24} color={route.color} />
+                </View>
               </TouchableOpacity>
             ))}
           </>
@@ -656,11 +694,13 @@ const s = StyleSheet.create({
   // Popular route card
   routeCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#FFFFFF', borderRadius: 24, marginBottom: 12,
-    overflow: 'hidden',
-    shadowColor: 'rgba(76,175,80,0.18)', shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1, shadowRadius: 20, elevation: 6,
-    borderWidth: 1, borderColor: 'rgba(200,230,201,0.5)',
+    backgroundColor: '#FFFFFF', borderRadius: 28, marginBottom: 16,
+    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
+    borderBottomColor: 'rgba(165,214,167,0.3)',
+    borderRightColor: 'rgba(165,214,167,0.2)',
+    shadowColor: 'rgba(165,214,167,0.5)', shadowOffset: { width: 8, height: 8 },
+    shadowOpacity: 1, shadowRadius: 22, elevation: 12,
+    position: 'relative', overflow: 'hidden',
   },
   routeAccent: { width: 5, alignSelf: 'stretch' },
   routeBody: { flex: 1, padding: 14 },
@@ -669,14 +709,17 @@ const s = StyleSheet.create({
   routeTagline: { fontSize: 12, color: '#558B2F', marginTop: 2 },
   routeTheme: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
   routeThemeText: { fontSize: 10, fontWeight: '800' },
-  routeMeta: { flexDirection: 'row', gap: 16, marginBottom: 10 },
-  routeMetaItem: { alignItems: 'center' },
+  routeMetaGrid: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  routeMetaPill: { 
+    flex: 1, backgroundColor: '#F0FAF1', borderRadius: 16, padding: 10, alignItems: 'center',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)',
+  },
   routeMetaVal: { fontSize: 15, fontWeight: '900', color: '#1B5E20' },
-  routeMetaLabel: { fontSize: 10, color: '#558B2F', marginTop: 1 },
-  routeCities: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
+  routeMetaLabel: { fontSize: 9, color: '#558B2F', fontWeight: '700', textTransform: 'uppercase', marginTop: 1 },
+  routeCities: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   routeCityText: { fontSize: 12, color: '#558B2F', fontWeight: '600' },
   routeCityArrow: { fontSize: 12, fontWeight: '700' },
-  routeChevron: { fontSize: 24, paddingRight: 14, fontWeight: '300' },
+  routeChevronBox: { paddingRight: 16 },
 
   // History card
   historyCard: {
@@ -708,6 +751,13 @@ const md = StyleSheet.create({
     shadowOpacity: 1, shadowRadius: 20, elevation: 20,
   },
   handle: { width: 36, height: 4, backgroundColor: '#C8E6C9', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  topClose: { 
+    position: 'absolute', top: 12, right: 12, width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', zIndex: 10,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: 'rgba(165,214,167,0.35)', shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1, shadowRadius: 6, elevation: 4,
+  },
   hero: { borderRadius: 20, padding: 18, marginBottom: 16, borderWidth: 1.5 },
   themeBadge: { alignSelf: 'flex-start', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 },
   themeText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
@@ -723,33 +773,52 @@ const md = StyleSheet.create({
   hlChip: { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1.5, backgroundColor: '#F0FAF1' },
   hlText: { fontSize: 12, fontWeight: '700' },
   dayCard: {
-    flexDirection: 'row', gap: 12, marginBottom: 12,
-    backgroundColor: '#F0FAF1', borderRadius: 16, padding: 12,
-    borderWidth: 1, borderColor: 'rgba(200,230,201,0.5)',
+    marginBottom: 12, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 16,
+    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
+    borderBottomColor: 'rgba(165,214,167,0.35)',
+    shadowColor: 'rgba(165,214,167,0.45)', shadowOffset: { width: 6, height: 6 },
+    shadowOpacity: 1, shadowRadius: 16, elevation: 6,
+    position: 'relative', overflow: 'hidden',
+    flexDirection: 'row', gap: 12,
   },
+  daySheen: { position: 'absolute', top: 0, left: 0, right: 0, height: '40%', backgroundColor: 'rgba(255,255,255,0.3)' },
   dayNum: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   dayNumText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
   dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
   dayCity: { fontSize: 15, fontWeight: '900', color: '#1B5E20' },
   transportBadge: { backgroundColor: '#C8E6C9', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   transportText: { color: '#2E7D32', fontSize: 10, fontWeight: '700' },
-  actRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  actList: { marginTop: 8, paddingLeft: 4 },
+  actRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   actDot: { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
-  actText: { fontSize: 12, color: '#2E7D32', flex: 1 },
-  stayText: { fontSize: 11, color: '#558B2F', marginTop: 4 },
+  actText: { fontSize: 13, color: '#1B5E20', fontWeight: '600', flex: 1 },
+  stayBox: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, backgroundColor: '#F1F8F2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  stayText: { fontSize: 11, fontWeight: '800' },
   citiesRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   cityChip: { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1.5, backgroundColor: '#F0FAF1' },
   cityText: { fontSize: 13, fontWeight: '700' },
   cityArrow: { fontSize: 14, fontWeight: '700' },
   actions: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  bookBtn: {
-    flex: 2, borderRadius: 999, paddingVertical: 18, alignItems: 'center',
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)',
-    shadowColor: NC.shadowButton, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1, shadowRadius: 20, elevation: 8,
+  bookBtnSmall: {
+    flex: 1, backgroundColor: NC.primary, borderRadius: 999, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
+    shadowColor: NC.shadowButton, shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1, shadowRadius: 10, elevation: 6,
   },
-  bookBtnText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
-  closeBtn: { flex: 1, backgroundColor: NC.surfaceLow, borderRadius: 999, paddingVertical: 18, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', shadowColor: NC.shadowOuter, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 10, elevation: 3 },
+  navBtnSmall: {
+    flex: 1, backgroundColor: '#1B5E20', borderRadius: 999, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)',
+    shadowColor: 'rgba(27,94,32,0.4)', shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1, shadowRadius: 10, elevation: 6,
+  },
+  bookBtnText: { color: '#FFF', fontSize: 14, fontWeight: '900' },
+  closeBtnFull: { 
+    marginTop: 12, backgroundColor: NC.surfaceLow, borderRadius: 999, paddingVertical: 18, alignItems: 'center', 
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', 
+    shadowColor: NC.shadowOuter, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 10, elevation: 3 
+  },
   closeBtnText: { color: NC.primary, fontSize: 16, fontWeight: '800' },
   routeHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   summaryCard: { backgroundColor: '#F0FAF1', borderRadius: 16, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(200,230,201,0.5)' },

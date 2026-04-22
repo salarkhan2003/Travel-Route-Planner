@@ -6,9 +6,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, G } from 'react-native-svg';
 import { parseTransactionalSMS, ParsedTransaction } from '../../src/utils/smsParser';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useToastStore } from '../../src/store/toastStore';
+import { useTripStore } from '../../src/store/tripStore';
+import { useTranslation } from '../../src/hooks/useTranslation';
 
 let SmsListener: any = null;
 try { if (Platform.OS === 'android') { SmsListener = require('react-native-android-sms-listener').default || require('react-native-android-sms-listener'); } } catch {}
@@ -16,7 +17,6 @@ try { if (Platform.OS === 'android') { SmsListener = require('react-native-andro
 const FILTERS = ['All Time', 'This Month', 'This Week'];
 const PIE_COLORS = ['#FF1744', '#D500F9', '#FF9100', '#00E5FF', '#76FF03', '#FFD600', '#E040FB'];
 const CATEGORIES = ['Food & Dining', 'Travel & Transport', 'Shopping', 'Entertainment', 'Bills & Utilities', 'Health', 'Other'];
-const STORE_KEY = 'ROAMIO_EXPENSES';
 
 const DonutChart = ({ data, size = 170 }: { data: { name: string; amount: number; color: string }[]; size?: number }) => {
   const total = data.reduce((a, d) => a + d.amount, 0);
@@ -58,12 +58,15 @@ const DonutChart = ({ data, size = 170 }: { data: { name: string; amount: number
 };
 
 export default function ExpensesScreen() {
-  const [transactions, setTransactions] = useState<ParsedTransaction[]>([]);
-  const [listening, setListening] = useState(false);
+  const { t } = useTranslation();
+  const extraExpenses = useTripStore(s => s.extraExpenses);
+  const addExtraExpense = useTripStore(s => s.addExtraExpense);
+  const setExtraExpenses = useTripStore(s => s.setExtraExpenses);
+  const showToast = useToastStore(s => s.showToast);
+
   const [filter, setFilter] = useState('All Time');
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const [selectedTx, setSelectedTx] = useState<ParsedTransaction | null>(null);
-  const showToast = useToastStore(s => s.showToast);
+  const [selectedTx, setSelectedTx] = useState<any | null>(null);
 
   // Manual add
   const [showAdd, setShowAdd] = useState(false);
@@ -71,40 +74,19 @@ export default function ExpensesScreen() {
   const [addMerchant, setAddMerchant] = useState('');
   const [addCategory, setAddCategory] = useState('Food & Dining');
   const [addType, setAddType] = useState<'debit' | 'credit'>('debit');
-  const [editingTx, setEditingTx] = useState<ParsedTransaction | null>(null);
+  const [editingTx, setEditingTx] = useState<any | null>(null);
 
   useEffect(() => { Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start(); }, []);
 
-  const persistAll = async (txs: ParsedTransaction[]) => {
-    try { await AsyncStorage.setItem(STORE_KEY, JSON.stringify(txs)); } catch {}
-  };
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const stored = await AsyncStorage.getItem(STORE_KEY);
-        if (stored) setTransactions(JSON.parse(stored));
-      } catch {}
-    })();
-  }, []);
-
-  const addTransaction = (tx: ParsedTransaction) => {
-    const updated = [tx, ...transactions];
-    setTransactions(updated);
-    persistAll(updated);
-  };
-
   const deleteTransaction = (id: string) => {
-    const updated = transactions.filter(t => t.id !== id);
-    setTransactions(updated);
-    persistAll(updated);
+    const updated = extraExpenses.filter(t => t.id !== id);
+    setExtraExpenses(updated);
     showToast('Transaction deleted', 'warning');
   };
 
-  const updateTransaction = (tx: ParsedTransaction) => {
-    const updated = transactions.map(t => t.id === tx.id ? tx : t);
-    setTransactions(updated);
-    persistAll(updated);
+  const updateTransaction = (tx: any) => {
+    const updated = extraExpenses.map(t => t.id === tx.id ? tx : t);
+    setExtraExpenses(updated);
     showToast('Transaction updated', 'construct');
   };
 
@@ -114,21 +96,25 @@ export default function ExpensesScreen() {
     if (editingTx) {
       updateTransaction({ ...editingTx, amount: amt, merchant: addMerchant.trim(), category: addCategory, type: addType });
     } else {
-      addTransaction({
-        id: `manual_${Date.now()}`, amount: amt, merchant: addMerchant.trim(), category: addCategory,
-        type: addType, account: 'Manual Entry', date: new Date().toISOString(),
+      addExtraExpense({
+        amount: amt,
+        text: addMerchant.trim(),
+        category: addCategory,
+        type: addType,
+        account: 'Manual Entry',
+        merchant: addMerchant.trim(),
       });
     }
     setAddAmount(''); setAddMerchant(''); setShowAdd(false); setEditingTx(null);
     showToast(editingTx ? 'Updated!' : 'Expense added!', 'construct');
   };
 
-  const openEdit = (tx: ParsedTransaction) => {
+  const openEdit = (tx: any) => {
     setEditingTx(tx);
     setAddAmount(String(tx.amount));
-    setAddMerchant(tx.merchant);
-    setAddCategory(tx.category);
-    setAddType(tx.type as any);
+    setAddMerchant(tx.merchant || tx.text);
+    setAddCategory(tx.category || 'Other');
+    setAddType(tx.type as any || 'debit');
     setShowAdd(true);
   };
 
@@ -140,8 +126,8 @@ export default function ExpensesScreen() {
           PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
         ]);
         if (granted[PermissionsAndroid.PERMISSIONS.READ_SMS] === PermissionsAndroid.RESULTS.GRANTED) {
-          setListening(true);
-          showToast('SMS Tracker active', 'construct');
+          showToast('SMS Tracker Re-Activated', 'construct');
+          // This forces the RootLayout listener to wake up if it was throttled by OS
         } else {
           showToast('SMS permission denied', 'warning');
         }
@@ -153,26 +139,6 @@ export default function ExpensesScreen() {
     }
   };
 
-  useEffect(() => {
-    let subscription: any;
-    if (listening && SmsListener) {
-      subscription = SmsListener.addListener((msg: any) => {
-        try {
-          const parsed = parseTransactionalSMS(msg.body);
-          if (parsed) {
-            addTransaction(parsed);
-            showToast(`New transaction: ₹${parsed.amount}`, 'construct');
-          }
-        } catch (e) {
-          console.error('SMS Parse Error:', e);
-        }
-      });
-    }
-    return () => {
-      if (subscription) subscription.remove();
-    };
-  }, [listening]);
-
   const simulateIncomingSMS = () => {
     const msgs = [
       "Rs 550.00 debited from a/c **4930. Info: Zomato/Mumbai",
@@ -182,24 +148,37 @@ export default function ExpensesScreen() {
       "Rs 180.00 paid to Swiggy via UPI. Acct 5678.",
     ];
     const parsed = parseTransactionalSMS(msgs[Math.floor(Math.random() * msgs.length)]);
-    if (parsed) addTransaction(parsed);
+    if (parsed) {
+      addExtraExpense({
+        amount: parsed.amount,
+        text: parsed.merchant,
+        category: parsed.category,
+        type: parsed.type,
+        merchant: parsed.merchant,
+      });
+      showToast(`Tracked ₹${parsed.amount}`, 'cash-outline');
+    }
   };
 
   const filteredTx = useMemo(() => {
     const now = new Date();
-    return transactions.filter(t => {
+    return (extraExpenses as any[]).slice().reverse().filter(t => {
       if (filter === 'All Time') return true;
       const td = new Date(t.date);
       if (filter === 'This Month') return td.getMonth() === now.getMonth() && td.getFullYear() === now.getFullYear();
       if (filter === 'This Week') return (now.getTime() - td.getTime()) / 86400000 <= 7;
       return true;
     });
-  }, [transactions, filter]);
+  }, [extraExpenses, filter]);
 
-  const totalSpent = filteredTx.filter(t => t.type === 'debit').reduce((a, t) => a + t.amount, 0);
+  const totalSpent = filteredTx.filter(t => (t.type || 'debit') === 'debit').reduce((a, t) => a + t.amount, 0);
   const totalCredit = filteredTx.filter(t => t.type === 'credit').reduce((a, t) => a + t.amount, 0);
 
-  const grouped = filteredTx.filter(t => t.type === 'debit').reduce((a, t) => { a[t.category] = (a[t.category] || 0) + t.amount; return a; }, {} as Record<string, number>);
+  const grouped = filteredTx.filter(t => (t.type || 'debit') === 'debit').reduce((a, t) => { 
+    const cat = t.category || 'Other';
+    a[cat] = (a[cat] || 0) + t.amount; 
+    return a; 
+  }, {} as Record<string, number>);
   const pieData = Object.keys(grouped).map((k, i) => ({ name: k, amount: grouped[k], color: PIE_COLORS[i % PIE_COLORS.length] })).sort((a, b) => b.amount - a.amount);
   const topCats = Object.keys(grouped).sort((a, b) => grouped[b] - grouped[a]).slice(0, 5);
   const maxCat = topCats.length ? grouped[topCats[0]] : 1;
@@ -218,7 +197,7 @@ export default function ExpensesScreen() {
     <SafeAreaView style={s.container} edges={['top']}>
       <Animated.View style={[s.header, { opacity: fadeAnim }]}>
         <View style={s.headerRow}>
-          <Text style={s.title}>Wallet Insights</Text>
+          <Text style={s.title}>{t('wallet_insights') || 'Wallet Insights'}</Text>
           <TouchableOpacity onPress={() => { setEditingTx(null); setAddAmount(''); setAddMerchant(''); setShowAdd(true); }}>
             <View style={s.addBtn}><Ionicons name="add" size={24} color="#FFF"/></View>
           </TouchableOpacity>
@@ -227,7 +206,7 @@ export default function ExpensesScreen() {
         <Text style={s.subtext}>Spent • {filter}</Text>
       </Animated.View>
 
-      <FlatList data={filteredTx} keyExtractor={item => item.id!} showsVerticalScrollIndicator={false}
+      <FlatList data={filteredTx} keyExtractor={(item, index) => item.id || `idx-${index}`} showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow}>
@@ -248,7 +227,7 @@ export default function ExpensesScreen() {
             {/* Chart */}
             {pieData.length > 0 && (
               <View style={s.chartCard}>
-                <Text style={s.chartTitle}>Spending Analysis</Text>
+                <Text style={s.chartTitle}>{t('spending_analysis') || 'Spending Analysis'}</Text>
                 <DonutChart data={pieData} size={180}/>
                 {topCats.map(cat => (
                   <View key={cat} style={s.barRow}>
@@ -264,14 +243,14 @@ export default function ExpensesScreen() {
             <View style={s.actionRow}>
               <TouchableOpacity style={s.syncBtn} onPress={requestRealPermissions}>
                 <Ionicons name="sync" size={16} color="#000" style={{marginRight:6}}/>
-                <Text style={s.syncBtnText}>{listening ? 'Live' : 'SMS Tracker'}</Text>
+                <Text style={s.syncBtnText}>SMS Tracker</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.simBtn} onPress={simulateIncomingSMS}>
                 <Ionicons name="add-circle" size={16} color="#FFF" style={{marginRight:6}}/>
                 <Text style={s.simBtnText}>Demo</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.simBtn,{backgroundColor:'rgba(255,23,68,0.15)'}]} onPress={() => {
-                setTransactions([]); persistAll([]); showToast('All cleared', 'warning');
+                setExtraExpenses([]); showToast('All cleared', 'warning');
               }}>
                 <Ionicons name="trash" size={16} color="#FF1744" style={{marginRight:4}}/>
                 <Text style={[s.simBtnText,{color:'#FF1744'}]}>Clear</Text>
@@ -289,8 +268,8 @@ export default function ExpensesScreen() {
                 <Ionicons name={catIcon(item.category) as any} size={20} color={item.type==='credit'?'#00E676':'#FF1744'}/>
               </View>
               <View style={{flex:1}}>
-                <Text style={s.txMerchant} numberOfLines={1}>{item.merchant}</Text>
-                <Text style={s.txCategory}>{item.category} • {new Date(item.date).toLocaleDateString()}</Text>
+                <Text style={s.txMerchant} numberOfLines={1}>{item.merchant || item.text}</Text>
+                <Text style={s.txCategory}>{item.category || 'Other'} • {new Date(item.date).toLocaleDateString()}</Text>
               </View>
               <Text style={[s.txAmount,{color:item.type==='credit'?'#00E676':'#FFF'}]}>{item.type==='credit'?'+':'-'}₹{item.amount.toLocaleString('en-IN')}</Text>
               <TouchableOpacity onPress={() => deleteTransaction(item.id!)} style={{marginLeft:10}}>
@@ -323,7 +302,7 @@ export default function ExpensesScreen() {
                   <Text style={{fontSize:11,fontWeight:'900',color:selectedTx.type==='credit'?'#00E676':'#FF1744'}}>{selectedTx.type.toUpperCase()}</Text>
                 </View>
                 <View style={s.modalDivider}/>
-                {[{l:'Merchant',v:selectedTx.merchant},{l:'Category',v:selectedTx.category},{l:'Account',v:selectedTx.account},{l:'Date',v:new Date(selectedTx.date).toLocaleString()}].map(r => (
+                {[{l:'Details',v:selectedTx.merchant||selectedTx.text},{l:'Category',v:selectedTx.category||'Other'},{l:'Account',v:selectedTx.account||'N/A'},{l:'Date',v:new Date(selectedTx.date).toLocaleString()}].map(r => (
                   <View key={r.l} style={s.modalField}><Text style={s.modalLabel}>{r.l}</Text><Text style={s.modalValue}>{r.v}</Text></View>
                 ))}
                 <View style={{flexDirection:'row',gap:12,marginTop:20}}>

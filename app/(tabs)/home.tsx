@@ -9,9 +9,8 @@
 import React, { useRef, useState } from 'react';
 import {
   Alert, Animated, ScrollView, StyleSheet,
-  Text, TextInput, TouchableOpacity, View, ActivityIndicator, Modal
+  Text, TextInput, TouchableOpacity, View, ActivityIndicator, Modal, Image
 } from 'react-native';
-import { useSpeechRecognitionEvent, ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +24,7 @@ import { useFamilyStore } from '../../src/store/familyStore';
 import { CURRENCIES } from '../../src/constants/currencies';
 import { useCurrency } from '../../src/hooks/useCurrency';
 import { NC } from '../../src/constants/theme';
+import { useTranslation } from '../../src/hooks/useTranslation';
 
 const POPULAR_CITIES = [
   'Mumbai','Delhi','Bangalore','Goa','Jaipur','Udaipur','Varanasi','Manali',
@@ -54,6 +54,16 @@ const INITIAL_POLLS = [
   { id: '1', q: 'Dinner tonight?', opts: ['Taj Cafe', 'Local Dhaba'], votes: [3, 5] },
   { id: '2', q: 'Next stop?', opts: ['Pushkar', 'Jaipur'], votes: [4, 4] },
 ];
+
+function getPersonaInfo(p: string) {
+  switch (p) {
+    case 'family': return { title: 'The Family', icon: 'people', color: '#4CAF50' };
+    case 'solo': return { title: 'Solo Explorer', icon: 'person', color: '#00E676' };
+    case 'business': return { title: 'Business Mover', icon: 'briefcase', color: '#2196F3' };
+    case 'spiritual': return { title: 'Spiritual Pilgrim', icon: 'sunny', color: '#FFD600' };
+    default: return { title: 'Select Persona', icon: 'help-circle', color: NC.outline };
+  }
+}
 
 const getWeatherIcon = (main: string) => {
   if (main.includes('Cloud')) return '⛅';
@@ -129,6 +139,10 @@ const ci = StyleSheet.create({
 export default function HomeScreen() {
   const router = useRouter();
   const showToast = useToastStore(s => s.showToast);
+  const members = useFamilyStore(s => s.members);
+  const { t } = useTranslation();
+  const { fmtFull } = useCurrency();
+  const persona = useTripStore(s => s.persona);
   const nodes = useTripStore(s => s.nodes);
   const spentBudget = useTripStore(s => s.spentBudget);
   const globalBudget = useTripStore(s => s.globalBudget);
@@ -136,8 +150,7 @@ export default function HomeScreen() {
   const setHomeCity = useTripStore(s => s.setHomeCity);
   const routeWeathers = useTripStore(s => s.routeWeathers);
   const setRouteWeathers = useTripStore(s => s.setRouteWeathers);
-  const members = useFamilyStore(s => s.members);
-  const { fmtFull } = useCurrency();
+  const setBudget = useTripStore(s => s.setBudget);
   const [search, setSearch] = useState('');
   const [polls, setPolls] = useState([...INITIAL_POLLS]);
   const [pollVotes, setPollVotes] = useState<Record<string, number>>({});
@@ -166,20 +179,6 @@ export default function HomeScreen() {
   const [searchSuggestions, setSearchSuggestions] = useState<typeof TRIP_SUGGESTIONS>([]);
   const [fxHistory, setFxHistory] = useState<number[]>([]);
   const [recognizing, setRecognizing] = useState(false);
-
-  useSpeechRecognitionEvent("start", () => setRecognizing(true));
-  useSpeechRecognitionEvent("end", () => setRecognizing(false));
-  useSpeechRecognitionEvent("result", (event) => {
-    if (event.results && event.results[0]?.transcript) {
-      setTransInput(event.results[0].transcript);
-    }
-  });
-  useSpeechRecognitionEvent("error", (event) => {
-    setRecognizing(false);
-    if (event.error !== 'no-speech') {
-      showToast("Voice typing failed", "warning");
-    }
-  });
 
   const [liveWeather, setLiveWeather] = useState({ temp: 0, cond: 'Loading...', icon: '☀️' });
   const [isWeatherLoading, setIsWeatherLoading] = useState(false);
@@ -244,8 +243,6 @@ export default function HomeScreen() {
     Speech.speak(text, { language: transLang === 'hi' ? 'hi-IN' : transLang, rate: 0.9 });
   };
 
-  const setBudget = useTripStore(s => s.setBudget);
-
   const translateText = async () => {
     if (!transInput.trim()) return;
     setTransLoading(true);
@@ -265,20 +262,7 @@ export default function HomeScreen() {
   };
   
   const handleVoiceTyping = async () => {
-    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-    if (!result.granted) {
-      showToast("Microphone permission required", "warning");
-      return;
-    }
-
-    if (recognizing) {
-      ExpoSpeechRecognitionModule.stop();
-    } else {
-      ExpoSpeechRecognitionModule.start({
-        lang: "en-US",
-        interimResults: true,
-      });
-    }
+    showToast("Voice typing requires a custom build", "warning");
   };
 
   React.useEffect(() => {
@@ -313,11 +297,15 @@ export default function HomeScreen() {
             {/* Clay logo circle */}
             <View style={s.logoCircle}>
               <View style={s.logoSheen} />
-              <Text style={s.logoText}>R</Text>
+              <Image 
+                source={require('../../logo/ROAMIO_LOGO-NEW.png')} 
+                style={s.logoImg}
+                resizeMode="contain"
+              />
             </View>
             <View>
-              <Text style={s.appName}>Roamio</Text>
-              <Text style={s.sub}>Trip CEO · {members.length} members</Text>
+              <Text style={s.appName}>{t('welcome') || 'Next Step?'}</Text>
+              <Text style={s.sub}>{t('members') || 'Members'}: {members.length}</Text>
             </View>
           </View>
           {/* Clay avatar */}
@@ -328,19 +316,44 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        {persona && (
+          <TouchableOpacity 
+            activeOpacity={0.9} 
+            onPress={() => router.push('/persona' as any)}
+            style={s.personaMiniCardTrigger}
+          >
+            <ClayCard variant="mint" style={s.personaMiniCard}>
+              <View style={s.personaMiniRow}>
+                <View style={s.personaMiniIconBox}>
+                  <Ionicons 
+                    name={getPersonaInfo(persona).icon as any} 
+                    size={20} 
+                    color={getPersonaInfo(persona).color} 
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.personaMiniLabel}>{t('traveler_type') || 'TRAVELER TYPE'}</Text>
+                  <Text style={s.personaMiniTitle}>{t(getPersonaInfo(persona).title.toLowerCase().replace(/ /g, '_'))}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={NC.outlineVariant} />
+              </View>
+            </ClayCard>
+          </TouchableOpacity>
+        )}
+
         {/* ── Clay Search Tube — sunken ditch ── */}
         <View style={s.searchTube}>
           <Ionicons name="search-outline" size={18} color="#7CB87F" />
           <TextInput
             style={s.searchInput}
-            placeholder="Where to next, traveller..."
+            placeholder={t('search_placeholder')}
             placeholderTextColor={NC.outlineVariant}
             value={search}
             onChangeText={handleSearchChange}
           />
           <TouchableOpacity style={s.planBtn} onPress={() => router.push({pathname:'/(tabs)/explore',params:{q:search}})}>
             <View style={s.planBtnSheen} />
-            <Text style={s.planBtnText}>Plan</Text>
+            <Text style={s.planBtnText}>{t('plan') || 'Plan'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -366,7 +379,7 @@ export default function HomeScreen() {
         {/* Hero card — editable */}
         <ClayCard variant="green" style={s.heroCard}>
           <View style={s.heroBadgeRow}>
-            <View style={s.livePill}><Text style={s.livePillText}>LIVE TRIP</Text></View>
+            <View style={s.livePill}><Text style={s.livePillText}>{t('live_trip') || 'Live Trip'}</Text></View>
             <Text style={s.dayPill}>Day 1 of 9</Text>
           </View>
           <TouchableOpacity activeOpacity={0.9} onPress={() => setShowHeroEdit(true)} style={{position:'absolute',top:10,right:10,zIndex:5}}>
@@ -394,8 +407,8 @@ export default function HomeScreen() {
             </View>
           </View>
           <View style={s.heroBudgetRow}>
-            <Text style={s.heroBudgetLabel}>{fmtFull(spentBudget)} spent</Text>
-            <Text style={s.heroBudgetLabel}>{fmtFull(globalBudget - spentBudget)} left</Text>
+            <Text style={s.heroBudgetLabel}>{fmtFull(spentBudget)} {t('spent') || 'spent'}</Text>
+            <Text style={s.heroBudgetLabel}>{fmtFull(globalBudget - spentBudget)} {t('left') || 'left'}</Text>
           </View>
           <LiquidBar pct={budgetPct} color={budgetPct > 80 ? NC.warning : NC.primaryFixed} />
         </ClayCard>
@@ -447,7 +460,7 @@ export default function HomeScreen() {
         <TouchableOpacity activeOpacity={0.85} onPress={() => { setBudgetInput(String(globalBudget)); setShowBudgetEdit(true); }} style={{ marginBottom: 16 }}>
           <ClayCard variant="white">
             <View style={{flexDirection:'row',justifyContent:'space-between', alignItems:'center'}}>
-              <Text style={s.bentoTileLabel}>Budget Utilized</Text>
+              <Text style={s.bentoTileLabel}>{t('budget_utilized') || 'Budget Utilized'}</Text>
               <Ionicons name="pencil-outline" size={14} color={NC.outlineVariant}/>
             </View>
             <View style={{flexDirection:'row',justifyContent:'space-between', alignItems:'flex-end', marginBottom: 16, marginTop: 4}}>
@@ -513,6 +526,7 @@ export default function HomeScreen() {
                 else if (t.key === 'SOS') showToast('Location transmitted', 'radio');
                 else if (t.key === 'Vault') router.push('/(tabs)/booking');
                 else if (t.key === 'Weather') setEditingCity(true);
+                else if (t.key === 'Offline') router.push('/(tabs)/explore');
                 else showToast(`${t.label} Coming Soon`, 'construct');
               }}>
               <View style={s.toolIconBox}>
@@ -858,19 +872,22 @@ const s = StyleSheet.create({
   
   // Clay logo circle — inflated sphere
   logoCircle: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: NC.primary, alignItems: 'center', justifyContent: 'center',
-    position: 'relative', overflow: 'hidden',
-    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.9)',
-    borderBottomColor: 'rgba(27,94,32,0.3)',
-    borderRightColor: 'rgba(27,94,32,0.2)',
-    shadowColor: 'rgba(27,94,32,0.4)', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 12, elevation: 8,
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: '#FFF',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,1)',
+    shadowColor: 'rgba(27,94,32,0.15)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1, shadowRadius: 10, elevation: 6,
+    marginRight: 6,
+    overflow: 'hidden'
   },
+  logoImg: { width: 34, height: 34, zIndex: 1 },
   logoSheen: {
-    position: 'absolute', top: 0, left: 0, right: 0, height: '45%',
-    backgroundColor: 'rgba(255,255,255,0.3)', borderTopLeftRadius: 22, borderTopRightRadius: 22,
+    position: 'absolute', top: 0, left: 0, right: 0, height: '40%',
+    backgroundColor: 'rgba(255,255,255,0.4)', zIndex: 2
   },
-  logoText: { fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: -0.5, zIndex: 1 },
+  logoText: { fontSize: 24, fontWeight: '900', color: '#fff', zIndex: 1 },
   appName: { fontSize: 24, fontWeight: '900', color: '#1B5E20', letterSpacing: -0.5 },
   sub: { fontSize: 12, color: NC.onSurfaceVariant, marginTop: 2, fontWeight: '600' },
   
@@ -1126,4 +1143,10 @@ const s = StyleSheet.create({
   pollFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: 'rgba(46,125,50,0.1)', borderRadius: 24 },
   pollOptText: { flex: 1, color: NC.onSurface, fontSize: 14, fontWeight: '700' },
   pollPct: { color: NC.primary, fontSize: 14, fontWeight: '900' },
+  personaMiniCard: { marginHorizontal: 20, marginBottom: 16, padding: 12 },
+  personaMiniRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  personaMiniIconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.05)', alignItems: 'center', justifyContent: 'center' },
+  personaMiniLabel: { fontSize: 9, fontWeight: '900', color: NC.outline, letterSpacing: 1 },
+  personaMiniTitle: { fontSize: 15, fontWeight: '900', color: NC.onSurface, marginTop: 1 },
+  personaMiniCardTrigger: { width: '100%' },
 });

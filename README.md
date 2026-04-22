@@ -137,8 +137,18 @@ Built for **group travel with up to 11 members**:
 - Visual 14-day FX sparklines indicating exchange rate trends.
 - Changes propagate instantly across every app screen using reactive hooks and Zustand state.
 
+**Real-time SMS Expense Tracking:**
+- Automated parsing of bank/transactional SMS messages.
+- Real-time wallet updates via background listener logic.
+- Robust regex support for INR/₹/Amt currency patterns.
+
 **Real-Time Language Translation:**
-- Functional voice translations supporting Speech-to-Text & Text-to-Speech (utilizing `expo-speech`). Translate quickly between global languages while on the road via the unified live translator tool.
+- Functional voice translations supporting **real-time Speech-to-Text** & Text-to-Speech (utilizing `expo-speech-recognition` and `expo-speech`). Translate quickly between 20+ global languages while on the road via the unified live translator tool.
+
+**Detailed Booking Search Results:**
+- Search results now feature a progressive detail view.
+- Real-time availability (seats remaining), fare breakdowns (base vs. taxes), and schedule specifics.
+- Deep linking to official booking apps (IRCTC, MakeMyTrip, RedBus, Booking.com).
 
 **Weather Management:**
 - User-driven route weather synchronization. Add destinations manually and see real-time forecasts.
@@ -199,6 +209,7 @@ This prevents accidental changes from immediately affecting the whole app. The S
 | **Expo SDK 54** | Managed workflow, EAS cloud builds, no Android Studio needed for CI |
 | **React Native 0.81.5** | New Architecture enabled (`newArchEnabled: true`) for better performance |
 | **Expo Router** | File-based routing, deep linking, typed routes |
+| **Expo Speech Recognition** | Native-level real-time voice typing (STT) |
 | **Zustand + AsyncStorage**| Minimal boilerplate state management, reactive subscriptions, persisting storage |
 | **TomTom Maps JS SDK** | No Google Maps billing, generous free tier, dotLottie-quality vector tiles |
 | **TypeScript** | Full type safety across stores, components, and API responses |
