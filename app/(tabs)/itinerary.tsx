@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Modal, ScrollView, StyleSheet, Text,
-  TouchableOpacity, View,
+  TouchableOpacity, View, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,11 +51,30 @@ function RouteDetailModal({
           </TouchableOpacity>
 
           <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Hero Image */}
+            <View style={{marginHorizontal:-20,marginTop:-20,marginBottom:16,height:200,overflow:'hidden'}}>
+              {route.image ? (
+                <Image 
+                  source={{ uri: route.image }}
+                  style={{width:'100%',height:'100%'}}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={{flex:1,backgroundColor:route.color+'33',justifyContent:'center',alignItems:'center'}}>
+                  <Ionicons name="map" size={60} color={route.color} />
+                </View>
+              )}
+              {/* Gradient Overlay */}
+              <View style={{position:'absolute',bottom:0,left:0,right:0,height:100,backgroundColor:'rgba(0,0,0,0.4)'}} />
+              <View style={{position:'absolute',bottom:12,left:16,right:16}}>
+                <View style={[md.themeBadge, { backgroundColor: route.color }]}>
+                  <Text style={md.themeText}>{route.theme}</Text>
+                </View>
+              </View>
+            </View>
+
             {/* Hero */}
             <View style={[md.hero, { backgroundColor: route.color + '22', borderColor: route.color + '44' }]}>
-              <View style={[md.themeBadge, { backgroundColor: route.color }]}>
-                <Text style={md.themeText}>{route.theme}</Text>
-              </View>
               <Text style={md.heroTitle}>{route.title}</Text>
               <Text style={md.heroTagline}>{route.tagline}</Text>
               <View style={md.heroMeta}>
@@ -149,11 +168,29 @@ function RouteDetailModal({
                 style={md.navBtnSmall} 
                 onPress={() => {
                   onClose();
-                  router.push({ pathname: '/(tabs)/explore', params: { q: route.cities[1] || route.cities[0], start: route.cities[0] } });
+                  // Navigate to explore with destination and start params
+                  const destCity = route.cities[route.cities.length - 1];
+                  const startCity = route.cities[0];
+                  router.push(`/(tabs)/explore?q=${encodeURIComponent(destCity)}&start=${encodeURIComponent(startCity)}`);
                 }}
               >
                 <Ionicons name="navigate" size={16} color="#fff" style={{marginRight:6}}/>
                 <Text style={md.bookBtnText}>Navigate</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[md.navBtnSmall, { backgroundColor: NC.secondary }]} 
+                onPress={() => {
+                  // Show detailed route guide modal directly
+                  onClose();
+                  // Navigate to explore tab with guide param
+                  const destCity = route.cities[route.cities.length - 1];
+                  const startCity = route.cities[0];
+                  router.push(`/(tabs)/explore?q=${encodeURIComponent(destCity)}&start=${encodeURIComponent(startCity)}&guide=true`);
+                }}
+              >
+                <Ionicons name="map" size={16} color="#fff" style={{marginRight:6}}/>
+                <Text style={md.bookBtnText}>Route Guide</Text>
               </TouchableOpacity>
             </View>
             <TouchableOpacity style={md.closeBtnFull} onPress={onClose}>
@@ -814,6 +851,13 @@ const md = StyleSheet.create({
     shadowOpacity: 1, shadowRadius: 10, elevation: 6,
   },
   bookBtnText: { color: '#FFF', fontSize: 14, fontWeight: '900' },
+  bookBtn: {
+    backgroundColor: NC.primary, borderRadius: 999, paddingVertical: 16,
+    alignItems: 'center', marginTop: 16,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
+    shadowColor: NC.shadowButton, shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1, shadowRadius: 12, elevation: 6,
+  },
   closeBtnFull: { 
     marginTop: 12, backgroundColor: NC.surfaceLow, borderRadius: 999, paddingVertical: 18, alignItems: 'center', 
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', 

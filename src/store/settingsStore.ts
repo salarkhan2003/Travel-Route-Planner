@@ -10,9 +10,11 @@ interface SettingsState {
   currency: string;
   language: LanguageCode;
   units: 'metric' | 'imperial';
+  darkMode: boolean;
   setCurrency: (c: string) => void;
   setLanguage: (l: LanguageCode) => void;
   setUnits: (u: 'metric' | 'imperial') => void;
+  setDarkMode: (d: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -21,9 +23,11 @@ export const useSettingsStore = create<SettingsState>()(
       currency: 'INR',
       language: 'en',
       units: 'metric',
+      darkMode: false,
       setCurrency: (currency) => set({ currency }),
       setLanguage: (language) => set({ language }),
       setUnits: (units) => set({ units }),
+      setDarkMode: (darkMode) => set({ darkMode }),
     }),
     {
       name: 'settings-storage',

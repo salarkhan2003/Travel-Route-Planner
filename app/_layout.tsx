@@ -8,11 +8,15 @@ import { StyleSheet, PermissionsAndroid, Platform } from 'react-native';
 import CustomToast from '../src/components/CustomToast';
 import { useTripStore } from '../src/store/tripStore';
 import { useToastStore } from '../src/store/toastStore';
+import { useSettingsStore } from '../src/store/settingsStore';
+import { getTheme } from '../src/constants/theme';
 import { parseTransactionalSMS } from '../src/utils/smsParser';
 
 export default function RootLayout() {
   const addExtraExpense = useTripStore(s => s.addExtraExpense);
   const showToast = useToastStore(s => s.showToast);
+  const darkMode = useSettingsStore(s => s.darkMode);
+  const theme = getTheme(darkMode);
 
   useEffect(() => {
     let subscription: any = null;
@@ -77,9 +81,9 @@ export default function RootLayout() {
   }, [addExtraExpense, showToast]);
 
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+    <GestureHandlerRootView style={[styles.root, { backgroundColor: theme.background }]}>
+      <StatusBar style={darkMode ? 'light' : 'dark'} />
+      <Stack screenOptions={{ headerShown: false, animation: 'fade', contentStyle: { backgroundColor: theme.background } }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
@@ -92,5 +96,5 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#E8F5E9' },
+  root: { flex: 1 },
 });

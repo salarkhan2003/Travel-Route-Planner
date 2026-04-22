@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ClayCard } from '../src/components/clay/ClayCard';
 import { ClayToggle } from '../src/components/clay/ClayToggle';
-import { useSettingsStore } from '../src/store/settingsStore';
+import { useSettingsStore, LanguageCode } from '../src/store/settingsStore';
 import { CURRENCIES } from '../src/constants/currencies';
 import { NC } from '../src/constants/theme';
 import { useToastStore } from '../src/store/toastStore';
@@ -42,7 +42,7 @@ function LanguagePickerModal({ visible, onClose, selected, onSelect }: { visible
   const [search, setSearch] = useState('');
   const filtered = LANGUAGE_LIST.filter(l => 
     l.native.toLowerCase().includes(search.toLowerCase()) || 
-    l.name.toLowerCase().includes(search.toLowerCase())
+    l.label.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -73,7 +73,7 @@ function LanguagePickerModal({ visible, onClose, selected, onSelect }: { visible
                 <Text style={st.langFlag}>{l.flag}</Text>
                 <View style={{ flex:1 }}>
                   <Text style={[st.langNative, selected === l.code && st.langNativeActive]}>{l.native}</Text>
-                  <Text style={st.langName}>{l.name}</Text>
+                  <Text style={st.langName}>{l.label}</Text>
                 </View>
                 {selected === l.code && <Ionicons name="checkmark-circle" size={22} color="#FFF" />}
               </TouchableOpacity>
@@ -98,7 +98,7 @@ export default function SettingsScreen() {
     travelClass: (store as any).travelClass || 'Sleeper',
     distanceUnit: (store as any).distanceUnit || 'km',
     mapStyle: (store as any).mapStyle || 'standard',
-    darkMode: (store as any).darkMode || false,
+    darkMode: store.darkMode || false,
     biometricLock: (store as any).biometricLock || false,
     cloudSync: (store as any).cloudSync || false,
     notifications: (store as any).notifications || true,
@@ -110,7 +110,7 @@ export default function SettingsScreen() {
     draft.travelClass !== (store as any).travelClass ||
     draft.distanceUnit !== (store as any).distanceUnit ||
     draft.mapStyle !== (store as any).mapStyle ||
-    draft.darkMode !== (store as any).darkMode ||
+    draft.darkMode !== store.darkMode ||
     draft.biometricLock !== (store as any).biometricLock ||
     draft.cloudSync !== (store as any).cloudSync ||
     draft.notifications !== (store as any).notifications;
@@ -121,6 +121,7 @@ export default function SettingsScreen() {
     if ((store as any).setTravelClass) (store as any).setTravelClass(draft.travelClass);
     if ((store as any).setDistanceUnit) (store as any).setDistanceUnit(draft.distanceUnit);
     if ((store as any).setMapStyle) (store as any).setMapStyle(draft.mapStyle);
+    store.setDarkMode(draft.darkMode);
     
     showToast('Preferences saved successfully!', 'construct');
   };
@@ -154,7 +155,7 @@ export default function SettingsScreen() {
           <TouchableOpacity onPress={() => setShowLangPicker(true)} style={st.langPickerTrigger}>
              <View style={{ flex: 1 }}>
                <Text style={st.rowLabel}>{t('language') || 'Language'}</Text>
-               <Text style={st.rowSub}>{LANGUAGE_LIST.find(l => l.code === draft.language)?.native} ({LANGUAGE_LIST.find(l => l.code === draft.language)?.name})</Text>
+               <Text style={st.rowSub}>{LANGUAGE_LIST.find(l => l.code === draft.language)?.native} ({LANGUAGE_LIST.find(l => l.code === draft.language)?.label})</Text>
              </View>
              <Ionicons name="chevron-forward" size={20} color={NC.primary} />
           </TouchableOpacity>
@@ -211,10 +212,31 @@ export default function SettingsScreen() {
           <Text style={st.rateNote}>Approximate rates · Apr 2026</Text>
         </ClayCard>
 
-        <Text style={st.section}>{t('about') || 'About'}</Text>
+        <Text style={st.section}>Legal & Info</Text>
         <ClayCard style={st.card}>
-          <Text style={st.aboutTitle}>Spatial Travel Planner v1.0</Text>
-          <Text style={st.aboutSub}>Built for Travellers · India to Global</Text>
+          <TouchableOpacity style={st.linkRow} onPress={() => router.push('/privacy-policy')}>
+            <View style={{flex:1}}>
+              <Text style={st.linkTitle}>Privacy Policy</Text>
+              <Text style={st.linkSub}>How we handle your data</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={NC.onSurfaceVariant} />
+          </TouchableOpacity>
+          <View style={st.div} />
+          <TouchableOpacity style={st.linkRow} onPress={() => router.push('/terms-conditions')}>
+            <View style={{flex:1}}>
+              <Text style={st.linkTitle}>Terms & Conditions</Text>
+              <Text style={st.linkSub}>Rules for using our services</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={NC.onSurfaceVariant} />
+          </TouchableOpacity>
+          <View style={st.div} />
+          <TouchableOpacity style={st.linkRow} onPress={() => router.push('/about')}>
+            <View style={{flex:1}}>
+              <Text style={st.linkTitle}>About Roamio</Text>
+              <Text style={st.linkSub}>App info, version, credits</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={NC.onSurfaceVariant} />
+          </TouchableOpacity>
         </ClayCard>
 
         <View style={{ height: 110 }} />
@@ -224,7 +246,7 @@ export default function SettingsScreen() {
         visible={showLangPicker} 
         onClose={() => setShowLangPicker(false)}
         selected={draft.language}
-        onSelect={(v) => setDraft(d => ({ ...d, language: v }))}
+        onSelect={(v) => setDraft(d => ({ ...d, language: v as LanguageCode }))}
       />
     </SafeAreaView>
   );
@@ -309,6 +331,10 @@ const st = StyleSheet.create({
   rateNote: { color: NC.outlineVariant, fontSize: 11, marginTop: 10, fontWeight: '600' },
   aboutTitle: { color: NC.onSurface, fontSize: 16, fontWeight: '900' },
   aboutSub: { color: NC.onSurfaceVariant, fontSize: 13, marginTop: 5 },
+  
+  linkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
+  linkTitle: { color: NC.onSurface, fontSize: 15, fontWeight: '800' },
+  linkSub: { color: NC.onSurfaceVariant, fontSize: 12, marginTop: 2 },
   
   langPickerTrigger: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
 

@@ -4,8 +4,11 @@ import {
   StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from '../../src/hooks/useTranslation';
+import { NC } from '../../src/constants/theme';
+import { ClayCard } from '../../src/components/clay/ClayCard';
 import { useTripStore } from '../../src/store/tripStore';
 import {
   ALL_LOCATIONS, INDIA_LOCATIONS, SINGAPORE_LOCATIONS,
@@ -19,7 +22,14 @@ import {
 } from '../../src/hooks/useGoogleMaps';
 import { TomTomMap, TomTomMapRef } from '../../src/components/TomTomMap';
 import { MasterGuide } from '../../src/components/travel-guide/MasterGuide';
+import { SegmentedRouteGuide } from '../../src/components/travel-guide/SegmentedRouteGuide';
 import { useToastStore } from '../../src/store/toastStore';
+import {
+  fetchEVChargingStations,
+  fetchTrafficFlow,
+  searchPOI,
+  calculateReachableRange,
+} from '../../src/hooks/useTomTomServices';
 
 let ExpoLocation: any = null;
 try { ExpoLocation = require('expo-location'); } catch (_) {}
@@ -86,6 +96,7 @@ export default function ExploreScreen() {
   const [selectedPlace, setSelectedPlace] = useState<PlaceDetail | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [showMasterGuide, setShowMasterGuide] = useState(false);
+  const [showSegmentedGuide, setShowSegmentedGuide] = useState(false);
   const [mapReady, setMapReady] = useState(false);
 
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -97,6 +108,18 @@ export default function ExploreScreen() {
   const [navLoading, setNavLoading] = useState(false);
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [showSteps, setShowSteps] = useState(false);
+
+  // Advanced TomTom Features
+  const [evStations, setEvStations] = useState<any[]>([]);
+  const [showEVStations, setShowEVStations] = useState(false);
+  const [trafficEnabled, setTrafficEnabled] = useState(false);
+  const [reachableRange, setReachableRange] = useState<any>(null);
+  const [showReachableRange, setShowReachableRange] = useState(false);
+  const [poiResults, setPoiResults] = useState<any[]>([]);
+  const [poiSearch, setPoiSearch] = useState('');
+  const [showPOISearch, setShowPOISearch] = useState(false);
+  const [showMapTools, setShowMapTools] = useState(false);
+  const [trafficInfo, setTrafficInfo] = useState<any>(null);
 
   const cardAnim = useRef(new Animated.Value(400)).current;
 
@@ -141,18 +164,23 @@ export default function ExploreScreen() {
     }
   }, [mapReady, navRoute, navDest]);
 
+  // Auto-navigation from popular routes
   useEffect(() => {
     if (params.q) {
       const loc = ALL_LOCATIONS.find(l => l.city.toLowerCase() === params.q?.toLowerCase());
       if (loc) {
-        setTimeout(() => openCard(loc), 1000);
+        setTimeout(() => {
+          openCard(loc);
+          // If start param provided, auto-trigger navigation with segmented guide
+          if (params.start) {
+            setTimeout(() => {
+              startNav(loc.coordinates[1], loc.coordinates[0], loc.city, 'driving');
+            }, 1500);
+          }
+        }, 800);
       } else {
         setSearch(params.q);
       }
-    }
-    if (params.start && params.q) {
-       // Logic for auto-navigation from start to q
-       showToast(`Calculating route from ${params.start} to ${params.q}`, 'construct');
     }
   }, [params.q, params.start]);
 
@@ -220,6 +248,77 @@ export default function ExploreScreen() {
     Animated.spring(cardAnim, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 120 }).start();
   }, [cardAnim]);
 
+  // Advanced TomTom Features Functions
+  const loadEVStations = useCallback(async () => {
+    const center = userCoords || { lat: 28.6139, lng: 77.2090 }; // Default to Delhi
+    showToast('Loading EV Charging Stations...', 'construct');
+    const stations = await fetchEVChargingStations(center.lat, center.lng, 20000);
+    setEvStations(stations);
+    setShowEVStations(true);
+    // Add markers for EV stations
+    stations.forEach((station, i) => {
+      const pos = station.position;
+      if (pos) {
+        mapRef.current?.setMarker(`ev_${i}`, pos.lat, pos.lon, '#00BCD4', '⚡');
+      }
+    });
+    showToast(`${stations.length} EV stations found`, 'success');
+  }, [userCoords]);
+
+  const clearEVStations = useCallback(() => {
+    evStations.forEach((_, i) => {
+      mapRef.current?.removeMarker(`ev_${i}`);
+    });
+    setEvStations([]);
+    setShowEVStations(false);
+  }, [evStations]);
+
+  const loadTrafficInfo = useCallback(async () => {
+    const center = userCoords || { lat: 28.6139, lng: 77.2090 };
+    showToast('Fetching traffic data...', 'construct');
+    const traffic = await fetchTrafficFlow(center.lat, center.lng);
+    setTrafficInfo(traffic);
+    setTrafficEnabled(true);
+    if (traffic?.flowSegmentData) {
+      const speed = traffic.flowSegmentData.currentSpeed;
+      const freeFlow = traffic.flowSegmentData.freeFlowSpeed;
+      const congestion = speed < freeFlow * 0.5 ? 'Heavy' : speed < freeFlow * 0.8 ? 'Moderate' : 'Light';
+      showToast(`Traffic: ${congestion} (${speed}/${freeFlow} km/h)`, congestion === 'Heavy' ? 'warning' : 'success');
+    }
+  }, [userCoords]);
+
+  const calculateRange = useCallback(async (minutes: number) => {
+    const center = userCoords || { lat: 28.6139, lng: 77.2090 };
+    showToast(`Calculating ${minutes}min reachable range...`, 'construct');
+    const range = await calculateReachableRange(center.lat, center.lng, minutes);
+    setReachableRange(range);
+    setShowReachableRange(true);
+    showToast('Reachable range calculated', 'success');
+  }, [userCoords]);
+
+  const searchNearbyPOI = useCallback(async () => {
+    if (!poiSearch.trim()) return;
+    const center = userCoords || { lat: 28.6139, lng: 77.2090 };
+    showToast(`Searching for ${poiSearch}...`, 'construct');
+    const results = await searchPOI(poiSearch, center.lat, center.lng, 15000);
+    setPoiResults(results);
+    // Add markers
+    results.forEach((poi, i) => {
+      const pos = poi.position;
+      if (pos) {
+        mapRef.current?.setMarker(`poi_${i}`, pos.lat, pos.lon, '#9C27B0', '★');
+      }
+    });
+    showToast(`${results.length} places found`, 'success');
+  }, [poiSearch, userCoords]);
+
+  const clearPOIMarkers = useCallback(() => {
+    poiResults.forEach((_, i) => {
+      mapRef.current?.removeMarker(`poi_${i}`);
+    });
+    setPoiResults([]);
+  }, [poiResults]);
+
   const openCard = useCallback((loc: TripLocation) => {
     setSearch(loc.city); setPredictions([]); setLocalResults([]);
     setSelectedLoc(loc); setSelectedPlace(null);
@@ -241,6 +340,10 @@ export default function ExploreScreen() {
     setNavDest({ name: destName, lat: destLat, lng: destLng });
     setNavMode(mode); setCurrentStepIdx(0); setShowSteps(false);
     closeCard(); setShowGuide(false);
+    
+    // Show the segmented route guide
+    setShowSegmentedGuide(true);
+    
     const result = await fetchDirections(origin, { lat: destLat, lng: destLng }, mode);
     setNavLoading(false);
     if (result) {
@@ -323,6 +426,9 @@ export default function ExploreScreen() {
           </View>
           <TouchableOpacity style={[s.locBtn, locLoading && { opacity: 0.5 }]} onPress={fetchLocation}>
             <Text style={s.locBtnText}>{locLoading ? '…' : '⊕'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.mapToolsBtn} onPress={() => setShowMapTools(true)}>
+            <Ionicons name="layers" size={20} color="#FFF" />
           </TouchableOpacity>
         </View>
 
@@ -447,11 +553,13 @@ export default function ExploreScreen() {
             <Text style={s.navMeta}>{navRoute.totalDistance}  ·  {navRoute.totalDuration}</Text>
           </View>
           <View style={s.navHUDRight}>
-            {navRoute.steps.length > 0 && (
-              <TouchableOpacity style={s.stepsBtn} onPress={() => setShowSteps(true)}>
-                <Text style={s.stepsBtnText}>Steps</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity 
+              style={[s.stepsBtn, { backgroundColor: NC.primary }]} 
+              onPress={() => setShowSegmentedGuide(true)}
+            >
+              <Ionicons name="map" size={14} color="#FFF" style={{ marginRight: 4 }} />
+              <Text style={[s.stepsBtnText, { color: '#FFF' }]}>Guide</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={s.navEnd} onPress={endNav}>
               <Text style={s.navEndText}>End</Text>
             </TouchableOpacity>
@@ -552,6 +660,184 @@ export default function ExploreScreen() {
         onClose={() => setShowMasterGuide(false)} 
         persona={persona} 
       />
+
+      <SegmentedRouteGuide
+        visible={showSegmentedGuide}
+        onClose={() => setShowSegmentedGuide(false)}
+        from={navRoute ? (userCoords ? 'Your Location' : 'Start') : 'Home'}
+        to={navDest?.name || selectedLoc?.city || 'Destination'}
+        persona={persona === 'none' ? 'family' : persona}
+        onStartNavigation={() => {
+          // When user clicks "Start Navigation" in the guide
+          setShowSegmentedGuide(false);
+          showToast('Navigation started - Follow the route', 'construct');
+        }}
+      />
+
+      {/* ── Map Tools Modal ── */}
+      <Modal visible={showMapTools} animationType="slide" transparent presentationStyle="overFullScreen">
+        <View style={s.modalOverlay}>
+          <View style={s.guideSheet}>
+            <View style={s.guideHandle} />
+            <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+              <Text style={s.guideCity}>🗺️ Map Tools</Text>
+              <TouchableOpacity onPress={() => setShowMapTools(false)}>
+                <Ionicons name="close" size={24} color={NC.primary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* EV Charging Stations */}
+              <Text style={s.guideSection}>⚡ EV Charging Stations</Text>
+              <View style={{flexDirection:'row',gap:10,marginBottom:12}}>
+                <TouchableOpacity 
+                  style={[s.navBtn, {flex:1, backgroundColor: showEVStations ? '#00BCD4' : NC.primary}]}
+                  onPress={() => {
+                    setShowMapTools(false);
+                    if (showEVStations) {
+                      clearEVStations();
+                    } else {
+                      loadEVStations();
+                    }
+                  }}
+                >
+                  <Ionicons name={showEVStations ? "close-circle" : "flash"} size={18} color="#FFF" />
+                  <Text style={s.navBtnText}>{showEVStations ? 'Hide Stations' : 'Show EV Stations'}</Text>
+                </TouchableOpacity>
+              </View>
+              {evStations.length > 0 && (
+                <Text style={{fontSize:12,color:'#558B2F',marginBottom:12}}>
+                  {evStations.length} charging stations found within 20km
+                </Text>
+              )}
+
+              {/* Traffic Information */}
+              <Text style={s.guideSection}>🚦 Traffic Flow</Text>
+              <View style={{flexDirection:'row',gap:10,marginBottom:12}}>
+                <TouchableOpacity 
+                  style={[s.navBtn, {flex:1, backgroundColor: trafficEnabled ? '#E53935' : NC.primary}]}
+                  onPress={() => {
+                    setShowMapTools(false);
+                    if (trafficEnabled) {
+                      setTrafficEnabled(false);
+                    } else {
+                      loadTrafficInfo();
+                    }
+                  }}
+                >
+                  <Ionicons name={trafficEnabled ? "close-circle" : "car"} size={18} color="#FFF" />
+                  <Text style={s.navBtnText}>{trafficEnabled ? 'Hide Traffic' : 'Show Traffic'}</Text>
+                </TouchableOpacity>
+              </View>
+              {trafficInfo?.flowSegmentData && (
+                <ClayCard variant="white" style={{marginBottom:12,padding:12}}>
+                  <Text style={{fontSize:13,fontWeight:'800',color:'#1B5E20'}}>
+                    Current Speed: {trafficInfo.flowSegmentData.currentSpeed} km/h
+                  </Text>
+                  <Text style={{fontSize:12,color:'#558B2F',marginTop:2}}>
+                    Free Flow: {trafficInfo.flowSegmentData.freeFlowSpeed} km/h
+                  </Text>
+                  <Text style={{fontSize:12,color:'#558B2F',marginTop:2}}>
+                    Road: {trafficInfo.flowSegmentData.roadClosure ? 'Closed' : 'Open'}
+                  </Text>
+                </ClayCard>
+              )}
+
+              {/* Reachable Range (Isochrones) */}
+              <Text style={s.guideSection}>📍 Reachable Range</Text>
+              <Text style={{fontSize:12,color:'#81C784',marginBottom:8}}>See how far you can travel in a given time</Text>
+              <View style={{flexDirection:'row',gap:8,marginBottom:12}}>
+                {[15, 30, 60].map(minutes => (
+                  <TouchableOpacity 
+                    key={minutes}
+                    style={[s.chip, {backgroundColor: NC.primary}]}
+                    onPress={() => calculateRange(minutes)}
+                  >
+                    <Text style={[s.chipText, {color:'#FFF'}]}>{minutes} min</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* POI Search */}
+              <Text style={s.guideSection}>🔍 Nearby Search</Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                style={{marginBottom:12}}
+                contentContainerStyle={{flexDirection:'row',gap:8,paddingRight:20}}
+              >
+                {['restaurant', 'hospital', 'fuel', 'atm', 'mall', 'pharmacy', 'parking', 'bank'].map(poi => (
+                  <TouchableOpacity 
+                    key={poi}
+                    style={[s.chip, {backgroundColor: '#9C27B0',minWidth:80,alignItems:'center'}]}
+                    onPress={() => { 
+                      setShowMapTools(false);
+                      setPoiSearch(poi); 
+                      setTimeout(() => searchNearbyPOI(), 300);
+                    }}
+                  >
+                    <Ionicons name={
+                      poi === 'restaurant' ? 'restaurant' :
+                      poi === 'hospital' ? 'medical' :
+                      poi === 'fuel' ? 'flash' :
+                      poi === 'atm' ? 'cash' :
+                      poi === 'mall' ? 'cart' :
+                      poi === 'pharmacy' ? 'bandage' :
+                      poi === 'parking' ? 'car' : 'business'
+                    } size={14} color="#FFF" style={{marginBottom:4}} />
+                    <Text style={[s.chipText, {color:'#FFF',textTransform:'capitalize'}]}>{poi}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <View style={{flexDirection:'row',gap:10}}>
+                <TextInput
+                  style={[s.input,{flex:1}]}
+                  placeholder="Search for places..."
+                  value={poiSearch}
+                  onChangeText={setPoiSearch}
+                />
+                <TouchableOpacity 
+                  style={[s.navBtn, {backgroundColor: '#9C27B0'}]} 
+                  onPress={() => {
+                    setShowMapTools(false);
+                    searchNearbyPOI();
+                  }}
+                >
+                  <Ionicons name="search" size={18} color="#FFF" />
+                </TouchableOpacity>
+              </View>
+              {poiResults.length > 0 && (
+                <View style={{marginTop:12}}>
+                  <Text style={{fontSize:12,color:'#558B2F',marginBottom:8}}>
+                    {poiResults.length} places found
+                  </Text>
+                  <TouchableOpacity style={[s.navBtn, {backgroundColor: '#78909C'}]} onPress={clearPOIMarkers}>
+                    <Text style={s.navBtnText}>Clear Markers</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* TomTom APIs Info */}
+              <Text style={s.guideSection}>ℹ️ Active APIs</Text>
+              <View style={{marginBottom:12}}>
+                {[
+                  'EV Charging Stations API',
+                  'Traffic Flow API',
+                  'Search API',
+                  'Reachable Range API',
+                  'Reverse Geocoding',
+                ].map((api, i) => (
+                  <View key={api} style={{flexDirection:'row',alignItems:'center',marginBottom:4}}>
+                    <View style={{width:6,height:6,borderRadius:3,backgroundColor:'#4CAF50',marginRight:8}} />
+                    <Text style={{fontSize:12,color:'#558B2F'}}>{api}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={{height:40}} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -845,4 +1131,23 @@ const s = StyleSheet.create({
     shadowOpacity: 1, shadowRadius: 12, elevation: 6,
   },
   guideCloseBtnText: { color: '#1B5E20', fontSize: 17, fontWeight: '900' },
+
+  // Map Tools
+  mapToolsBtn: {
+    width: 50, height: 50, borderRadius: 25,
+    backgroundColor: '#1565C0',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.98)',
+    borderBottomColor: 'rgba(21,101,192,0.4)',
+    borderRightColor: 'rgba(21,101,192,0.3)',
+    shadowColor: 'rgba(21,101,192,0.5)',
+    shadowOffset: { width: 6, height: 6 },
+    shadowOpacity: 1, shadowRadius: 14, elevation: 10,
+  },
+  input: {
+    backgroundColor: '#F1F8F2',
+    borderWidth: 2, borderColor: 'rgba(165,214,167,0.3)',
+    borderRadius: 18, padding: 14,
+    fontSize: 14, color: '#1B5E20', fontWeight: '600',
+  },
 });

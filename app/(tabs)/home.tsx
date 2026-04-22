@@ -71,11 +71,37 @@ const getWeatherIcon = (main: string) => {
   if (main.includes('Clear')) return '☀️';
   return '🌤️';
 };
-const WEEKEND = [
-  { from: 'Guntur', to: 'Goa', days: 3, cost: '₹4,200', tag: 'Beach' },
-  { from: 'Delhi', to: 'Agra', days: 1, cost: '₹1,800', tag: 'Heritage' },
-  { from: 'Ajmer', to: 'Pushkar', days: 1, cost: '₹800', tag: 'Spiritual' },
-];
+// Enhanced Discover data with multiple categories
+const DISCOVER_DATA = {
+  weekend: [
+    { from: 'Guntur', to: 'Goa', days: 3, cost: '₹4,200', tag: 'Beach', distance: '850 km', image: '🏖️' },
+    { from: 'Delhi', to: 'Agra', days: 1, cost: '₹1,800', tag: 'Heritage', distance: '230 km', image: '🏛️' },
+    { from: 'Ajmer', to: 'Pushkar', days: 1, cost: '₹800', tag: 'Spiritual', distance: '15 km', image: '🛕' },
+    { from: 'Mumbai', to: 'Lonavala', days: 2, cost: '₹2,500', tag: 'Nature', distance: '95 km', image: '🌄' },
+    { from: 'Bangalore', to: 'Coorg', days: 2, cost: '₹3,200', tag: 'Hill Station', distance: '270 km', image: '🏔️' },
+    { from: 'Chennai', to: 'Pondicherry', days: 2, cost: '₹2,800', tag: 'Beach', distance: '160 km', image: '🌊' },
+  ],
+  trending: [
+    { from: 'Delhi', to: 'Manali', days: 4, cost: '₹6,500', tag: 'Adventure', distance: '540 km', image: '🏔️', trending: '+45%' },
+    { from: 'Mumbai', to: 'Goa', days: 3, cost: '₹5,200', tag: 'Beach', distance: '590 km', image: '🏖️', trending: '+32%' },
+    { from: 'Bangalore', to: 'Ooty', days: 3, cost: '₹4,800', tag: 'Hill Station', distance: '280 km', image: '🚂', trending: '+28%' },
+    { from: 'Hyderabad', to: 'Hampi', days: 2, cost: '₹3,500', tag: 'Heritage', distance: '370 km', image: '🏛️', trending: '+24%' },
+  ],
+  nearby: [
+    { from: 'Current Location', to: 'Nearest Beach', days: 1, cost: '₹1,200', tag: 'Quick Escape', distance: '45 km', image: '🏖️' },
+    { from: 'Current Location', to: 'Local Hills', days: 1, cost: '₹800', tag: 'Day Trip', distance: '35 km', image: '⛰️' },
+    { from: 'Current Location', to: 'Historic Town', days: 1, cost: '₹600', tag: 'Heritage', distance: '25 km', image: '🏰' },
+  ],
+  // Based on user's booked tickets - will be dynamically generated
+  fromBookings: [] as any[],
+};
+
+// User preferences for Discover section
+const DISCOVER_PREFERENCES = {
+  defaultTab: 'weekend' as const,
+  enabledTabs: ['weekend', 'trending', 'nearby', 'fromBookings'] as const,
+  autoUpdateFromBookings: true,
+};
 
 // ── Liquid Progress Bar — Glassmorphic clay gauge ─────────────────────────────
 function LiquidBar({ pct, color = NC.primary }: { pct: number; color?: string }) {
@@ -134,6 +160,328 @@ const ci = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
   icon: { lineHeight: undefined, zIndex: 1 },
+});
+
+// ── Enhanced Discover Section Component ─────────────────────────────────────
+function DiscoverSection({ router }: { router: any }) {
+  const [activeTab, setActiveTab] = useState<'weekend' | 'trending' | 'nearby' | 'fromBookings'>(DISCOVER_PREFERENCES.defaultTab);
+  const [showPreferences, setShowPreferences] = useState(false);
+  const [preferences, setPreferences] = useState(DISCOVER_PREFERENCES);
+  const [userBookings, setUserBookings] = useState<any[]>([]);
+
+  // Simulate loading user's booked tickets and generating recommendations
+  React.useEffect(() => {
+    // In real app, this would fetch from tripStore or booking API
+    const mockBookings = [
+      { from: 'Delhi', to: 'Goa', type: 'flight', date: '2026-05-15' },
+      { from: 'Mumbai', to: 'Pune', type: 'train', date: '2026-04-20' },
+    ];
+    
+    // Generate "From Bookings" recommendations based on user's ticket history
+    const fromBookingsRecommendations = [
+      { from: 'Goa', to: 'Gokarna', days: 2, cost: '₹1,500', tag: 'Extension', distance: '140 km', image: '🏖️', reason: 'You flew to Goa' },
+      { from: 'Pune', to: 'Mahabaleshwar', days: 2, cost: '₹2,200', tag: 'Hill Station', distance: '120 km', image: '🌲', reason: 'Near your Pune trip' },
+      { from: 'Delhi', to: 'Rishikesh', days: 2, cost: '₹1,800', tag: 'Spiritual', distance: '240 km', image: '🧘', reason: 'Popular from Delhi' },
+    ];
+    
+    DISCOVER_DATA.fromBookings = fromBookingsRecommendations;
+    setUserBookings(mockBookings);
+  }, []);
+
+  const tabs = [
+    { id: 'weekend', label: 'Weekend', icon: 'sunny-outline' },
+    { id: 'trending', label: 'Trending', icon: 'trending-up-outline' },
+    { id: 'nearby', label: 'Nearby', icon: 'location-outline' },
+    { id: 'fromBookings', label: 'For You', icon: 'person-outline', badge: userBookings.length > 0 },
+  ].filter(tab => preferences.enabledTabs.includes(tab.id as any));
+
+  const currentData = DISCOVER_DATA[activeTab] || [];
+
+  return (
+    <View>
+      <View style={discoverStyles.header}>
+        <Text style={s.sectionHead}>Discover</Text>
+        <TouchableOpacity onPress={() => setShowPreferences(true)} style={discoverStyles.prefButton}>
+          <Ionicons name="options-outline" size={18} color={NC.primary} />
+        </TouchableOpacity>
+      </View>
+
+      <ClayCard variant="white" style={discoverStyles.card}>
+        {/* Tab Bar */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={discoverStyles.tabBar}>
+          {tabs.map(tab => (
+            <TouchableOpacity
+              key={tab.id}
+              style={[discoverStyles.tab, activeTab === tab.id && discoverStyles.tabActive]}
+              onPress={() => setActiveTab(tab.id as any)}
+            >
+              <View style={discoverStyles.tabIconWrap}>
+                <Ionicons name={tab.icon as any} size={14} color={activeTab === tab.id ? '#FFF' : NC.primary} />
+                {tab.badge && <View style={discoverStyles.tabBadge} />}
+              </View>
+              <Text style={[discoverStyles.tabText, activeTab === tab.id && discoverStyles.tabTextActive]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Content Title */}
+        <View style={discoverStyles.contentHeader}>
+          <Text style={discoverStyles.contentTitle}>
+            {activeTab === 'weekend' && 'Weekend Getaways'}
+            {activeTab === 'trending' && 'Trending Destinations'}
+            {activeTab === 'nearby' && 'Nearby Escapes'}
+            {activeTab === 'fromBookings' && 'Based on Your Trips'}
+          </Text>
+          {activeTab === 'fromBookings' && userBookings.length > 0 && (
+            <Text style={discoverStyles.contentSub}>Personalized from your bookings</Text>
+          )}
+        </View>
+
+        {/* Trip List */}
+        {currentData.length > 0 ? (
+          currentData.map((trip: any, index: number) => (
+            <TouchableOpacity 
+              key={`${trip.to}-${index}`} 
+              style={discoverStyles.tripRow}
+              onPress={() => router.push('/(tabs)/explore?q=' + encodeURIComponent(trip.to))}
+            >
+              <View style={discoverStyles.tripImage}>
+                <Text style={discoverStyles.tripEmoji}>{trip.image}</Text>
+              </View>
+              
+              <View style={discoverStyles.tripInfo}>
+                <View style={discoverStyles.tripHeader}>
+                  <Text style={discoverStyles.tripRoute}>{trip.from} → {trip.to}</Text>
+                  {trip.trending && (
+                    <View style={discoverStyles.trendingBadge}>
+                      <Ionicons name="trending-up" size={10} color="#FFF" />
+                      <Text style={discoverStyles.trendingText}>{trip.trending}</Text>
+                    </View>
+                  )}
+                </View>
+                
+                <View style={discoverStyles.tripMeta}>
+                  <View style={discoverStyles.metaItem}>
+                    <Ionicons name="time-outline" size={12} color={NC.onSurfaceVariant} />
+                    <Text style={discoverStyles.metaText}>{trip.days}D</Text>
+                  </View>
+                  <View style={discoverStyles.metaDivider} />
+                  <View style={discoverStyles.metaItem}>
+                    <Ionicons name="navigate-outline" size={12} color={NC.onSurfaceVariant} />
+                    <Text style={discoverStyles.metaText}>{trip.distance}</Text>
+                  </View>
+                  <View style={discoverStyles.metaDivider} />
+                  <View style={[discoverStyles.tagBadge, { backgroundColor: getTagColor(trip.tag) }]}>
+                    <Text style={discoverStyles.tagText}>{trip.tag}</Text>
+                  </View>
+                </View>
+
+                {trip.reason && (
+                  <Text style={discoverStyles.reasonText}>{trip.reason}</Text>
+                )}
+              </View>
+              
+              <View style={discoverStyles.tripCostCol}>
+                <Text style={discoverStyles.tripCost}>{trip.cost}</Text>
+                <Ionicons name="chevron-forward" size={18} color={NC.primary} />
+              </View>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <View style={discoverStyles.emptyState}>
+            <Ionicons name="compass-outline" size={40} color={NC.outlineVariant} />
+            <Text style={discoverStyles.emptyText}>No recommendations yet</Text>
+            <Text style={discoverStyles.emptySub}>Book a trip to get personalized suggestions</Text>
+          </View>
+        )}
+
+        {/* View All Button */}
+        <TouchableOpacity 
+          style={discoverStyles.viewAllBtn}
+          onPress={() => router.push('/(tabs)/explore')}
+        >
+          <Text style={discoverStyles.viewAllText}>Explore All Destinations</Text>
+          <Ionicons name="arrow-forward" size={16} color={NC.primary} />
+        </TouchableOpacity>
+      </ClayCard>
+
+      {/* Preferences Modal */}
+      <Modal visible={showPreferences} transparent animationType="fade">
+        <View style={discoverStyles.modalOverlay}>
+          <View style={discoverStyles.modalSheet}>
+            <View style={discoverStyles.modalHeader}>
+              <Text style={discoverStyles.modalTitle}>Discover Preferences</Text>
+              <TouchableOpacity onPress={() => setShowPreferences(false)}>
+                <Ionicons name="close" size={24} color={NC.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={discoverStyles.prefLabel}>Default Tab</Text>
+            <View style={discoverStyles.prefOptions}>
+              {tabs.map(tab => (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[discoverStyles.prefOption, preferences.defaultTab === tab.id && discoverStyles.prefOptionActive]}
+                  onPress={() => setPreferences({ ...preferences, defaultTab: tab.id as any })}
+                >
+                  <Text style={[discoverStyles.prefOptionText, preferences.defaultTab === tab.id && discoverStyles.prefOptionTextActive]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={discoverStyles.prefLabel}>Auto-Update from Bookings</Text>
+            <TouchableOpacity 
+              style={discoverStyles.toggleRow}
+              onPress={() => setPreferences({ ...preferences, autoUpdateFromBookings: !preferences.autoUpdateFromBookings })}
+            >
+              <Text style={discoverStyles.toggleText}>Show personalized recommendations</Text>
+              <View style={[discoverStyles.toggle, preferences.autoUpdateFromBookings && discoverStyles.toggleActive]}>
+                <View style={[discoverStyles.toggleDot, preferences.autoUpdateFromBookings && discoverStyles.toggleDotActive]} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={discoverStyles.saveBtn}
+              onPress={() => {
+                // Save preferences
+                setActiveTab(preferences.defaultTab);
+                setShowPreferences(false);
+              }}
+            >
+              <Text style={discoverStyles.saveBtnText}>Save Preferences</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+function getTagColor(tag: string): string {
+  const colors: Record<string, string> = {
+    'Beach': '#E3F2FD',
+    'Heritage': '#FFF3E0',
+    'Spiritual': '#F3E5F5',
+    'Nature': '#E8F5E9',
+    'Hill Station': '#E0F2F1',
+    'Adventure': '#FFEBEE',
+    'Extension': '#E8EAF6',
+    'Quick Escape': '#F1F8E9',
+    'Day Trip': '#FFF8E1',
+  };
+  return colors[tag] || '#F5F5F5';
+}
+
+const discoverStyles = StyleSheet.create({
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  prefButton: { 
+    width: 36, height: 36, borderRadius: 18, 
+    backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'rgba(165,214,167,0.3)',
+    shadowColor: 'rgba(165,214,167,0.3)', shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 6, elevation: 4,
+  },
+  card: { padding: 16 },
+  tabBar: { marginBottom: 16 },
+  tab: { 
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 10, 
+    borderRadius: 20, marginRight: 8,
+    backgroundColor: '#F1F8F2',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)',
+  },
+  tabActive: { 
+    backgroundColor: NC.primary, 
+    borderColor: NC.primary,
+    shadowColor: 'rgba(46,125,50,0.3)', shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 6, elevation: 4,
+  },
+  tabIconWrap: { position: 'relative' },
+  tabBadge: { 
+    position: 'absolute', top: -2, right: -2, 
+    width: 8, height: 8, borderRadius: 4, backgroundColor: '#E53935',
+    borderWidth: 1, borderColor: '#FFF',
+  },
+  tabText: { fontSize: 13, fontWeight: '700', color: NC.onSurfaceVariant },
+  tabTextActive: { color: '#FFF', fontWeight: '800' },
+  contentHeader: { marginBottom: 14 },
+  contentTitle: { fontSize: 16, fontWeight: '900', color: NC.onSurface },
+  contentSub: { fontSize: 12, color: NC.onSurfaceVariant, marginTop: 2 },
+  tripRow: { 
+    flexDirection: 'row', alignItems: 'center', 
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(165,214,167,0.2)',
+  },
+  tripImage: { 
+    width: 48, height: 48, borderRadius: 12, 
+    backgroundColor: '#F1F8F2', alignItems: 'center', justifyContent: 'center',
+    marginRight: 12,
+  },
+  tripEmoji: { fontSize: 24 },
+  tripInfo: { flex: 1 },
+  tripHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  tripRoute: { fontSize: 15, fontWeight: '800', color: NC.onSurface },
+  trendingBadge: { 
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#4CAF50', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8,
+  },
+  trendingText: { fontSize: 10, fontWeight: '900', color: '#FFF' },
+  tripMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaText: { fontSize: 12, color: NC.onSurfaceVariant, fontWeight: '600' },
+  metaDivider: { width: 3, height: 3, borderRadius: 2, backgroundColor: NC.outlineVariant },
+  tagBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  tagText: { fontSize: 10, fontWeight: '800', color: NC.onSurface },
+  reasonText: { fontSize: 11, color: NC.primary, marginTop: 4, fontWeight: '600' },
+  tripCostCol: { alignItems: 'flex-end', marginLeft: 8 },
+  tripCost: { fontSize: 14, fontWeight: '900', color: NC.primary, marginBottom: 4 },
+  viewAllBtn: { 
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginTop: 16, paddingVertical: 12,
+    borderTopWidth: 1, borderTopColor: 'rgba(165,214,167,0.3)',
+  },
+  viewAllText: { fontSize: 14, fontWeight: '800', color: NC.primary },
+  emptyState: { alignItems: 'center', paddingVertical: 40 },
+  emptyText: { fontSize: 16, fontWeight: '700', color: NC.onSurfaceVariant, marginTop: 12 },
+  emptySub: { fontSize: 12, color: NC.outline, marginTop: 4 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalSheet: { 
+    backgroundColor: '#FFF', borderTopLeftRadius: 40, borderTopRightRadius: 40,
+    padding: 24, paddingBottom: 40,
+  },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: '900', color: NC.onSurface },
+  prefLabel: { fontSize: 13, fontWeight: '800', color: NC.onSurfaceVariant, marginBottom: 12, marginTop: 16 },
+  prefOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  prefOption: { 
+    paddingHorizontal: 16, paddingVertical: 10, 
+    borderRadius: 20, backgroundColor: '#F1F8F2',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)',
+  },
+  prefOptionActive: { backgroundColor: NC.primary, borderColor: NC.primary },
+  prefOptionText: { fontSize: 13, fontWeight: '700', color: NC.onSurface },
+  prefOptionTextActive: { color: '#FFF' },
+  toggleRow: { 
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 12,
+  },
+  toggleText: { fontSize: 14, fontWeight: '600', color: NC.onSurface },
+  toggle: { 
+    width: 50, height: 28, borderRadius: 14, backgroundColor: '#E0E0E0',
+    padding: 3,
+  },
+  toggleActive: { backgroundColor: NC.primary },
+  toggleDot: { 
+    width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFF',
+    shadowColor: 'rgba(0,0,0,0.2)', shadowOffset: { width: 1, height: 1 }, shadowOpacity: 1, shadowRadius: 2,
+  },
+  toggleDotActive: { marginLeft: 22 },
+  saveBtn: { 
+    backgroundColor: NC.primary, borderRadius: 24, paddingVertical: 16, alignItems: 'center', marginTop: 24,
+    shadowColor: 'rgba(46,125,50,0.4)', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 12, elevation: 8,
+  },
+  saveBtnText: { fontSize: 16, fontWeight: '900', color: '#FFF' },
 });
 
 export default function HomeScreen() {
@@ -593,21 +941,8 @@ export default function HomeScreen() {
           </ClayCard>
         )}
 
-        {/* ── Discover ── */}
-        <Text style={s.sectionHead}>Discover</Text>
-        <ClayCard variant="white" style={s.discoverCard}>
-          <Text style={s.discoverTitle}>Weekend Getaways</Text>
-          {WEEKEND.map(t => (
-            <TouchableOpacity key={t.to} style={s.discoverRow} onPress={() => router.push('/(tabs)/saved')}>
-              <View style={[s.discoverDot, { backgroundColor: NC.primary }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={s.discoverName}>{t.from} → {t.to}</Text>
-                <Text style={s.discoverSub}>{t.days}D · {t.tag}</Text>
-              </View>
-              <Text style={s.discoverCost}>{t.cost}</Text>
-            </TouchableOpacity>
-          ))}
-        </ClayCard>
+        {/* ── Enhanced Discover Section ── */}
+        <DiscoverSection router={router} />
 
         {/* ── Family Hub ── */}
         <Text style={s.sectionHead}>Family Hub</Text>

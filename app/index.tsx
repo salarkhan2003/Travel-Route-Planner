@@ -3,7 +3,9 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LiquidSpinner from '../src/components/LiquidSpinner';
 import LottieView from 'lottie-react-native';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function Index() {
   const router = useRouter();
@@ -48,5 +50,8 @@ export default function Index() {
 
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center' },
-  lottie: { width: 380, height: 380 }
+  lottie: { 
+    width: Math.min(SCREEN_WIDTH * 0.85, 380), 
+    height: Math.min(SCREEN_WIDTH * 0.85, 380) 
+  }
 });

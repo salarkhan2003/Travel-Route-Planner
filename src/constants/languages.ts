@@ -51,3 +51,5 @@ export const FOREIGN_LANGUAGES: LanguageDef[] = [
   { code: 'id', label: 'Indonesian', native: 'Bahasa Indonesia', flag: '🇮🇩' },
   { code: 'ms', label: 'Malay', native: 'Bahasa Melayu', flag: '🇲🇾' },
 ];
+
+export const LANGUAGE_LIST: LanguageDef[] = [...INDIAN_LANGUAGES, ...FOREIGN_LANGUAGES];

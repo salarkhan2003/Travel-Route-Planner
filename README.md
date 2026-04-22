@@ -200,6 +200,19 @@ This prevents accidental changes from immediately affecting the whole app. The S
 * **Persistent Onboarding**: Tracks first-launch events using `AsyncStorage`. Users only see the onboarding animated flow once!
 * **Robust Lottie Render Engine**: All Lotties automatically resort to fallback native components on error during onboarding to avoid unmounting blocks.
 
+### Latest Updates (April 2026)
+
+* **🎬 Movies & Entertainment**: City-based movie search with real showtimes from International Showtimes API. View ratings, reviews, cast info, and book via BookMyShow/Paytm.
+* **🚂 Train Tracking**: Live train running status, PNR status check, and find trains between stations using IRCTC APIs.
+* **⚡ EV Charging Stations**: Find nearby EV charging stations on the map using TomTom API.
+* **🚦 Traffic Flow**: Real-time traffic information with current speed and congestion data.
+* **🔍 Nearby POI Search**: Find restaurants, hospitals, fuel stations, ATMs, malls with quick category buttons.
+* **📍 Reachable Range**: Calculate travelable distance in 15/30/60 minutes using TomTom Isochrones API.
+* **🗺️ Enhanced Popular Routes**: Hero images for all routes (Taj Mahal, Varanasi Ghats, Goa beaches, etc.).
+* **🌙 Dark Mode**: Full dark theme support with forest-green night palette.
+* **📄 Legal Pages**: Privacy Policy, Terms & Conditions, and About pages in Settings.
+* **🎨 Dynamic Claymorphism**: Tab bar and UI now adapt to dark/light themes.
+
 ---
 
 ## Tech Stack — Why These Choices

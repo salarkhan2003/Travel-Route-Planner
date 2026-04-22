@@ -10,7 +10,8 @@
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
-export const NC = {
+// ── Light Theme Colors ──────────────────────────────────────────────────────
+export const NC_LIGHT = {
   // ── Page surfaces ──────────────────────────────────────────────────────────
   background:    '#E8F5E9',   // mint green page bg
   surfaceLowest: '#FFFFFF',   // pure white card
@@ -42,8 +43,6 @@ export const NC = {
   onSecondaryContainer: '#33691E',
 
   // ── Clay double-shadow recipe ──────────────────────────────────────────────
-  // Top-left highlight: white → "sheen" on raised surface
-  // Bottom-right depth: soft green → "clay shadow"
   shadowHighlight: 'rgba(255,255,255,0.85)',   // top-left inner glow
   shadowOuter:     'rgba(165,214,167,0.45)',    // bottom-right clay drop
   shadowButton:    'rgba(27,94,32,0.30)',       // button press shadow
@@ -58,6 +57,62 @@ export const NC = {
   springStiffness: 150,
   pressScale: 0.95,
 } as const;
+
+// ── Dark Theme Colors ─────────────────────────────────────────────────────────
+export const NC_DARK = {
+  // ── Page surfaces ──────────────────────────────────────────────────────────
+  background:    '#0D1F0F',   // dark forest bg
+  surfaceLowest: '#1A2E1C',   // darkest card
+  surfaceLow:    '#263D28',   // dark surface
+  surface:       '#2E4A30',   // mid dark
+  surfaceHigh:   '#3D5C40',   // elevated surface
+
+  // ── Green palette ──────────────────────────────────────────────────────────
+  primary:       '#66BB6A',   // lighter green for dark mode
+  primaryLight:  '#81C784',   // medium light green
+  primaryFixed:  '#4CAF50',   // accent green
+  primaryPale:   '#1B5E20',   // dark green
+  onPrimary:     '#FFFFFF',   // white on green
+  onPrimaryFixed:'#E8F5E9',   // light on dark green
+
+  // ── Text ───────────────────────────────────────────────────────────────────
+  onSurface:        '#E8F5E9',   // light text on dark
+  onSurfaceVariant: '#A5D6A7',   // muted light text
+  outline:          '#4CAF50',   // border / divider
+  outlineVariant:   '#2E7D32',   // dark border
+
+  // ── Semantic ───────────────────────────────────────────────────────────────
+  error:    '#EF5350',
+  warning:  '#FFB74D',
+  info:     '#64B5F6',
+  tertiary: '#4DB6AC',   // teal accent
+  secondary: '#81C784',  // green accent
+  secondaryContainer: '#1B5E20',
+  onSecondaryContainer: '#C8E6C9',
+
+  // ── Clay double-shadow recipe ──────────────────────────────────────────────
+  shadowHighlight: 'rgba(255,255,255,0.1)',   // subtle highlight
+  shadowOuter:     'rgba(0,0,0,0.5)',        // dark shadow
+  shadowButton:    'rgba(0,0,0,0.5)',         // button shadow
+  shadowDeep:      'rgba(0,0,0,0.7)',        // deep pressed
+
+  // ── Radius — same as light ───────────────────────────────────────────────
+  r8: 8, r12: 12, r16: 16, r20: 20, r24: 24,
+  r32: 32, r40: 40, r48: 48, rFull: 999,
+
+  // ── Clay spring physics ────────────────────────────────────────────────────
+  springDamping: 15,
+  springStiffness: 150,
+  pressScale: 0.95,
+} as const;
+
+// ── Legacy export for backwards compatibility ─────────────────────────────────
+export const NC = NC_LIGHT;
+
+// ── Dynamic theme hook helper ─────────────────────────────────────────────
+export function getTheme(darkMode: boolean) {
+  return darkMode ? NC_DARK : NC_LIGHT;
+}
 
 // ── Reusable clay card style — "Inflated Pillow" ──────────────────────────────
 export const CLAY_CARD = {

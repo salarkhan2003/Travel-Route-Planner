@@ -9,6 +9,8 @@ import { Tabs } from 'expo-router';
 import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 import { useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { useSettingsStore } from '../../src/store/settingsStore';
+import { getTheme } from '../../src/constants/theme';
 
 const TABS = [
   { name: 'home',      label: 'Home',    icon: 'home-outline',        iconActive: 'home'  },
@@ -20,7 +22,7 @@ const TABS = [
 ] as const;
 
 // Clay tab icon — inflates on active with squish spring
-function TabIcon({ name, focused }: { name: string; focused: boolean }) {
+function TabIcon({ name, focused, theme }: { name: string; focused: boolean; theme: any }) {
   const tab = TABS.find(t => t.name === name)!;
   const scale = useRef(new Animated.Value(focused ? 1.12 : 1)).current;
 
@@ -39,10 +41,10 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
       <Ionicons 
         name={focused ? tab.iconActive : tab.icon as any} 
         size={24} 
-        color={focused ? '#1B5E20' : '#7CB87F'} 
+        color={focused ? theme.onSurface : theme.outline} 
         style={{ zIndex: 1 }} 
       />
-      <Text style={[st.label, focused && st.labelActive]} numberOfLines={1}>
+      <Text style={[st.label, focused && st.labelActive, { color: focused ? theme.onSurface : theme.outline }]} numberOfLines={1}>
         {tab.label}
       </Text>
     </Animated.View>
@@ -50,14 +52,17 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
 }
 
 export default function TabLayout() {
+  const darkMode = useSettingsStore(s => s.darkMode);
+  const theme = getTheme(darkMode);
+  
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: st.bar,
+        tabBarStyle: [st.bar, { backgroundColor: 'transparent' }],
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
-        tabBarBackground: () => <View style={st.barBg}>
+        tabBarBackground: () => <View style={[st.barBg, { backgroundColor: theme.surfaceLow + 'F5' }]}>
           {/* Top sheen on bar for 3D clay look */}
           <View style={st.barSheen} />
         </View>,
@@ -67,7 +72,7 @@ export default function TabLayout() {
         <Tabs.Screen
           key={name}
           name={name}
-          options={{ tabBarIcon: ({ focused }) => <TabIcon name={name} focused={focused} /> }}
+          options={{ tabBarIcon: ({ focused }) => <TabIcon name={name} focused={focused} theme={theme} /> }}
         />
       ))}
       <Tabs.Screen name="profile" options={{ href: null }} />
@@ -92,7 +97,6 @@ const st = StyleSheet.create({
   // Inflated clay pill bar — frosted glass + double shadow
   barBg: {
     flex: 1, borderRadius: 999,
-    backgroundColor: 'rgba(241,248,233,0.96)',
     position: 'relative',
     overflow: 'hidden',
     // Double border: bright top-left, soft bottom-right
