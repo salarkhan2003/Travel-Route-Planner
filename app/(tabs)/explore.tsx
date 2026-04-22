@@ -629,7 +629,7 @@ export default function ExploreScreen() {
                   {navRoute?.totalDistance || '0 km'}
                 </Text>
                 <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 16, fontWeight: '600' }}>
-                  {navRoute?.steps?.[currentStepIdx]?.instruction?.replace(/<[^>]*>/g, '') || 'Head to destination'}
+                  {navRoute?.steps?.[currentStepIdx]?.html_instructions?.replace(/<[^>]*>/g, '') || 'Head to destination'}
                 </Text>
               </View>
               <View style={{ alignItems: 'center' }}>
@@ -647,51 +647,74 @@ export default function ExploreScreen() {
             </View>
           </View>
 
-          {/* Map Area */}
+          {/* Map Area — reuse main map ref */}
           <View style={{ flex: 1, marginTop: 140 }}>
             <TomTomMap
               ref={mapRef}
-              apiKey={TOMTOM_API_KEY}
               style={{ flex: 1 }}
-              mapStyle={isDarkMode ? 'dark' : 'basic_main'}
-              center={userCoords ? [userCoords.lng, userCoords.lat] : [77.209, 28.6139]}
-              zoom={18}
-              compassEnabled={true}
-              showUserLocation={true}
-              onMapReady={handleMapReady}
-            >
-              {navRoute?.coordinates && (
-                <Polyline
-                  coordinates={navRoute.coordinates.map((c: number[]) => ({ lat: c[1], lng: c[0] }))}
-                  color="#2979FF"
-                  width={8}
-                />
-              )}
-              {/* Next turn indicator on map */}
-              {navRoute?.steps?.[currentStepIdx + 1] && (
-                <Marker
-                  lat={navRoute.steps[currentStepIdx + 1].location?.[1] || 0}
-                  lng={navRoute.steps[currentStepIdx + 1].location?.[0] || 0}
-                  icon={<Ionicons name="navigate-circle" size={36} color="#4FC3F7" />}
-                />
-              )}
-            </TomTomMap>
+              initialLat={userCoords?.lat ?? 28.6139}
+              initialLng={userCoords?.lng ?? 77.2090}
+              initialZoom={16}
+              onMapReady={() => setMapReady(true)}
+              onMarkerPress={handleMarkerPress}
+              onPolylinePress={handlePolylinePress}
+            />
+
+            {/* Steps scroll overlay */}
+            {navRoute && navRoute.steps.length > 0 && (
+              <ScrollView
+                style={{
+                  position: 'absolute', bottom: 120, left: 12, right: 12,
+                  maxHeight: 220, borderRadius: 20,
+                  backgroundColor: 'rgba(255,255,255,0.95)',
+                }}
+                showsVerticalScrollIndicator={false}
+              >
+                {navRoute.steps.slice(0, 5).map((step, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 10,
+                      padding: 12, borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: '#E8F5E9',
+                      backgroundColor: i === currentStepIdx ? '#E3F2FD' : 'transparent',
+                    }}
+                    onPress={() => {
+                      setCurrentStepIdx(i);
+                      mapRef.current?.flyTo(step.start_location.lat, step.start_location.lng, 16);
+                    }}
+                  >
+                    <View style={{
+                      width: 26, height: 26, borderRadius: 13,
+                      backgroundColor: i === currentStepIdx ? '#1565C0' : '#90CAF9',
+                      alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>{i + 1}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: '#1B5E20', fontSize: 12, fontWeight: '700' }} numberOfLines={1}>
+                        {step.html_instructions.replace(/<[^>]+>/g, '')}
+                      </Text>
+                      <Text style={{ color: '#558B2F', fontSize: 10, marginTop: 1 }}>{step.distance.text}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
 
             {/* Bottom Control Bar */}
             <View style={{
               position: 'absolute', bottom: 30, left: 20, right: 20,
-              flexDirection: 'row', alignItems: 'center', gap: 12
+              flexDirection: 'row', alignItems: 'center', gap: 12,
             }}>
-              {/* Speed/ETA Card */}
               <View style={{
                 flex: 1, backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 20,
                 padding: 16, flexDirection: 'row', alignItems: 'center', gap: 16,
-                shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 10
+                shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 10,
               }}>
                 <View style={{ alignItems: 'center' }}>
-                  <View style={{ 
+                  <View style={{
                     width: 60, height: 60, borderRadius: 30, backgroundColor: '#0D47A1',
-                    justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#2979FF'
+                    justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#2979FF',
                   }}>
                     <Text style={{ color: '#FFF', fontSize: 20, fontWeight: '900' }}>--</Text>
                   </View>
@@ -700,27 +723,26 @@ export default function ExploreScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: '#333', fontSize: 14, fontWeight: '700' }}>Arrive at</Text>
                   <Text style={{ color: '#0D47A1', fontSize: 20, fontWeight: '900' }}>
-                    {new Date(Date.now() + (parseInt(navRoute?.totalDuration?.replace(/\D/g, '') || '0') || 0) * 60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    {new Date(Date.now() + (parseInt(navRoute?.totalDuration?.replace(/\D/g, '') || '0') || 0) * 60000)
+                      .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                   <Text style={{ color: '#666', fontSize: 12, marginTop: 2 }}>{navRoute?.totalDistance || '0 km'} remaining</Text>
                 </View>
               </View>
 
-              {/* Audio Toggle */}
               <TouchableOpacity style={{
                 width: 56, height: 56, borderRadius: 28, backgroundColor: '#FFF',
                 justifyContent: 'center', alignItems: 'center',
-                shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 8
+                shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 8,
               }}>
                 <Ionicons name="volume-high" size={24} color="#333" />
               </TouchableOpacity>
 
-              {/* Exit Button */}
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={{
                   width: 56, height: 56, borderRadius: 28, backgroundColor: '#D32F2F',
                   justifyContent: 'center', alignItems: 'center',
-                  shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 8
+                  shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 8,
                 }}
                 onPress={() => setFullNavMode(false)}
               >

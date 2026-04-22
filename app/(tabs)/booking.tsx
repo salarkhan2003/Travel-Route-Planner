@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   ScrollView, StyleSheet, Text, TextInput, TouchableOpacity,
-  View, ActivityIndicator, Linking, Modal, KeyboardAvoidingView, Platform, FlatList, Image
+  View, ActivityIndicator, Linking, Modal, KeyboardAvoidingView, Platform, Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -144,15 +144,15 @@ export default function BookingHubScreen() {
     } catch {}
   }, []);
 
-  const addTicket = (t: Ticket) => {
-    const updated = [t, ...activeTickets];
+  const addTicket = (ticket: Ticket) => {
+    const updated = [ticket, ...activeTickets];
     setActiveTickets(updated);
     saveTickets(updated, completedTickets);
   };
 
   const deleteTicket = (id: string) => {
-    const updatedActive = activeTickets.filter(t => t.id !== id);
-    const updatedComplete = completedTickets.filter(t => t.id !== id);
+    const updatedActive = activeTickets.filter(tk => tk.id !== id);
+    const updatedComplete = completedTickets.filter(tk => tk.id !== id);
     setActiveTickets(updatedActive);
     setCompletedTickets(updatedComplete);
     saveTickets(updatedActive, updatedComplete);
@@ -200,7 +200,6 @@ export default function BookingHubScreen() {
           }
         });
         const data = await res.json();
-        const statusText = typeof data?.current_station_name === 'string' ? data.current_station_name : 'Confirmed';
         const trainName = typeof data?.train_name === 'string' ? data.train_name : `Train ${syncPnr}`;
         const ticket: Ticket = {
           id: `t${Date.now()}`, type: 'train', title: trainName,
@@ -290,23 +289,12 @@ export default function BookingHubScreen() {
       ];
       setMovieResults(indianMovies);
       showToast(`Showing movies playing in ${city}`, 'success');
-    } catch (e) {
+    } catch {
       showToast('Failed to load movies', 'error');
     }
     setMovieLoading(false);
   };
 
-  const fetchMovieShowtimes = async (movieId: string, lat: number = 28.6139, lng: number = 77.2090) => {
-    try {
-      const res = await fetch(`https://api.internationalshowtimes.com/v4/showtimes/?movie_id=${movieId}&location=${lat},${lng}&distance=10`, {
-        headers: { 'X-Api-Key': RAPID_API_KEYS.internationalShowtimes }
-      });
-      const data = await res.json();
-      return data?.showtimes || [];
-    } catch {
-      return [];
-    }
-  };
 
   // Train Tracking API Functions
   const fetchTrainRunningStatus = async (trainNo: string) => {
@@ -481,20 +469,20 @@ export default function BookingHubScreen() {
     );
   };
 
-  const renderTicketCard = (t: Ticket, canDelete = true) => (
-    <TouchableOpacity key={t.id} activeOpacity={0.85} onPress={() => setShowTicketDetail(t)}>
+  const renderTicketCard = (ticket: Ticket, canDelete = true) => (
+    <TouchableOpacity key={ticket.id} activeOpacity={0.85} onPress={() => setShowTicketDetail(ticket)}>
       <ClayCard variant="white" style={st.tkCard}>
         <View style={st.tkHead}>
-          <Ionicons name={t.type==='flight'?'airplane':t.type==='bus'?'bus':'train'} size={18} color={NC.primaryFixed}/>
-          <Text style={st.tkPnr}>PNR: {t.pnr}</Text>
-          <View style={[st.tkStatusBadge, t.status==='COMPLETED'&&{backgroundColor:'#78909C'}]}><Text style={st.tkStatusText}>{t.status}</Text></View>
-          {canDelete && <TouchableOpacity onPress={() => deleteTicket(t.id)} style={{marginLeft:8}}><Ionicons name="trash-outline" size={18} color="#E53935"/></TouchableOpacity>}
+          <Ionicons name={ticket.type==='flight'?'airplane':ticket.type==='bus'?'bus':'train'} size={18} color={NC.primaryFixed}/>
+          <Text style={st.tkPnr}>PNR: {ticket.pnr}</Text>
+          <View style={[st.tkStatusBadge, ticket.status==='COMPLETED'&&{backgroundColor:'#78909C'}]}><Text style={st.tkStatusText}>{ticket.status}</Text></View>
+          {canDelete && <TouchableOpacity onPress={() => deleteTicket(ticket.id)} style={{marginLeft:8}}><Ionicons name="trash-outline" size={18} color="#E53935"/></TouchableOpacity>}
         </View>
-        <Text style={st.tkTitle}>{t.title}</Text>
+        <Text style={st.tkTitle}>{ticket.title}</Text>
         <View style={st.tkGrid}>
-          <View><Text style={st.tkLabel}>ROUTE</Text><Text style={st.tkVal}>{t.from} → {t.to}</Text></View>
-          <View><Text style={st.tkLabel}>DATE</Text><Text style={st.tkVal}>{t.date}</Text></View>
-          <View><Text style={st.tkLabel}>PAX</Text><Text style={st.tkVal}>{t.pax}</Text></View>
+          <View><Text style={st.tkLabel}>ROUTE</Text><Text style={st.tkVal}>{ticket.from} → {ticket.to}</Text></View>
+          <View><Text style={st.tkLabel}>DATE</Text><Text style={st.tkVal}>{ticket.date}</Text></View>
+          <View><Text style={st.tkLabel}>PAX</Text><Text style={st.tkVal}>{ticket.pax}</Text></View>
         </View>
       </ClayCard>
     </TouchableOpacity>
@@ -516,6 +504,7 @@ export default function BookingHubScreen() {
   };
 
   return (
+    <>
     <SafeAreaView style={st.container} edges={['top']}>
       <ScrollView contentContainerStyle={st.scroll} showsVerticalScrollIndicator={false}>
         <View style={st.header}>
@@ -582,7 +571,7 @@ export default function BookingHubScreen() {
         {activeTickets.length > 0 && (
           <>
             <Text style={st.gridTitle}>{t('active_bookings') || 'Active Bookings'} ({activeTickets.length})</Text>
-            {activeTickets.map(t => renderTicketCard(t))}
+            {activeTickets.map(ticket => renderTicketCard(ticket))}
           </>
         )}
         <View style={{height:120}}/>
@@ -642,9 +631,9 @@ export default function BookingHubScreen() {
               </View>
               <ScrollView>
                 {activeTickets.length > 0 && <Text style={st.histSecTitle}>ACTIVE ({activeTickets.length})</Text>}
-                {activeTickets.map(t => renderTicketCard(t))}
+                {activeTickets.map(ticket => renderTicketCard(ticket))}
                 {completedTickets.length > 0 && <Text style={st.histSecTitle}>COMPLETED</Text>}
-                {completedTickets.map(t => renderTicketCard(t))}
+                {completedTickets.map(ticket => renderTicketCard(ticket))}
                 {activeTickets.length===0 && completedTickets.length===0 && (
                   <View style={{alignItems:'center',paddingVertical:40}}>
                     <Ionicons name="ticket-outline" size={48} color={NC.outlineVariant}/>
@@ -708,9 +697,9 @@ export default function BookingHubScreen() {
                         <Ionicons name="chevron-down" size={14} color={NC.onSurfaceVariant}/>
                       </TouchableOpacity>
                       {showTripDrop && (
-                        <View style={st.dropdown}>{TRIP_TYPES.map(t => (
-                          <TouchableOpacity key={t} style={st.dropItem} onPress={() => {setTripType(t);setShowTripDrop(false);}}>
-                            <Text style={[st.dropItemText,tripType===t&&{color:NC.primary,fontWeight:'900'}]}>{t}</Text>
+                        <View style={st.dropdown}>{TRIP_TYPES.map(tripOpt => (
+                          <TouchableOpacity key={tripOpt} style={st.dropItem} onPress={() => {setTripType(tripOpt);setShowTripDrop(false);}}>
+                            <Text style={[st.dropItemText,tripType===tripOpt&&{color:NC.primary,fontWeight:'900'}]}>{tripOpt}</Text>
                           </TouchableOpacity>
                         ))}</View>
                       )}
@@ -917,7 +906,7 @@ export default function BookingHubScreen() {
                         key={code}
                         style={{backgroundColor:'#E3F2FD',paddingHorizontal:8,paddingVertical:4,borderRadius:10}}
                         onPress={() => {
-                          const [station, name] = code.split('-');
+                          const [station] = code.split('-');
                           if (!sourceStation) setSourceStation(station);
                           else setDestStation(station);
                         }}
@@ -971,9 +960,9 @@ export default function BookingHubScreen() {
                             </View>
                           </View>
                           <View style={{flexDirection:'row',gap:6,marginTop:8}}>
-                            {(train.train_type || 'Express').split(' ').map((t: string, idx: number) => (
+                            {(train.train_type || 'Express').split(' ').map((tag: string, idx: number) => (
                               <View key={idx} style={{backgroundColor:'#FFF3E0',paddingHorizontal:8,paddingVertical:3,borderRadius:6}}>
-                                <Text style={{fontSize:10,fontWeight:'700',color:'#E65100'}}>{t}</Text>
+                                <Text style={{fontSize:10,fontWeight:'700',color:'#E65100'}}>{tag}</Text>
                               </View>
                             ))}
                           </View>
@@ -1102,6 +1091,8 @@ export default function BookingHubScreen() {
                   )}
               </>
               )}
+                </View>
+              )}
 
               {loading && activeModule !== 'train' && <ActivityIndicator size="large" color={NC.primary} style={{marginVertical:30}}/>}
 
@@ -1140,7 +1131,16 @@ export default function BookingHubScreen() {
                   
                   <ClayCard variant="green" style={{marginBottom:16,padding:20}}>
                     <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                      <Ionicons name={activeModule==='flight'?'airplane':activeModule==='bus'?'bus':activeModule==='train'?'train':'bed'} size={28} color="#FFF"/>
+                      <Ionicons 
+                        name={(
+                          activeModule==='flight' ? 'airplane' :
+                          activeModule==='bus' ? 'bus' :
+                          activeModule==='train' ? 'train' :
+                          'bed'
+                        ) as any} 
+                        size={28} 
+                        color="#FFF"
+                      />
                       <View style={{backgroundColor:'rgba(255,255,255,0.2)',paddingHorizontal:10,paddingVertical:4,borderRadius:10}}>
                         <Text style={{color:'#FFF',fontSize:10,fontWeight:'900'}}>{safeStr(selectedResult.status)}</Text>
                       </View>
@@ -1180,10 +1180,9 @@ export default function BookingHubScreen() {
                   <Text style={{textAlign:'center',fontSize:11,color:NC.onSurfaceVariant,marginTop:10}}>Redirects to partner application</Text>
                 </View>
               )}
-              </>
-              </View>
-            </ScrollView>
+              </ScrollView>
             </View>
+          </View>
           </KeyboardAvoidingView>
         </Modal>
       )}
@@ -1336,6 +1335,7 @@ export default function BookingHubScreen() {
         </Modal>
       )}
     </SafeAreaView>
+    </>
   );
 }
 
