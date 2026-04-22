@@ -104,6 +104,7 @@ export default function BookingHubScreen() {
   const [destStation, setDestStation] = useState('');
   const [runningTrains, setRunningTrains] = useState<any[]>([]);
   const [trainsLoading, setTrainsLoading] = useState(false);
+  const [showTrainTracking, setShowTrainTracking] = useState(false);
 
   // Tickets with persistence
   const [activeTickets, setActiveTickets] = useState<Ticket[]>([]);
@@ -989,8 +990,17 @@ export default function BookingHubScreen() {
                   {/* === DIVIDER === */}
                   <View style={{height:2,backgroundColor:'#E8F5E9',marginVertical:16}} />
 
-                  {/* === LIVE TRAIN TRACKING === */}
-                  <Text style={{fontSize:14,fontWeight:'800',color:'#1B5E20',marginBottom:10}}>📍 Live Train Tracking</Text>
+                  {/* === LIVE TRAIN TRACKING TOGGLE === */}
+                  <TouchableOpacity 
+                    style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:10,paddingVertical:8}}
+                    onPress={() => setShowTrainTracking(!showTrainTracking)}
+                  >
+                    <Text style={{fontSize:14,fontWeight:'800',color:'#1B5E20'}}>📍 Live Train Tracking & PNR</Text>
+                    <Ionicons name={showTrainTracking ? "chevron-up" : "chevron-down"} size={20} color="#1B5E20"/>
+                  </TouchableOpacity>
+                  
+                  {showTrainTracking && (
+                  <>
                   <View style={[st.inputWrap,{marginBottom:12}]}>
                     <Text style={st.label}>Enter Train Number</Text>
                     <View style={{flexDirection:'row',gap:8}}>
@@ -1090,12 +1100,13 @@ export default function BookingHubScreen() {
                       </View>
                     </ClayCard>
                   )}
-                </View>
+              </>
               )}
 
-              {loading && <ActivityIndicator size="large" color={NC.primary} style={{marginVertical:30}}/>}
+              {loading && activeModule !== 'train' && <ActivityIndicator size="large" color={NC.primary} style={{marginVertical:30}}/>}
 
-              {!loading && results && !selectedResult && (
+              {/* Generic results - NOT for train module (train has its own results above) */}
+              {!loading && results && !selectedResult && activeModule !== 'train' && (
                 <View style={{marginTop:6}}>
                   <Text style={st.resultHeaders}>FOUND {results.length} RESULTS</Text>
                   {results.map((r,i) => (
@@ -1169,10 +1180,10 @@ export default function BookingHubScreen() {
                   <Text style={{textAlign:'center',fontSize:11,color:NC.onSurfaceVariant,marginTop:10}}>Redirects to partner application</Text>
                 </View>
               )}
-              <View style={{height:40}}/>
-              </ScrollView>
+              </>
+              </View>
+            </ScrollView>
             </View>
-          </View>
           </KeyboardAvoidingView>
         </Modal>
       )}

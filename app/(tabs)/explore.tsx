@@ -108,6 +108,7 @@ export default function ExploreScreen() {
   const [navLoading, setNavLoading] = useState(false);
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [showSteps, setShowSteps] = useState(false);
+  const [fullNavMode, setFullNavMode] = useState(false);
 
   // Advanced TomTom Features
   const [evStations, setEvStations] = useState<any[]>([]);
@@ -554,6 +555,13 @@ export default function ExploreScreen() {
           </View>
           <View style={s.navHUDRight}>
             <TouchableOpacity 
+              style={[s.startDriveBtn]} 
+              onPress={() => setFullNavMode(true)}
+            >
+              <Ionicons name="navigate" size={16} color="#FFF" />
+              <Text style={s.startDriveText}>Drive</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
               style={[s.stepsBtn, { backgroundColor: NC.primary }]} 
               onPress={() => setShowSegmentedGuide(true)}
             >
@@ -595,6 +603,130 @@ export default function ExploreScreen() {
             <TouchableOpacity style={s.stepsClose} onPress={() => setShowSteps(false)}>
               <Text style={s.stepsCloseText}>Close</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Full Screen Navigation Mode (Turn-by-Turn) ── */}
+      <Modal visible={fullNavMode} animationType="fade" presentationStyle="fullScreen">
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          {/* Top Navigation Header */}
+          <View style={{
+            position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100,
+            backgroundColor: '#0D47A1', paddingTop: 50, paddingHorizontal: 20, paddingBottom: 16,
+            borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
+            shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 20
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <View style={{ 
+                width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.2)',
+                justifyContent: 'center', alignItems: 'center'
+              }}>
+                <Ionicons name="arrow-forward" size={32} color="#FFF" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#FFF', fontSize: 28, fontWeight: '800' }}>
+                  {navRoute?.totalDistance || '0 km'}
+                </Text>
+                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 16, fontWeight: '600' }}>
+                  {navRoute?.steps?.[currentStepIdx]?.instruction?.replace(/<[^>]*>/g, '') || 'Head to destination'}
+                </Text>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ color: '#4FC3F7', fontSize: 32, fontWeight: '900' }}>
+                  {navRoute?.totalDuration?.split(' ')?.[0] || '--'}
+                </Text>
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>min</Text>
+              </View>
+            </View>
+            {/* Street Name */}
+            <View style={{ marginTop: 12, paddingHorizontal: 8 }}>
+              <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: '700' }} numberOfLines={1}>
+                on {navDest?.name || 'Main Street'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Map Area */}
+          <View style={{ flex: 1, marginTop: 140 }}>
+            <TomTomMap
+              ref={mapRef}
+              apiKey={TOMTOM_API_KEY}
+              style={{ flex: 1 }}
+              mapStyle={isDarkMode ? 'dark' : 'basic_main'}
+              center={userCoords ? [userCoords.lng, userCoords.lat] : [77.209, 28.6139]}
+              zoom={18}
+              compassEnabled={true}
+              showUserLocation={true}
+              onMapReady={handleMapReady}
+            >
+              {navRoute?.coordinates && (
+                <Polyline
+                  coordinates={navRoute.coordinates.map((c: number[]) => ({ lat: c[1], lng: c[0] }))}
+                  color="#2979FF"
+                  width={8}
+                />
+              )}
+              {/* Next turn indicator on map */}
+              {navRoute?.steps?.[currentStepIdx + 1] && (
+                <Marker
+                  lat={navRoute.steps[currentStepIdx + 1].location?.[1] || 0}
+                  lng={navRoute.steps[currentStepIdx + 1].location?.[0] || 0}
+                  icon={<Ionicons name="navigate-circle" size={36} color="#4FC3F7" />}
+                />
+              )}
+            </TomTomMap>
+
+            {/* Bottom Control Bar */}
+            <View style={{
+              position: 'absolute', bottom: 30, left: 20, right: 20,
+              flexDirection: 'row', alignItems: 'center', gap: 12
+            }}>
+              {/* Speed/ETA Card */}
+              <View style={{
+                flex: 1, backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 20,
+                padding: 16, flexDirection: 'row', alignItems: 'center', gap: 16,
+                shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 10
+              }}>
+                <View style={{ alignItems: 'center' }}>
+                  <View style={{ 
+                    width: 60, height: 60, borderRadius: 30, backgroundColor: '#0D47A1',
+                    justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#2979FF'
+                  }}>
+                    <Text style={{ color: '#FFF', fontSize: 20, fontWeight: '900' }}>--</Text>
+                  </View>
+                  <Text style={{ color: '#666', fontSize: 11, marginTop: 4, fontWeight: '600' }}>km/h</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#333', fontSize: 14, fontWeight: '700' }}>Arrive at</Text>
+                  <Text style={{ color: '#0D47A1', fontSize: 20, fontWeight: '900' }}>
+                    {new Date(Date.now() + (parseInt(navRoute?.totalDuration?.replace(/\D/g, '') || '0') || 0) * 60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </Text>
+                  <Text style={{ color: '#666', fontSize: 12, marginTop: 2 }}>{navRoute?.totalDistance || '0 km'} remaining</Text>
+                </View>
+              </View>
+
+              {/* Audio Toggle */}
+              <TouchableOpacity style={{
+                width: 56, height: 56, borderRadius: 28, backgroundColor: '#FFF',
+                justifyContent: 'center', alignItems: 'center',
+                shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 8
+              }}>
+                <Ionicons name="volume-high" size={24} color="#333" />
+              </TouchableOpacity>
+
+              {/* Exit Button */}
+              <TouchableOpacity 
+                style={{
+                  width: 56, height: 56, borderRadius: 28, backgroundColor: '#D32F2F',
+                  justifyContent: 'center', alignItems: 'center',
+                  shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 8
+                }}
+                onPress={() => setFullNavMode(false)}
+              >
+                <Ionicons name="close" size={28} color="#FFF" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1024,6 +1156,16 @@ const s = StyleSheet.create({
     shadowOpacity: 1, shadowRadius: 8, elevation: 5,
   },
   navEndText: { color: '#FFF', fontSize: 13, fontWeight: '900' },
+  startDriveBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#1565C0', borderRadius: 16,
+    paddingHorizontal: 12, paddingVertical: 9,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
+    borderTopColor: 'rgba(255,255,255,0.6)',
+    shadowColor: 'rgba(21,101,192,0.4)', shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1, shadowRadius: 8, elevation: 5,
+  },
+  startDriveText: { color: '#FFF', fontSize: 12, fontWeight: '900' },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   // Steps sheet — clay bottom sheet

@@ -61,40 +61,40 @@ export const NC_LIGHT = {
 // ── Dark Theme Colors ─────────────────────────────────────────────────────────
 export const NC_DARK = {
   // ── Page surfaces ──────────────────────────────────────────────────────────
-  background:    '#0D1F0F',   // dark forest bg
-  surfaceLowest: '#1A2E1C',   // darkest card
-  surfaceLow:    '#263D28',   // dark surface
-  surface:       '#2E4A30',   // mid dark
-  surfaceHigh:   '#3D5C40',   // elevated surface
+  background:    '#0F172A',   // slate 900 - modern dark bg
+  surfaceLowest: '#1E293B',   // slate 800 - cards
+  surfaceLow:    '#334155',   // slate 700 - elevated
+  surface:       '#475569',   // slate 600 - mid
+  surfaceHigh:   '#64748B',   // slate 500 - high
 
-  // ── Green palette ──────────────────────────────────────────────────────────
-  primary:       '#66BB6A',   // lighter green for dark mode
-  primaryLight:  '#81C784',   // medium light green
-  primaryFixed:  '#4CAF50',   // accent green
-  primaryPale:   '#1B5E20',   // dark green
+  // ── Green palette (vibrant for dark mode) ───────────────────────────────────
+  primary:       '#22C55E',   // vibrant green
+  primaryLight:  '#4ADE80',   // light green
+  primaryFixed:  '#16A34A',   // accent green
+  primaryPale:   '#14532D',   // dark green bg
   onPrimary:     '#FFFFFF',   // white on green
-  onPrimaryFixed:'#E8F5E9',   // light on dark green
+  onPrimaryFixed:'#DCFCE7',   // light on green
 
   // ── Text ───────────────────────────────────────────────────────────────────
-  onSurface:        '#E8F5E9',   // light text on dark
-  onSurfaceVariant: '#A5D6A7',   // muted light text
-  outline:          '#4CAF50',   // border / divider
-  outlineVariant:   '#2E7D32',   // dark border
+  onSurface:        '#F8FAFC',   // slate 50 - bright text
+  onSurfaceVariant: '#CBD5E1',   // slate 300 - muted text
+  outline:          '#22C55E',   // green border
+  outlineVariant:   '#334155',   // slate 700 border
 
   // ── Semantic ───────────────────────────────────────────────────────────────
-  error:    '#EF5350',
-  warning:  '#FFB74D',
-  info:     '#64B5F6',
-  tertiary: '#4DB6AC',   // teal accent
-  secondary: '#81C784',  // green accent
-  secondaryContainer: '#1B5E20',
-  onSecondaryContainer: '#C8E6C9',
+  error:    '#EF4444',
+  warning:  '#F59E0B',
+  info:     '#3B82F6',
+  tertiary: '#06B6D4',   // cyan accent
+  secondary: '#8B5CF6',  // purple accent
+  secondaryContainer: '#4C1D95',
+  onSecondaryContainer: '#EDE9FE',
 
   // ── Clay double-shadow recipe ──────────────────────────────────────────────
-  shadowHighlight: 'rgba(255,255,255,0.1)',   // subtle highlight
-  shadowOuter:     'rgba(0,0,0,0.5)',        // dark shadow
+  shadowHighlight: 'rgba(255,255,255,0.08)',   // subtle highlight
+  shadowOuter:     'rgba(0,0,0,0.6)',        // dark shadow
   shadowButton:    'rgba(0,0,0,0.5)',         // button shadow
-  shadowDeep:      'rgba(0,0,0,0.7)',        // deep pressed
+  shadowDeep:      'rgba(0,0,0,0.8)',        // deep pressed
 
   // ── Radius — same as light ───────────────────────────────────────────────
   r8: 8, r12: 12, r16: 16, r20: 20, r24: 24,
