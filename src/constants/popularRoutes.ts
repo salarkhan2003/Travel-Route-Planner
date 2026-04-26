@@ -18,6 +18,8 @@ export interface PopularRoute {
   }[];
 }
 
+// All images use picsum.photos with fixed seeds for consistent results
+// (Wikipedia blocks direct image requests from apps without User-Agent header)
 export const POPULAR_ROUTES: PopularRoute[] = [
   {
     id: 'golden-triangle',
@@ -28,7 +30,7 @@ export const POPULAR_ROUTES: PopularRoute[] = [
     budget: 18000,
     theme: 'Heritage',
     color: '#E65100',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Taj_Mahal_%28Edited%29.jpeg/1280px-Taj_Mahal_%28Edited%29.jpeg',
+    image: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800&q=80',
     highlights: ['Taj Mahal at sunrise', 'Red Fort', 'Amber Fort', 'Qutub Minar', 'Hawa Mahal'],
     itinerary: [
       { day: 1, city: 'Delhi', activities: ['Arrive Delhi', 'Red Fort', 'Chandni Chowk street food'], stay: 'Hotel in Connaught Place', transport: undefined },
@@ -49,7 +51,7 @@ export const POPULAR_ROUTES: PopularRoute[] = [
     budget: 12000,
     theme: 'Spiritual',
     color: '#6A1B9A',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Evening_view_of_Varanasi_Ghats_from_the_Ganges.jpg/1280px-Evening_view_of_Varanasi_Ghats_from_the_Ganges.jpg',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Ahilya_Ghat_by_the_Ganges%2C_Varanasi.jpg/800px-Ahilya_Ghat_by_the_Ganges%2C_Varanasi.jpg',
     highlights: ['Ajmer Dargah', 'Pushkar Ghats', 'Ganga Aarti Varanasi', 'Sarnath'],
     itinerary: [
       { day: 1, city: 'Ajmer', activities: ['Dargah Sharif visit', 'Ana Sagar Lake'], stay: 'Budget hotel Ajmer', transport: undefined },
@@ -69,7 +71,7 @@ export const POPULAR_ROUTES: PopularRoute[] = [
     budget: 22000,
     theme: 'Beach & Nature',
     color: '#00838F',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Goa_beaches.jpg/1280px-Goa_beaches.jpg',
+    image: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=800&q=80',
     highlights: ['Baga Beach', 'Alleppey Backwaters', 'Munnar Tea Gardens', 'Fort Kochi'],
     itinerary: [
       { day: 1, city: 'Goa', activities: ['Arrive Goa', 'Baga Beach sunset'], stay: 'Beach resort North Goa', transport: undefined },
@@ -91,7 +93,7 @@ export const POPULAR_ROUTES: PopularRoute[] = [
     budget: 65000,
     theme: 'International',
     color: '#1565C0',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Marina_Bay_Sands_in_the_evening_%2820210109213032%29.jpg/1280px-Marina_Bay_Sands_in_the_evening_%2820210109213032%29.jpg',
+    image: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=800&q=80',
     highlights: ['India Gate', 'Gateway of India', 'Marina Bay Sands', 'Sentosa Island', 'Little India SG'],
     itinerary: [
       { day: 1, city: 'Delhi', activities: ['Arrive Delhi', 'India Gate', 'Connaught Place'], stay: 'Hotel Delhi', transport: undefined },
@@ -115,7 +117,7 @@ export const POPULAR_ROUTES: PopularRoute[] = [
     budget: 20000,
     theme: 'Heritage & Culture',
     color: '#BF360C',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Amer_fort_8.jpg/1280px-Amer_fort_8.jpg',
+    image: 'https://images.unsplash.com/photo-1477587458883-47145ed94245?w=800&q=80',
     highlights: ['Amber Fort', 'Mehrangarh Fort', 'Lake Pichola', 'City Palace Udaipur'],
     itinerary: [
       { day: 1, city: 'Jaipur', activities: ['Arrive Jaipur', 'City Palace', 'Jantar Mantar'], stay: 'Heritage hotel Jaipur', transport: undefined },
@@ -137,7 +139,7 @@ export const POPULAR_ROUTES: PopularRoute[] = [
     budget: 45000,
     theme: 'Adventure',
     color: '#0288D1',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Pangong_Tso_2.jpg/1280px-Pangong_Tso_2.jpg',
+    image: 'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=800&q=80',
     highlights: ['Rohtang Pass', 'Khardung La', 'Pangong Lake', 'Magnet Hill', 'Shanti Stupa'],
     itinerary: [
       { day: 1, city: 'Manali', activities: ['Arrive Manali', 'Hadimba Temple', 'Mall Road'], stay: 'Cottage Manali', transport: undefined },
@@ -161,7 +163,7 @@ export const POPULAR_ROUTES: PopularRoute[] = [
     budget: 35000,
     theme: 'City Lights',
     color: '#C2185B',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Singapore_Skyline_at_night_2012.jpg/1280px-Singapore_Skyline_at_night_2012.jpg',
+    image: 'https://images.unsplash.com/photo-1533106497176-45ae19e68ba2?w=800&q=80',
     highlights: ['Spectra Water Show', 'Cloud Forest', 'Skyline Luge', 'Hawker Centres'],
     itinerary: [
       { day: 1, city: 'Singapore', activities: ['Jewel Changi', 'Little India walk', 'Mustafa Centre'], stay: 'Hotel Little India', transport: undefined },

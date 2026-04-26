@@ -20,9 +20,14 @@ interface Props {
   icon?: string;
 }
 
+import { useSettingsStore } from '../../store/settingsStore';
+import { getTheme } from '../../constants/theme';
+
 export function ClayButton({ label, onPress, color, textColor, style, small, ghost, icon }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
   const shadowSize = useRef(new Animated.Value(1)).current;
+  const darkMode = useSettingsStore(s => s.darkMode);
+  const theme = getTheme(darkMode);
 
   const onPressIn = () => {
     Animated.parallel([
@@ -39,15 +44,18 @@ export function ClayButton({ label, onPress, color, textColor, style, small, gho
     onPress();
   };
 
-  const bg = color ?? (ghost ? '#E8F5E9' : '#2E7D32');
-  const fg = textColor ?? (ghost ? '#1B5E20' : '#FFFFFF');
+  const bg = color ?? (ghost ? (darkMode ? theme.surfaceLow : '#E8F5E9') : theme.primary);
+  const fg = textColor ?? (ghost ? theme.onSurface : theme.onPrimary);
+  
+  const outerBorder = darkMode ? theme.surface : 'rgba(255,255,255,0.6)';
+  const shadowCol = darkMode ? theme.shadowOuter : 'rgba(27,94,32,0.4)';
 
   return (
     <Animated.View style={[s.wrap, { transform: [{ scale }] }, style]}>
       <TouchableOpacity onPressIn={onPressIn} onPressOut={onPressOut} activeOpacity={1}
-        style={[s.btn, small && s.small, ghost && s.ghost, { backgroundColor: bg }]}>
+        style={[s.btn, small && s.small, ghost && s.ghost, { backgroundColor: bg, borderColor: outerBorder, shadowColor: shadowCol }]}>
         {/* Inner sheen for 3D inflated look */}
-        <View style={s.sheen} pointerEvents="none" />
+        <View style={[s.sheen, darkMode && {backgroundColor: 'rgba(255,255,255,0.05)'}]} pointerEvents="none" />
         {icon ? <Text style={[s.icon, { color: fg }]}>{icon}  </Text> : null}
         <Text style={[s.label, small && s.smallLabel, { color: fg }]}>{label}</Text>
       </TouchableOpacity>

@@ -1,167 +1,148 @@
 /**
- * TabLayout — Clay Bottom Navigation Bar
- * 
- * ✦ Frosted glass + inflated clay pill bar
- * ✦ Active tab: inflated clay bubble with elastic spring
- * ✦ Inner glow on active items
+ * TabLayout — Mint Liquid Clay Navigation
+ * Fixes: nav bar overlap (useSafeAreaInsets) · instant FAB · frosted glass bar
  */
-import { Tabs } from 'expo-router';
-import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
-import { useRef } from 'react';
+import React from 'react';
+import { Tabs, usePathname } from 'expo-router';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '../../src/store/settingsStore';
-import { getTheme } from '../../src/constants/theme';
+import { router } from 'expo-router';
 
 const TABS = [
-  { name: 'home',      label: 'Home',    icon: 'home-outline',        iconActive: 'home'  },
-  { name: 'explore',   label: 'Map',     icon: 'map-outline',         iconActive: 'map'  },
-  { name: 'itinerary', label: 'Routes',  icon: 'git-network-outline', iconActive: 'git-network'  },
-  { name: 'expenses',  label: 'Expenses',icon: 'wallet-outline',      iconActive: 'wallet'  },
-  { name: 'saved',     label: 'Saved',   icon: 'heart-outline',       iconActive: 'heart'  },
-  { name: 'booking',   label: 'Booking', icon: 'ticket-outline',      iconActive: 'ticket'  },
+  { name: 'home',      label: 'Home',    icon: 'home-outline'        as const, iconActive: 'home'         as const },
+  { name: 'explore',   label: 'Map',     icon: 'map-outline'         as const, iconActive: 'map'          as const },
+  { name: 'itinerary', label: 'Routes',  icon: 'git-network-outline' as const, iconActive: 'git-network'  as const },
+  { name: 'expenses',  label: 'Wallet',  icon: 'wallet-outline'      as const, iconActive: 'wallet'       as const },
+  { name: 'saved',     label: 'Saved',   icon: 'heart-outline'       as const, iconActive: 'heart'        as const },
+  { name: 'booking',   label: 'Book',    icon: 'ticket-outline'      as const, iconActive: 'ticket'       as const },
 ] as const;
 
-// Clay tab icon — inflates on active with squish spring
-function TabIcon({ name, focused, theme }: { name: string; focused: boolean; theme: any }) {
-  const tab = TABS.find(t => t.name === name)!;
-  const scale = useRef(new Animated.Value(focused ? 1.12 : 1)).current;
+type TabName = typeof TABS[number]['name'];
 
-  // Inflate when focused with elastic bounce
-  if (focused) {
-    Animated.spring(scale, { toValue: 1.12, useNativeDriver: true, damping: 12, stiffness: 120 }).start();
-  } else {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, damping: 15, stiffness: 150 }).start();
-  }
-
+// ── Tab icon ──────────────────────────────────────────────────────────────────
+function TabIcon({ name, focused, dark }: { name: TabName; focused: boolean; dark: boolean }) {
+  const tab = TABS.find(t => t.name === name);
+  if (!tab) return null;
+  const mint   = dark ? '#00F59B' : '#10B981';
+  const fg     = focused ? (dark ? '#000' : '#FFF') : (dark ? 'rgba(255,255,255,0.35)' : 'rgba(16,185,129,0.45)');
   return (
-    <Animated.View style={[st.item, focused && st.itemActive, { transform: [{ scale }] }]}>
-      {/* Inner sheen glow on active */}
-      {focused && <View style={st.glow} />}
-      {focused && <View style={st.sheenTop} />}
-      <Ionicons 
-        name={focused ? tab.iconActive : tab.icon as any} 
-        size={24} 
-        color={focused ? theme.onSurface : theme.outline} 
-        style={{ zIndex: 1 }} 
-      />
-      <Text style={[st.label, focused && st.labelActive, { color: focused ? theme.onSurface : theme.outline }]} numberOfLines={1}>
-        {tab.label}
-      </Text>
-    </Animated.View>
+    <View style={[
+      st.tabItem,
+      focused && { backgroundColor: mint, shadowColor: mint, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6 },
+    ]}>
+      <Ionicons name={focused ? tab.iconActive : tab.icon} size={20} color={fg} />
+      <Text style={[st.tabLabel, { color: fg, fontWeight: focused ? '800' : '500' }]}>{tab.label}</Text>
+    </View>
   );
 }
 
+// ── Floating AI Button ─────────────────────────────────────────────────────────
+function FloatingAIButton({ dark }: { dark: boolean }) {
+  const insets  = useSafeAreaInsets();
+  const pathname = usePathname();
+  if (pathname.includes('agent')) return null;
+
+  const mint = dark ? '#00F59B' : '#10B981';
+  // Position above tab bar + Android nav bar inset
+  const bottom = 56 + insets.bottom + 12;
+
+  return (
+    <View style={[st.fabWrap, { bottom }]} pointerEvents="box-none">
+      {/* Glow ring — static, no animation = no lag */}
+      <View style={[st.fabRing, { borderColor: mint + '50' }]} />
+      <TouchableOpacity
+        style={[st.fab, { backgroundColor: mint }]}
+        onPress={() => router.push('/agent' as any)}
+        activeOpacity={0.82}
+      >
+        <Ionicons name="sparkles" size={22} color={dark ? '#000' : '#FFF'} />
+      </TouchableOpacity>
+      <View style={[st.fabLabel, { backgroundColor: dark ? '#0C1A12' : '#FFF', borderColor: mint + '45' }]}>
+        <Text style={[st.fabLabelTxt, { color: mint }]}>AI</Text>
+      </View>
+    </View>
+  );
+}
+
+// ── Root layout ────────────────────────────────────────────────────────────────
 export default function TabLayout() {
   const darkMode = useSettingsStore(s => s.darkMode);
-  const theme = getTheme(darkMode);
-  
+  const insets   = useSafeAreaInsets();
+
+  const barBg  = darkMode ? 'rgba(6,14,9,0.94)'  : 'rgba(255,255,255,0.94)';
+  const border = darkMode ? 'rgba(0,245,155,0.10)' : 'rgba(16,185,129,0.12)';
+
+  // Total tab bar height = icon area + system bottom inset
+  const tabBarH = 56 + insets.bottom;
+
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: [st.bar, { backgroundColor: 'transparent' }],
-        tabBarShowLabel: false,
-        tabBarHideOnKeyboard: true,
-        tabBarBackground: () => <View style={[st.barBg, { backgroundColor: theme.surfaceLow + 'F5' }]}>
-          {/* Top sheen on bar for 3D clay look */}
-          <View style={st.barSheen} />
-        </View>,
-      }}
-    >
-      {TABS.map(({ name }) => (
-        <Tabs.Screen
-          key={name}
-          name={name}
-          options={{ tabBarIcon: ({ focused }) => <TabIcon name={name} focused={focused} theme={theme} /> }}
-        />
-      ))}
-      <Tabs.Screen name="profile" options={{ href: null }} />
-    </Tabs>
+    <View style={{ flex: 1 }}>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarShowLabel: false,
+          tabBarHideOnKeyboard: true,
+          tabBarStyle: {
+            ...st.bar,
+            backgroundColor: barBg,
+            borderTopColor: border,
+            height: tabBarH,
+            paddingBottom: insets.bottom,  // ← KEY: prevents Android nav bar overlap
+          },
+        }}
+      >
+        {TABS.map(({ name }) => (
+          <Tabs.Screen
+            key={name}
+            name={name}
+            options={{
+              tabBarIcon: ({ focused }) => (
+                <TabIcon name={name} focused={focused} dark={darkMode} />
+              ),
+            }}
+          />
+        ))}
+        <Tabs.Screen name="profile" options={{ href: null }} />
+      </Tabs>
+
+      <FloatingAIButton dark={darkMode} />
+    </View>
   );
 }
-
-const BAR_H = Platform.OS === 'ios' ? 88 : 80;
-const BOTTOM = Platform.OS === 'ios' ? 28 : 16;
 
 const st = StyleSheet.create({
   bar: {
-    position: 'absolute',
-    bottom: BOTTOM, left: 16, right: 16,
-    height: BAR_H,
-    borderRadius: 999,
-    backgroundColor: 'transparent',
-    borderTopWidth: 0,
-    elevation: 0, shadowOpacity: 0,
+    borderTopWidth: 1,
+    elevation: 24,
+    // Frosted glass effect
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    paddingTop: 6,
   },
-
-  // Inflated clay pill bar — frosted glass + double shadow
-  barBg: {
-    flex: 1, borderRadius: 999,
-    position: 'relative',
-    overflow: 'hidden',
-    // Double border: bright top-left, soft bottom-right
-    borderWidth: 2.5,
-    borderColor: 'rgba(255,255,255,0.98)',
-    borderBottomColor: 'rgba(165,214,167,0.45)',
-    borderRightColor: 'rgba(165,214,167,0.3)',
-    // Clay outer shadow
-    shadowColor: 'rgba(165,214,167,0.5)',
-    shadowOffset: { width: 8, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 24,
-    elevation: 20,
-  },
-
-  // Top sheen for 3D inflated bar
-  barSheen: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0,
-    height: '45%',
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderTopLeftRadius: 999,
-    borderTopRightRadius: 999,
-  },
-
-  item: {
+  tabItem: {
     alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 999, gap: 3,
-    minWidth: 60, height: BAR_H - 14,
-    position: 'relative',
-    overflow: 'hidden',
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 16, gap: 2, minWidth: 50,
   },
+  tabLabel: { fontSize: 9, letterSpacing: 0.1, lineHeight: 11 },
 
-  // Active: inflated clay pill with inner glow
-  itemActive: {
-    backgroundColor: '#A5D6A7',
-    // Double border on active
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.8)',
-    borderBottomColor: 'rgba(46,125,50,0.2)',
-    borderRightColor: 'rgba(46,125,50,0.15)',
-    // Clay shadow on active icon
-    shadowColor: 'rgba(46,125,50,0.4)',
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1, shadowRadius: 10, elevation: 8,
+  // FAB — static, no heavy animation loops
+  fabWrap:  { position: 'absolute', right: 16, alignItems: 'center', zIndex: 9999 },
+  fabRing:  { position: 'absolute', width: 62, height: 62, borderRadius: 31, borderWidth: 2, top: -5, left: -5 },
+  fab:      {
+    width: 52, height: 52, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    elevation: 10, shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.45, shadowRadius: 14,
   },
-
-  // Soft inner glow layer
-  glow: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  fabLabel: {
+    marginTop: 6, paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 8, borderWidth: 1,
   },
-
-  // Top sheen on active tab
-  sheenTop: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    height: '45%',
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-  },
-
-  icon: { fontSize: 24, color: '#7CB87F', lineHeight: 28, zIndex: 1 },
-  iconActive: { color: '#1B5E20', fontWeight: '900' },
-  label: { fontSize: 10, fontWeight: '700', color: '#7CB87F', letterSpacing: 0.2, zIndex: 1, lineHeight: 13 },
-  labelActive: { color: '#1B5E20', fontWeight: '900' },
+  fabLabelTxt: { fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
 });

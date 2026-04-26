@@ -26,11 +26,21 @@ export default function CustomToast() {
 
   if (!show) return null;
 
+  const getValidIconName = (name: string) => {
+    switch (name) {
+      case 'success': return 'checkmark-circle';
+      case 'warning': return 'warning';
+      case 'error': return 'alert-circle';
+      case 'info': return 'information-circle';
+      default: return name;
+    }
+  };
+
   return (
     <Animated.View style={[styles.container, { top: Math.max(insets.top, 40), opacity, transform: [{ translateY }] }]}>
       <View style={styles.toastBox}>
         <View style={styles.iconBox}>
-          <Ionicons name={icon as any} size={24} color="#FFF" />
+          <Ionicons name={getValidIconName(icon) as any} size={24} color="#FFF" />
         </View>
         <Text style={styles.message}>{message}</Text>
       </View>

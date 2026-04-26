@@ -1,7 +1,10 @@
+/**
+ * Roamio Itinerary (Liquid Clay v2)
+ */
 import React, { useState } from 'react';
 import {
   Modal, ScrollView, StyleSheet, Text,
-  TouchableOpacity, View, Image,
+  TouchableOpacity, View, Image, Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,188 +17,80 @@ import { useCurrency } from '../../src/hooks/useCurrency';
 import { POPULAR_ROUTES, PopularRoute } from '../../src/constants/popularRoutes';
 import { useHistoryStore, TripStatus } from '../../src/store/historyStore';
 import type { TripPath, TripNode } from '../../src/types/trip';
-import { NC } from '../../src/constants/theme';
+import { useSettingsStore } from '../../src/store/settingsStore';
+import { MINT, CLAY_CARD_V2, CLAY_BTN_V2, ACCENTS, FONTS } from '../../src/constants/theme';
 
-const MODE_ICON: Record<string, string> = {
-  train: 'TR', flight: 'FL', bus: 'BU', road: 'CA',
-};
+const { width } = Dimensions.get('window');
 
+const MODE_ICON: Record<string, string> = { train: '🚆', flight: '✈️', bus: '🚌', road: '🚕' };
 const STATUS_CONFIG: Record<TripStatus, { label: string; color: string; bg: string }> = {
-  booked:    { label: 'Booked',    color: '#1565C0', bg: '#E3F2FD' },
-  ongoing:   { label: 'Ongoing',   color: '#2E7D32', bg: '#E8F5E9' },
-  completed: { label: 'Completed', color: '#558B2F', bg: '#F1F8E9' },
-  cancelled: { label: 'Cancelled', color: '#B71C1C', bg: '#FFEBEE' },
+  booked:    { label: 'Booked',    color: '#0284C7', bg: '#E0F2FE' },
+  ongoing:   { label: 'Ongoing',   color: '#059669', bg: '#D1FAE5' },
+  completed: { label: 'Completed', color: '#16A34A', bg: '#DCFCE7' },
+  cancelled: { label: 'Cancelled', color: '#DC2626', bg: '#FEE2E2' },
 };
 
-// ─── Route Detail Modal ───────────────────────────────────────────────────────
-function RouteDetailModal({
-  route, visible, onClose, onBook,
-}: {
-  route: PopularRoute;
-  visible: boolean;
-  onClose: () => void;
-  onBook: () => void;
-}) {
+function RouteDetailModal({ route, visible, onClose, onBook }: { route: PopularRoute; visible: boolean; onClose: () => void; onBook: () => void; }) {
   const router = useRouter();
   const { t } = useTranslation();
   const { fmtFull } = useCurrency();
+  const darkMode = useSettingsStore(s => s.darkMode);
+  const card = darkMode ? '#0A1A12' : '#FFFFFF';
+  const txt1 = darkMode ? '#F0FDF4' : MINT[900];
+  const txt2 = darkMode ? '#6EE7B7' : MINT[700];
+  const border = darkMode ? '#163322' : 'rgba(167,243,208,0.4)';
+
   return (
-    <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
+    <Modal visible={visible} animationType="slide" transparent>
       <View style={md.overlay}>
-        <View style={md.sheet}>
-          <View style={md.handle} />
-          
-          {/* Top Close Button */}
-          <TouchableOpacity style={md.topClose} onPress={onClose}>
-            <Ionicons name="close" size={24} color={NC.primary} />
+        <View style={[md.sheet, { backgroundColor: card }]}>
+          <TouchableOpacity style={[md.topClose, { backgroundColor: card, borderColor: border }]} onPress={onClose}>
+            <Ionicons name="close" size={24} color={txt1} />
           </TouchableOpacity>
-
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Hero Image */}
-            <View style={{marginHorizontal:-20,marginTop:-20,marginBottom:16,height:200,overflow:'hidden'}}>
-              {route.image ? (
-                <Image 
-                  source={{ uri: route.image }}
-                  style={{width:'100%',height:'100%'}}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={{flex:1,backgroundColor:route.color+'33',justifyContent:'center',alignItems:'center'}}>
-                  <Ionicons name="map" size={60} color={route.color} />
-                </View>
+            <View style={{marginHorizontal:-24,marginTop:-24,marginBottom:16,height:220,overflow:'hidden'}}>
+              {route.image ? <Image source={{ uri: route.image }} style={{width:'100%',height:'100%'}} resizeMode="cover"/> : (
+                <View style={{flex:1,backgroundColor:route.color+'33',justifyContent:'center',alignItems:'center'}}><Ionicons name="map" size={60} color={route.color}/></View>
               )}
-              {/* Gradient Overlay */}
-              <View style={{position:'absolute',bottom:0,left:0,right:0,height:100,backgroundColor:'rgba(0,0,0,0.4)'}} />
-              <View style={{position:'absolute',bottom:12,left:16,right:16}}>
-                <View style={[md.themeBadge, { backgroundColor: route.color }]}>
-                  <Text style={md.themeText}>{route.theme}</Text>
-                </View>
+              <View style={{position:'absolute',bottom:0,left:0,right:0,height:120,backgroundColor:'rgba(0,0,0,0.5)'}} />
+              <View style={{position:'absolute',bottom:16,left:24,right:24}}>
+                <View style={[md.themeBadge, { backgroundColor: route.color }]}><Text style={md.themeText}>{route.theme}</Text></View>
+                <Text style={md.heroTitle}>{route.title}</Text>
               </View>
             </View>
 
-            {/* Hero */}
-            <View style={[md.hero, { backgroundColor: route.color + '22', borderColor: route.color + '44' }]}>
-              <Text style={md.heroTitle}>{route.title}</Text>
-              <Text style={md.heroTagline}>{route.tagline}</Text>
-              <View style={md.heroMeta}>
-                <View style={md.metaItem}>
-                  <Text style={md.metaVal}>{route.days}</Text>
-                  <Text style={md.metaLabel}>Days</Text>
-                </View>
-                <View style={md.metaDivider} />
-                <View style={md.metaItem}>
-                  <Text style={md.metaVal}>{route.cities.length}</Text>
-                  <Text style={md.metaLabel}>Cities</Text>
-                </View>
-                <View style={md.metaDivider} />
-                <View style={md.metaItem}>
-                  <Text style={md.metaVal}>{fmtFull(route.budget)}</Text>
-                  <Text style={md.metaLabel}>Budget</Text>
-                </View>
-              </View>
+            <View style={[md.heroMeta, { backgroundColor: route.color + '15', borderColor: route.color + '33' }]}>
+              <View style={md.metaItem}><Text style={[md.metaVal, { color: txt1 }]}>{route.days}</Text><Text style={[md.metaLabel, { color: txt2 }]}>Days</Text></View>
+              <View style={[md.metaDivider, { backgroundColor: border }]} />
+              <View style={md.metaItem}><Text style={[md.metaVal, { color: txt1 }]}>{route.cities.length}</Text><Text style={[md.metaLabel, { color: txt2 }]}>Cities</Text></View>
+              <View style={[md.metaDivider, { backgroundColor: border }]} />
+              <View style={md.metaItem}><Text style={[md.metaVal, { color: txt1 }]}>{fmtFull(route.budget)}</Text><Text style={[md.metaLabel, { color: txt2 }]}>Budget</Text></View>
             </View>
 
-            {/* Highlights */}
-            <Text style={md.section}>Highlights</Text>
+            <Text style={[md.section, { color: txt1 }]}>Highlights</Text>
             <View style={md.hlRow}>
-              {route.highlights.map((h) => (
-                <View key={h} style={[md.hlChip, { borderColor: route.color + '66' }]}>
-                  <Text style={[md.hlText, { color: route.color }]}>{h}</Text>
-                </View>
-              ))}
+              {route.highlights.map(h => <View key={h} style={[md.hlChip, { borderColor: route.color + '66' }]}><Text style={[md.hlText, { color: route.color }]}>{h}</Text></View>)}
             </View>
 
-            {/* Day-by-day itinerary */}
-            <Text style={md.section}>{t('itinerary') || 'Day-by-Day Plan'}</Text>
-            {route.itinerary.map((day) => (
-              <View key={day.day} style={md.dayCard}>
-                {/* Clay Sheen for day card */}
-                <View style={md.daySheen} />
-                
-                <View style={[md.dayNum, { backgroundColor: route.color }]}>
-                  <Text style={md.dayNumText}>D{day.day}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={md.dayHeader}>
-                    <Text style={md.dayCity}>{day.city}</Text>
-                    {day.transport && (
-                      <View style={[md.transportBadge, { backgroundColor: route.color + '22' }]}>
-                        <Text style={[md.transportText, { color: route.color }]}>{day.transport}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <View style={md.actList}>
-                    {day.activities.map((a) => (
-                      <View key={a} style={md.actRow}>
-                        <View style={[md.actDot, { backgroundColor: route.color }]} />
-                        <Text style={md.actText}>{a}</Text>
-                      </View>
-                    ))}
-                  </View>
-                  {day.stay ? (
-                    <View style={md.stayBox}>
-                      <Ionicons name="bed-outline" size={14} color={route.color} />
-                      <Text style={[md.stayText, { color: route.color }]}>{day.stay}</Text>
-                    </View>
-                  ) : null}
+            <Text style={[md.section, { color: txt1 }]}>{t('itinerary') || 'Day-by-Day Plan'}</Text>
+            {route.itinerary.map(day => (
+              <View key={day.day} style={[md.dayCard, { backgroundColor: darkMode ? '#0E291B' : MINT[50], borderColor: border }]}>
+                <View style={[md.dayNum, { backgroundColor: route.color }]}><Text style={md.dayNumText}>D{day.day}</Text></View>
+                <View style={{ flex: 1, padding: 16 }}>
+                  <Text style={[md.dayCity, { color: txt1 }]}>{day.city}</Text>
+                  {day.activities.map(a => <View key={a} style={md.actRow}><View style={[md.actDot, { backgroundColor: route.color }]} /><Text style={[md.actText, { color: txt1 }]}>{a}</Text></View>)}
                 </View>
               </View>
             ))}
 
-            {/* Cities */}
-            <Text style={md.section}>Cities Covered</Text>
-            <View style={md.citiesRow}>
-              {route.cities.map((c, i) => (
-                <React.Fragment key={c}>
-                  <View style={[md.cityChip, { borderColor: route.color }]}>
-                    <Text style={[md.cityText, { color: route.color }]}>{c}</Text>
-                  </View>
-                  {i < route.cities.length - 1 && (
-                    <Text style={[md.cityArrow, { color: route.color }]}>→</Text>
-                  )}
-                </React.Fragment>
-              ))}
-            </View>
-
-            {/* Actions */}
             <View style={md.actions}>
-              <TouchableOpacity style={md.bookBtnSmall} onPress={onBook}>
-                <Ionicons name="bookmark" size={16} color="#fff" style={{marginRight:6}}/>
-                <Text style={md.bookBtnText}>Book</Text>
+              <TouchableOpacity style={[md.bookBtnSmall, { backgroundColor: route.color }]} onPress={onBook}>
+                <Ionicons name="bookmark" size={16} color="#fff" style={{marginRight:6}}/><Text style={md.bookBtnText}>Book Trip</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={md.navBtnSmall} 
-                onPress={() => {
-                  onClose();
-                  // Navigate to explore with destination and start params
-                  const destCity = route.cities[route.cities.length - 1];
-                  const startCity = route.cities[0];
-                  router.push(`/(tabs)/explore?q=${encodeURIComponent(destCity)}&start=${encodeURIComponent(startCity)}`);
-                }}
-              >
-                <Ionicons name="navigate" size={16} color="#fff" style={{marginRight:6}}/>
-                <Text style={md.bookBtnText}>Navigate</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={[md.navBtnSmall, { backgroundColor: NC.secondary }]} 
-                onPress={() => {
-                  // Show detailed route guide modal directly
-                  onClose();
-                  // Navigate to explore tab with guide param
-                  const destCity = route.cities[route.cities.length - 1];
-                  const startCity = route.cities[0];
-                  router.push(`/(tabs)/explore?q=${encodeURIComponent(destCity)}&start=${encodeURIComponent(startCity)}&guide=true`);
-                }}
-              >
-                <Ionicons name="map" size={16} color="#fff" style={{marginRight:6}}/>
-                <Text style={md.bookBtnText}>Route Guide</Text>
+              <TouchableOpacity style={[md.bookBtnSmall, { backgroundColor: MINT[600] }]} onPress={() => { onClose(); router.push(`/(tabs)/explore?q=${encodeURIComponent(route.cities[route.cities.length-1])}&start=${encodeURIComponent(route.cities[0])}`); }}>
+                <Ionicons name="navigate" size={16} color="#fff" style={{marginRight:6}}/><Text style={md.bookBtnText}>Navigate Map</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={md.closeBtnFull} onPress={onClose}>
-              <Text style={md.closeBtnText}>Close Guide</Text>
-            </TouchableOpacity>
             <View style={{ height: 32 }} />
           </ScrollView>
         </View>
@@ -204,86 +99,38 @@ function RouteDetailModal({
   );
 }
 
-// ─── Transport swap modal ─────────────────────────────────────────────────────
-function SwapModal({
-  path, fromNode, toNode, visible, onClose, onSwap,
-}: {
-  path: TripPath; fromNode?: TripNode; toNode?: TripNode;
-  visible: boolean; onClose: () => void; onSwap: (mode: string) => void;
-}) {
+function SwapModal({ path, fromNode, toNode, visible, onClose, onSwap }: any) {
   const { fmtFull } = useCurrency();
-  const sel = path.options.find(o => o.mode === path.selectedMode);
+  const darkMode = useSettingsStore(s => s.darkMode);
+  const card = darkMode ? '#0A1A12' : '#FFFFFF';
+  const txt1 = darkMode ? '#F0FDF4' : MINT[900];
+  const txt2 = darkMode ? '#6EE7B7' : MINT[700];
+  const border = darkMode ? '#163322' : 'rgba(167,243,208,0.4)';
   return (
-    <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
+    <Modal visible={visible} animationType="slide" transparent>
       <View style={md.overlay}>
-        <View style={md.sheet}>
-          <View style={md.handle} />
-          <View style={md.routeHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={md.heroTitle}>{fromNode?.city}</Text>
-              <Text style={md.heroTagline}>{fromNode?.country}</Text>
-            </View>
-            <Text style={{ fontSize: 20, color: '#A5D6A7', marginHorizontal: 8 }}>→</Text>
-            <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              <Text style={md.heroTitle}>{toNode?.city}</Text>
-              <Text style={md.heroTagline}>{toNode?.country}</Text>
-            </View>
-          </View>
-          {sel && (
-            <View style={md.summaryCard}>
-              <View style={md.heroMeta}>
-                <View style={md.metaItem}>
-                  <Text style={md.metaVal}>{sel.durationHrs}h</Text>
-                  <Text style={md.metaLabel}>Duration</Text>
-                </View>
-                <View style={md.metaDivider} />
-                <View style={md.metaItem}>
-                  <Text style={md.metaVal}>{fmtFull(sel.cost)}</Text>
-                  <Text style={md.metaLabel}>Cost</Text>
-                </View>
-                <View style={md.metaDivider} />
-                <View style={md.metaItem}>
-                  <Text style={md.metaVal}>{sel.label}</Text>
-                  <Text style={md.metaLabel}>Service</Text>
-                </View>
-              </View>
-            </View>
-          )}
-          <Text style={md.section}>Choose Transport</Text>
+        <View style={[md.sheet, { backgroundColor: card }]}>
+          <Text style={[md.section, { color: txt1, marginTop: 10 }]}>Swap Transport</Text>
           <View style={md.optGrid}>
-            {path.options.map(opt => {
+            {path.options.map((opt: any) => {
               const active = opt.mode === path.selectedMode;
-              const color = TRANSPORT_COLORS[opt.mode] ?? '#4CAF50';
+              const color = TRANSPORT_COLORS[opt.mode] ?? MINT[500];
               return (
-                <TouchableOpacity
-                  key={opt.mode}
-                  style={[md.optCard, active && { borderColor: color, borderWidth: 2.5 }]}
-                  onPress={() => onSwap(opt.mode)}
-                  activeOpacity={0.75}
-                >
-                  {active && <View style={[md.optDot, { backgroundColor: color }]} />}
-                  <Text style={md.optIcon}>{MODE_ICON[opt.mode]}</Text>
-                  <Text style={[md.optMode, { color: active ? color : '#1B3A1F' }]}>
-                    {opt.mode.charAt(0).toUpperCase() + opt.mode.slice(1)}
-                  </Text>
-                  <Text style={md.optLabel}>{opt.label}</Text>
-                  <Text style={md.optCost}>{fmtFull(opt.cost)}</Text>
-                  <Text style={md.optDur}>{opt.durationHrs}h</Text>
+                <TouchableOpacity key={opt.mode} style={[md.optCard, { borderColor: active ? color : border, backgroundColor: darkMode ? (active ? color+'20' : '#0E291B') : (active ? color+'10' : MINT[50]) }]} onPress={() => onSwap(opt.mode)} activeOpacity={0.8}>
+                  <Text style={{ fontSize: 24 }}>{MODE_ICON[opt.mode]}</Text>
+                  <Text style={[md.optMode, { color: active ? color : txt2 }]}>{opt.label}</Text>
+                  <Text style={[md.optCost, { color: txt1 }]}>{fmtFull(opt.cost)}</Text>
                 </TouchableOpacity>
               );
             })}
           </View>
-          <TouchableOpacity style={[md.bookBtn, { backgroundColor: '#2E7D32' }]} onPress={onClose}>
-            <Text style={md.bookBtnText}>Done</Text>
-          </TouchableOpacity>
-          <View style={{ height: 24 }} />
+          <TouchableOpacity style={[md.bookBtn, { backgroundColor: MINT[600] }]} onPress={onClose}><Text style={md.bookBtnText}>Done</Text></TouchableOpacity>
         </View>
       </View>
     </Modal>
   );
 }
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
 export default function ItineraryScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -294,6 +141,15 @@ export default function ItineraryScreen() {
   const swapTransport = useTripStore(s => s.swapTransport);
   const { fmtFull } = useCurrency();
   const { trips, addTrip } = useHistoryStore();
+  const darkMode = useSettingsStore(s => s.darkMode);
+
+  const bg      = darkMode ? '#020F08' : MINT[50];
+  const card    = darkMode ? '#0A1A12' : '#FFFFFF';
+  const border  = darkMode ? '#163322' : 'rgba(167,243,208,0.4)';
+  const primary = darkMode ? '#00F59B' : MINT[500];
+  const txt1    = darkMode ? '#F0FDF4' : MINT[900];
+  const txt2    = darkMode ? '#6EE7B7' : MINT[700];
+  const surf    = darkMode ? '#0E291B' : MINT[100];
 
   const [tab, setTab] = useState<'routes' | 'popular' | 'history'>('routes');
   const [selectedRoute, setSelectedRoute] = useState<PopularRoute | null>(null);
@@ -305,578 +161,230 @@ export default function ItineraryScreen() {
 
   const bookRoute = (route: PopularRoute) => {
     addTrip({
-      routeId: route.id,
-      title: route.title,
-      cities: route.cities,
+      routeId: route.id, title: route.title, cities: route.cities,
       startDate: new Date().toISOString().split('T')[0],
       endDate: new Date(Date.now() + route.days * 86400000).toISOString().split('T')[0],
-      status: 'booked',
-      totalSpent: route.budget,
-      members: 1,
+      status: 'booked', totalSpent: route.budget, members: 1,
     });
-    setSelectedRoute(null);
-    setTab('history');
+    setSelectedRoute(null); setTab('history');
   };
 
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
-      {/* Tab bar */}
-      <View style={s.tabBar}>
-        {([['routes', 'My Routes'], ['popular', 'Popular'], ['history', 'History']] as const).map(([id, label]) => (
-          <TouchableOpacity
-            key={id}
-            style={[s.tabBtn, tab === id && s.tabBtnActive]}
-            onPress={() => setTab(id)}
-          >
-            <Text style={[s.tabBtnText, tab === id && s.tabBtnTextActive]}>{label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+    <View style={[s.container, { backgroundColor: bg }]}>
+      <SafeAreaView edges={['top']} style={{ backgroundColor: bg }}>
+        <View style={[s.tabBar, { backgroundColor: card, borderColor: border }]}>
+          {([['routes', 'My Routes'], ['popular', 'Popular'], ['history', 'History']] as const).map(([id, label]) => (
+            <TouchableOpacity key={id} style={[s.tabBtn, tab === id && { backgroundColor: txt1 }]} onPress={() => setTab(id)}>
+              <Text style={[s.tabBtnText, { color: tab === id ? bg : txt2 }]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </SafeAreaView>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* ── MY ROUTES ── */}
         {tab === 'routes' && (
           <>
             <View style={s.header}>
-              <Text style={s.heading}>My Routes</Text>
-              <View style={s.metaBadge}>
-                <Text style={s.metaBadgeText}>{nodes.length} cities · {totalDays}N</Text>
-              </View>
+              <Text style={[s.heading, { color: txt1 }]}>My Planned Trip</Text>
+              <View style={[s.metaBadge, { backgroundColor: primary }]}><Text style={s.metaBadgeText}>{nodes.length} cities · {totalDays}N</Text></View>
             </View>
 
             {nodes.length === 0 ? (
               <View style={s.emptyState}>
-                <Text style={s.emptyIcon}>Map</Text>
-                <Text style={s.emptyTitle}>No routes yet</Text>
-                <Text style={s.emptyDesc}>Tap a city on the map to start building your trip, or pick a Popular route below.</Text>
-                <TouchableOpacity style={s.emptyBtn} onPress={() => setTab('popular')}>
-                  <Text style={s.emptyBtnText}>Browse Popular Routes</Text>
+                <Ionicons name="map-outline" size={60} color={txt2} style={{marginBottom:16}} />
+                <Text style={[s.emptyTitle, { color: txt1 }]}>No routes drawn yet</Text>
+                <Text style={[s.emptyDesc, { color: txt2 }]}>Use the Explore map to drop markers and draw liquid strings!</Text>
+                <TouchableOpacity style={[s.emptyBtn, { backgroundColor: primary }]} onPress={() => setTab('popular')}>
+                  <Text style={s.emptyBtnText}>Browse Templates</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <>
-                {/* Budget card */}
-                <View style={s.budgetCard}>
+                <View style={[s.budgetCard, { backgroundColor: card, borderColor: border }]}>
                   <View style={s.budgetTop}>
-                    <View>
-                      <Text style={s.budgetLabel}>Budget</Text>
-                      <Text style={s.budgetAmt}>{fmtFull(globalBudget)}</Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={s.budgetLabel}>Spent</Text>
-                      <Text style={[s.budgetAmt, isOver && { color: '#E53935' }]}>{fmtFull(spentBudget)}</Text>
-                    </View>
+                    <View><Text style={[s.budgetLabel, { color: txt2 }]}>Budget Focus</Text><Text style={[s.budgetAmt, { color: txt1 }]}>{fmtFull(globalBudget)}</Text></View>
+                    <View style={{ alignItems: 'flex-end' }}><Text style={[s.budgetLabel, { color: txt2 }]}>Estimated</Text><Text style={[s.budgetAmt, isOver && { color: '#EF4444' }, !isOver && { color: txt1 }]}>{fmtFull(spentBudget)}</Text></View>
                   </View>
-                  <View style={s.progressBg}>
-                    <View style={[s.progressFill, {
-                      width: `${budgetPct}%` as any,
-                      backgroundColor: isOver ? '#E53935' : budgetPct > 75 ? '#FB8C00' : '#43A047',
-                    }]} />
-                  </View>
-                  <Text style={s.budgetRemain}>
-                    {isOver ? `Over by ${fmtFull(spentBudget - globalBudget)}` : `${fmtFull(globalBudget - spentBudget)} remaining`}
-                  </Text>
+                  <View style={[s.progressBg, { backgroundColor: surf, borderColor: border }]}><View style={[s.progressFill, { width: `${budgetPct}%` as any, backgroundColor: isOver ? '#EF4444' : primary }]} /></View>
+                  <Text style={[s.budgetRemain, { color: txt2 }]}>{isOver ? `Over by ${fmtFull(spentBudget - globalBudget)}` : `${fmtFull(globalBudget - spentBudget)} remaining`}</Text>
                 </View>
 
-                {/* Route timeline */}
                 {nodes.map((node, i) => {
-                  const loc = ALL_LOCATIONS.find(l => l.city === node.city);
                   const pathAfter = paths[i];
                   const isLast = i === nodes.length - 1;
                   return (
                     <View key={node.id}>
                       <View style={s.stopRow}>
                         <View style={s.stopLeft}>
-                          <View style={s.stopNumWrap}>
-                            <Text style={s.stopNum}>{i + 1}</Text>
-                          </View>
-                          {!isLast && <View style={s.stopStem} />}
+                          <View style={[s.stopNumWrap, { backgroundColor: primary }]}><Text style={s.stopNum}>{i + 1}</Text></View>
+                          {!isLast && <View style={[s.stopStem, { backgroundColor: border }]} />}
                         </View>
-                        <View style={s.stopBody}>
+                        <View style={[s.stopBody, { backgroundColor: card, borderColor: border }]}>
                           <View style={s.stopTop}>
-                            <View style={{ flex: 1 }}>
-                              <Text style={s.stopCity}>{node.city}</Text>
-                              <Text style={s.stopMeta}>{node.country} · {node.stayNights}N</Text>
-                            </View>
-                            <View style={{ alignItems: 'flex-end' }}>
-                              <Text style={s.stopCost}>{fmtFull(node.totalStayCost)}</Text>
-                              <Text style={s.stopCostLabel}>stay</Text>
-                            </View>
+                            <View style={{ flex: 1 }}><Text style={[s.stopCity, { color: txt1 }]}>{node.city}</Text><Text style={[s.stopMeta, { color: txt2 }]}>{node.country} · {node.stayNights}N</Text></View>
+                            <View style={{ alignItems: 'flex-end' }}><Text style={[s.stopCost, { color: primary }]}>{fmtFull(node.totalStayCost)}</Text><Text style={[s.stopCostLabel, { color: txt2 }]}>stay</Text></View>
                           </View>
-                          {loc?.description && <Text style={s.stopDesc} numberOfLines={2}>{loc.description}</Text>}
-                          {loc && (
-                            <View style={s.tagsWrap}>
-                              {loc.highlights.slice(0, 3).map(h => (
-                                <View key={h} style={s.tag}><Text style={s.tagText}>{h}</Text></View>
-                              ))}
-                              {loc.highlights.length > 3 && (
-                                <View style={[s.tag, s.tagMore]}>
-                                  <Text style={s.tagMoreText}>+{loc.highlights.length - 3}</Text>
-                                </View>
-                              )}
-                            </View>
-                          )}
                         </View>
                       </View>
 
                       {pathAfter && !isLast && (
-                        <TouchableOpacity style={s.pathRow} onPress={() => setSelectedPath(pathAfter)} activeOpacity={0.7}>
-                          <View style={[s.pathIconWrap, { backgroundColor: TRANSPORT_COLORS[pathAfter.selectedMode] ?? '#4CAF50' }]}>
-                            <Text style={s.pathIconText}>{MODE_ICON[pathAfter.selectedMode]}</Text>
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={s.pathMode}>{pathAfter.selectedMode.charAt(0).toUpperCase() + pathAfter.selectedMode.slice(1)}</Text>
-                            <Text style={s.pathLabel}>{pathAfter.options.find(o => o.mode === pathAfter.selectedMode)?.label}</Text>
-                          </View>
-                          <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={s.pathCost}>{fmtFull(pathAfter.options.find(o => o.mode === pathAfter.selectedMode)?.cost ?? 0)}</Text>
-                            <Text style={s.pathDur}>{pathAfter.options.find(o => o.mode === pathAfter.selectedMode)?.durationHrs}h</Text>
-                          </View>
-                          <Text style={s.pathChevron}>›</Text>
+                        <TouchableOpacity style={[s.pathRow, { backgroundColor: surf, borderColor: border }]} onPress={() => setSelectedPath(pathAfter)} activeOpacity={0.8}>
+                          <Text style={{ fontSize: 24 }}>{MODE_ICON[pathAfter.selectedMode]}</Text>
+                          <View style={{ flex: 1, marginLeft: 12 }}><Text style={[s.pathMode, { color: txt1 }]}>{pathAfter.options.find(o => o.mode === pathAfter.selectedMode)?.label}</Text></View>
+                          <View style={{ alignItems: 'flex-end' }}><Text style={[s.pathCost, { color: txt1 }]}>{fmtFull(pathAfter.options.find(o => o.mode === pathAfter.selectedMode)?.cost ?? 0)}</Text><Text style={[s.pathDur, { color: txt2 }]}>{pathAfter.options.find(o => o.mode === pathAfter.selectedMode)?.durationHrs}h</Text></View>
+                          <Ionicons name="chevron-forward" size={20} color={txt2} style={{marginLeft: 8}} />
                         </TouchableOpacity>
                       )}
                     </View>
                   );
                 })}
-
-                {/* Summary */}
-                <View style={s.summaryCard}>
-                  <Text style={s.summaryTitle}>Trip Summary</Text>
-                  {[
-                    { label: 'Accommodation', val: fmtFull(nodes.reduce((a, n) => a + n.totalStayCost, 0)) },
-                    { label: 'Transport', val: fmtFull(paths.reduce((a, p) => a + (p.options.find(o => o.mode === p.selectedMode)?.cost ?? 0), 0)) },
-                    { label: 'Total', val: fmtFull(spentBudget), hl: true },
-                  ].map(item => (
-                    <View key={item.label} style={[s.summaryRow, item.hl && s.summaryRowHL]}>
-                      <Text style={[s.summaryLabel, item.hl && s.summaryLabelHL]}>{item.label}</Text>
-                      <Text style={[s.summaryVal, item.hl && s.summaryValHL]}>{item.val}</Text>
-                    </View>
-                  ))}
-                </View>
               </>
             )}
           </>
         )}
 
-        {/* ── POPULAR ROUTES ── */}
         {tab === 'popular' && (
           <>
-            <Text style={s.heading}>{t('popular_routes') || 'Popular Routes'}</Text>
-            <Text style={s.subHeading}>Curated trips across India & Singapore</Text>
+            <Text style={[s.heading, { color: txt1, marginTop: 16, marginBottom: 20 }]}>Premium Inspirations</Text>
             {POPULAR_ROUTES.map(route => (
-              <TouchableOpacity
-                key={route.id}
-                style={s.routeCard}
-                onPress={() => setSelectedRoute(route)}
-                activeOpacity={0.8}
-              >
-                <View style={[s.routeAccent, { backgroundColor: route.color }]} />
-                <View style={s.routeBody}>
-                  <View style={s.routeTop}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.routeTitle}>{route.title}</Text>
-                      <Text style={s.routeTagline}>{route.tagline}</Text>
-                    </View>
-                    <View style={[s.routeTheme, { backgroundColor: route.color + '22', borderColor: route.color + '55' }]}>
-                      <Text style={[s.routeThemeText, { color: route.color }]}>{route.theme}</Text>
-                    </View>
-                  </View>
-                  
-                  {/* Inflated Metadata Grid */}
-                  <View style={s.routeMetaGrid}>
-                    <View style={s.routeMetaPill}>
-                      <Text style={s.routeMetaVal}>{route.days}D</Text>
-                      <Text style={s.routeMetaLabel}>{t('days')}</Text>
-                    </View>
-                    <View style={s.routeMetaPill}>
-                      <Text style={s.routeMetaVal}>{route.cities.length}</Text>
-                      <Text style={s.routeMetaLabel}>{t('cities')}</Text>
-                    </View>
-                    <View style={[s.routeMetaPill, { backgroundColor: route.color + '15' }]}>
-                      <Text style={[s.routeMetaVal, { color: route.color }]}>{fmtFull(route.budget).replace('.0k','k')}</Text>
-                      <Text style={s.routeMetaLabel}>Est.</Text>
-                    </View>
-                  </View>
-
-                  <View style={s.routeCities}>
-                    {route.cities.map((c, i) => (
-                      <React.Fragment key={c}>
-                        <Text style={s.routeCityText}>{c}</Text>
-                        {i < route.cities.length - 1 && <Text style={[s.routeCityArrow, { color: route.color }]}>→</Text>}
-                      </React.Fragment>
-                    ))}
-                  </View>
+              <TouchableOpacity key={route.id} style={[s.routeCard, { backgroundColor: card, borderColor: border }]} onPress={() => setSelectedRoute(route)} activeOpacity={0.88}>
+                <View style={s.routeImageBox}>
+                  {route.image ? <Image source={{ uri: route.image }} style={s.routeImage} resizeMode="cover"/> : <View style={[s.routeImageFallback, { backgroundColor: route.color+'33' }]}><Ionicons name="map" size={40} color={route.color}/></View>}
+                  <View style={s.routeImageOverlay} />
+                  <View style={[s.routeThemeBadge, { backgroundColor: route.color }]}><Text style={s.routeThemeBadgeText}>{route.theme}</Text></View>
                 </View>
-                <View style={s.routeChevronBox}>
-                  <Ionicons name="chevron-forward" size={24} color={route.color} />
+                <View style={s.routeBody}>
+                  <Text style={[s.routeTitle, { color: txt1 }]}>{route.title}</Text>
+                  <Text style={[s.routeTagline, { color: txt2 }]}>{route.tagline}</Text>
+                  <View style={s.routeMetaGrid}>
+                    <View style={[s.routeMetaPill, { backgroundColor: surf, borderColor: border }]}><Text style={[s.routeMetaVal, { color: txt1 }]}>{route.days}D</Text></View>
+                    <View style={[s.routeMetaPill, { backgroundColor: surf, borderColor: border }]}><Text style={[s.routeMetaVal, { color: txt1 }]}>{route.cities.length} Cities</Text></View>
+                    <View style={[s.routeMetaPill, { backgroundColor: route.color+'15', borderColor: border }]}><Text style={[s.routeMetaVal, { color: route.color }]}>{fmtFull(route.budget).replace('.0k','k')}</Text></View>
+                  </View>
                 </View>
               </TouchableOpacity>
             ))}
           </>
         )}
 
-        {/* ── HISTORY ── */}
         {tab === 'history' && (
           <>
-            <Text style={s.heading}>Trip History</Text>
+            <Text style={[s.heading, { color: txt1, marginTop: 16, marginBottom: 20 }]}>Trip Archives</Text>
             {trips.length === 0 ? (
-              <View style={s.emptyState}>
-                <Text style={s.emptyIcon}>List</Text>
-                <Text style={s.emptyTitle}>No trips yet</Text>
-                <Text style={s.emptyDesc}>Book a popular route or plan your own trip to see it here.</Text>
-                <TouchableOpacity style={s.emptyBtn} onPress={() => setTab('popular')}>
-                  <Text style={s.emptyBtnText}>Browse Popular Routes</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              trips.map(trip => {
-                const cfg = STATUS_CONFIG[trip.status];
-                return (
-                  <View key={trip.id} style={s.historyCard}>
-                    <View style={s.historyTop}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.historyTitle}>{trip.title}</Text>
-                        <Text style={s.historyDates}>{trip.startDate} → {trip.endDate}</Text>
-                      </View>
-                      <View style={[s.statusBadge, { backgroundColor: cfg.bg, borderColor: cfg.color + '55' }]}>
-                        <Text style={[s.statusText, { color: cfg.color }]}>{cfg.label}</Text>
-                      </View>
-                    </View>
-                    <View style={s.historyCities}>
-                      {trip.cities.map((c, i) => (
-                        <React.Fragment key={c}>
-                          <Text style={s.historyCityText}>{c}</Text>
-                          {i < trip.cities.length - 1 && <Text style={s.historyCityArrow}>→</Text>}
-                        </React.Fragment>
-                      ))}
-                    </View>
-                    <View style={s.historyFooter}>
-                      <Text style={s.historySpent}>₹{trip.totalSpent.toLocaleString()} · {trip.members} member{trip.members > 1 ? 's' : ''}</Text>
-                    </View>
+              <View style={s.emptyState}><Ionicons name="documents-outline" size={60} color={txt2} style={{marginBottom:16}}/><Text style={[s.emptyTitle, { color: txt1 }]}>No Archives</Text></View>
+            ) : trips.map(trip => {
+              const cfg = STATUS_CONFIG[trip.status];
+              return (
+                <View key={trip.id} style={[s.historyCard, { backgroundColor: card, borderColor: border }]}>
+                  <View style={s.historyTop}>
+                    <View style={{ flex: 1 }}><Text style={[s.historyTitle, { color: txt1 }]}>{trip.title}</Text><Text style={[s.historyDates, { color: txt2 }]}>{trip.startDate} → {trip.endDate}</Text></View>
+                    <View style={[s.statusBadge, { backgroundColor: cfg.bg }]}><Text style={[s.statusText, { color: cfg.color }]}>{cfg.label}</Text></View>
                   </View>
-                );
-              })
-            )}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
+                    <Ionicons name="card" size={16} color={txt2} style={{marginRight: 6}}/>
+                    <Text style={[s.historySpent, { color: txt2 }]}>₹{trip.totalSpent.toLocaleString()}</Text>
+                  </View>
+                </View>
+              );
+            })}
           </>
         )}
-
-        <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Route detail modal */}
-      {selectedRoute && (
-        <RouteDetailModal
-          route={selectedRoute}
-          visible={!!selectedRoute}
-          onClose={() => setSelectedRoute(null)}
-          onBook={() => bookRoute(selectedRoute)}
-        />
-      )}
-
-      {/* Swap transport modal */}
-      {selectedPath && (
-        <SwapModal
-          path={selectedPath}
-          fromNode={nodes.find(n => n.id === selectedPath.fromNodeId)}
-          toNode={nodes.find(n => n.id === selectedPath.toNodeId)}
-          visible={!!selectedPath}
-          onClose={() => setSelectedPath(null)}
-          onSwap={(mode) => {
-            swapTransport(selectedPath.id, mode as any);
-            setSelectedPath(prev => prev ? { ...prev, selectedMode: mode as any } : null);
-          }}
-        />
-      )}
-    </SafeAreaView>
+      {selectedRoute && <RouteDetailModal route={selectedRoute} visible={!!selectedRoute} onClose={() => setSelectedRoute(null)} onBook={() => bookRoute(selectedRoute)} />}
+      {selectedPath && <SwapModal path={selectedPath} fromNode={nodes.find(n => n.id === selectedPath.fromNodeId)} toNode={nodes.find(n => n.id === selectedPath.toNodeId)} visible={!!selectedPath} onClose={() => setSelectedPath(null)} onSwap={(mode: string) => { swapTransport(selectedPath.id, mode as any); setSelectedPath(prev => prev ? { ...prev, selectedMode: mode as any } : null); }} />}
+    </View>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: NC.background },
+  container: { flex: 1 },
   scroll: { paddingHorizontal: 16, paddingBottom: 20 },
-
-  tabBar: {
-    flexDirection: 'row', marginHorizontal: 0, marginTop: 8, marginBottom: 4,
-    backgroundColor: '#FFFFFF', borderRadius: 999, padding: 5,
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.98)',
-    shadowColor: 'rgba(165,214,167,0.4)', shadowOffset: { width: 6, height: 6 },
-    shadowOpacity: 1, shadowRadius: 16, elevation: 8,
-  },
-  tabBtn: { flex: 1, paddingVertical: 12, borderRadius: 999, alignItems: 'center' },
-  tabBtnActive: {
-    backgroundColor: '#2E7D32',
-    shadowColor: 'rgba(27,62,31,0.3)', shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 1, shadowRadius: 10, elevation: 6,
-  },
-  tabBtnText: { fontSize: 12, fontWeight: '700', color: '#7CB87F' },
-  tabBtnTextActive: { color: '#FFF', fontWeight: '900' },
-
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 14 },
-  heading: { fontSize: 24, fontWeight: '900', color: NC.onSurface, letterSpacing: -0.5, marginTop: 16, marginBottom: 4 },
-  subHeading: { fontSize: 13, color: NC.onSurfaceVariant, marginBottom: 16 },
-  metaBadge: { backgroundColor: NC.primaryFixed, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.8)' },
-  metaBadgeText: { color: NC.onPrimaryFixed, fontSize: 12, fontWeight: '800' },
-
-  // Empty state
-  emptyState: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 24 },
-  emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyTitle: { fontSize: 18, fontWeight: '900', color: NC.onSurface, marginBottom: 8 },
-  emptyDesc: { fontSize: 13, color: NC.onSurfaceVariant, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
-  emptyBtn: {
-    backgroundColor: '#2E7D32', borderRadius: 999, paddingHorizontal: 32, paddingVertical: 16,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)',
-    shadowColor: 'rgba(165,214,167,0.45)', shadowOffset: { width: 8, height: 8 },
-    shadowOpacity: 1, shadowRadius: 20, elevation: 10,
-  },
-  emptyBtnText: { color: '#FFF', fontSize: 15, fontWeight: '900', letterSpacing: 0.2 },
-
-  // Budget card — inflated clay card
-  budgetCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 36, padding: 18, marginBottom: 22,
-    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
-    borderBottomColor: 'rgba(165,214,167,0.35)',
-    borderRightColor: 'rgba(165,214,167,0.25)',
-    shadowColor: 'rgba(165,214,167,0.5)', shadowOffset: { width: 8, height: 8 },
-    shadowOpacity: 1, shadowRadius: 24, elevation: 10,
-  },
-  budgetTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  budgetLabel: { fontSize: 12, color: '#558B2F', fontWeight: '700', marginBottom: 2 },
-  budgetAmt: { fontSize: 22, fontWeight: '900', color: '#1B5E20' },
-  progressBg: {
-    height: 14, backgroundColor: '#DCF0DE', borderRadius: 999, overflow: 'hidden', marginBottom: 8,
-    borderWidth: 1.5, borderColor: 'rgba(165,214,167,0.4)',
-    borderTopColor: 'rgba(27,94,32,0.06)',
-  },
-  progressFill: { height: '100%', borderRadius: 999 },
-  budgetRemain: { fontSize: 13, color: '#558B2F', fontWeight: '700' },
-
-  // Stop card
+  tabBar: { ...CLAY_CARD_V2, flexDirection: 'row', marginHorizontal: 16, marginTop: 8, marginBottom: 12, borderRadius: 30, padding: 6, borderWidth: 1.5 },
+  tabBtn: { flex: 1, paddingVertical: 12, borderRadius: 24, alignItems: 'center' },
+  tabBtnText: { fontSize: 13, fontFamily: FONTS.display, fontWeight: '800' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 20 },
+  heading: { fontSize: 28, fontFamily: FONTS.display, fontWeight: '900', letterSpacing: -0.5 },
+  metaBadge: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
+  metaBadgeText: { color: '#FFF', fontSize: 13, fontFamily: FONTS.display, fontWeight: '900' },
+  emptyState: { alignItems: 'center', paddingVertical: 60, paddingHorizontal: 24 },
+  emptyTitle: { fontSize: 20, fontFamily: FONTS.display, fontWeight: '900', marginBottom: 8 },
+  emptyDesc: { fontSize: 14, fontFamily: FONTS.body, textAlign: 'center', marginBottom: 20 },
+  emptyBtn: { ...CLAY_BTN_V2, borderRadius: 24, paddingHorizontal: 32, paddingVertical: 16 },
+  emptyBtnText: { color: '#FFF', fontSize: 16, fontFamily: FONTS.display, fontWeight: '900' },
+  budgetCard: { ...CLAY_CARD_V2, borderRadius: 36, padding: 22, marginBottom: 24, borderWidth: 1.5 },
+  budgetTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
+  budgetLabel: { fontSize: 11, fontFamily: FONTS.display, fontWeight: '800', textTransform: 'uppercase', marginBottom: 4 },
+  budgetAmt: { fontSize: 26, fontFamily: FONTS.display, fontWeight: '900' },
+  progressBg: { height: 16, borderRadius: 8, overflow: 'hidden', marginBottom: 10, borderWidth: 1.5 },
+  progressFill: { height: '100%', borderRadius: 8 },
+  budgetRemain: { fontSize: 13, fontFamily: FONTS.display, fontWeight: '800' },
   stopRow: { flexDirection: 'row', marginBottom: 0 },
   stopLeft: { width: 36, alignItems: 'center' },
-  stopNumWrap: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: '#4CAF50',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: 'rgba(76,175,80,0.4)', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1, shadowRadius: 8, elevation: 5,
-  },
-  stopNum: { color: '#FFF', fontSize: 13, fontWeight: '900' },
-  stopStem: { width: 2, flex: 1, backgroundColor: '#C8E6C9', marginTop: 4, minHeight: 16 },
-  stopBody: {
-    flex: 1, backgroundColor: '#FFFFFF', borderRadius: 28, padding: 16,
-    marginLeft: 12, marginBottom: 0,
-    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
-    borderBottomColor: 'rgba(165,214,167,0.3)',
-    borderRightColor: 'rgba(165,214,167,0.2)',
-    shadowColor: 'rgba(165,214,167,0.45)', shadowOffset: { width: 6, height: 6 },
-    shadowOpacity: 1, shadowRadius: 16, elevation: 6,
-  },
-  stopTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
-  stopCity: { fontSize: 18, fontWeight: '900', color: '#1B5E20', letterSpacing: -0.3 },
-  stopMeta: { fontSize: 12, color: '#558B2F', marginTop: 3 },
-  stopCost: { fontSize: 17, fontWeight: '900', color: '#2E7D32' },
-  stopCostLabel: { fontSize: 10, color: '#81C784', marginTop: 2 },
-  stopDesc: { fontSize: 13, color: '#2E7D32', lineHeight: 18, marginBottom: 12 },
-  tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  tag: { backgroundColor: '#F0FAF1', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)' },
-  tagText: { color: '#2E7D32', fontSize: 11, fontWeight: '700' },
-  tagMore: { backgroundColor: '#C8E6C9' },
-  tagMoreText: { color: '#1B5E20', fontSize: 11, fontWeight: '800' },
-
-  // Path row
-  pathRow: {
-    flexDirection: 'row', alignItems: 'center',
-    marginLeft: 38, marginVertical: 6,
-    backgroundColor: '#FFFFFF', borderRadius: 22, padding: 14,
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)',
-    borderBottomColor: 'rgba(165,214,167,0.3)',
-    shadowColor: 'rgba(165,214,167,0.35)', shadowOffset: { width: 5, height: 5 },
-    shadowOpacity: 1, shadowRadius: 12, elevation: 5,
-    gap: 12,
-  },
-  pathIconWrap: {
-    width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)',
-  },
-  pathIconText: { fontSize: 17 },
-  pathMode: { fontSize: 14, fontWeight: '900', color: '#1B5E20' },
-  pathLabel: { fontSize: 12, color: '#558B2F', marginTop: 2 },
-  pathCost: { fontSize: 15, fontWeight: '900', color: '#2E7D32' },
-  pathDur: { fontSize: 12, color: '#81C784', marginTop: 2 },
-  pathChevron: { fontSize: 22, color: '#C8E6C9' },
-
-  // Summary
-  summaryCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 32, padding: 18, marginTop: 14,
-    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
-    borderBottomColor: 'rgba(165,214,167,0.3)',
-    borderRightColor: 'rgba(165,214,167,0.2)',
-    shadowColor: 'rgba(165,214,167,0.5)', shadowOffset: { width: 8, height: 8 },
-    shadowOpacity: 1, shadowRadius: 24, elevation: 10,
-  },
-  summaryTitle: { fontSize: 15, fontWeight: '900', color: '#1B5E20', marginBottom: 14 },
-  summaryRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    paddingVertical: 12, paddingHorizontal: 14,
-    backgroundColor: '#F0FAF1', borderRadius: 18, marginBottom: 7,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)',
-  },
-  summaryRowHL: { backgroundColor: '#C8E6C9', borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)' },
-  summaryLabel: { fontSize: 14, color: '#558B2F', fontWeight: '600' },
-  summaryLabelHL: { color: '#1B5E20', fontWeight: '800' },
-  summaryVal: { fontSize: 14, fontWeight: '800', color: '#1B5E20' },
-  summaryValHL: { fontSize: 16, fontWeight: '900', color: '#2E7D32' },
-
-  // Popular route card
-  routeCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#FFFFFF', borderRadius: 28, marginBottom: 16,
-    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
-    borderBottomColor: 'rgba(165,214,167,0.3)',
-    borderRightColor: 'rgba(165,214,167,0.2)',
-    shadowColor: 'rgba(165,214,167,0.5)', shadowOffset: { width: 8, height: 8 },
-    shadowOpacity: 1, shadowRadius: 22, elevation: 12,
-    position: 'relative', overflow: 'hidden',
-  },
-  routeAccent: { width: 5, alignSelf: 'stretch' },
-  routeBody: { flex: 1, padding: 14 },
-  routeTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
-  routeTitle: { fontSize: 16, fontWeight: '900', color: '#1B5E20', letterSpacing: -0.3 },
-  routeTagline: { fontSize: 12, color: '#558B2F', marginTop: 2 },
-  routeTheme: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
-  routeThemeText: { fontSize: 10, fontWeight: '800' },
-  routeMetaGrid: { flexDirection: 'row', gap: 8, marginBottom: 14 },
-  routeMetaPill: { 
-    flex: 1, backgroundColor: '#F0FAF1', borderRadius: 16, padding: 10, alignItems: 'center',
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)',
-  },
-  routeMetaVal: { fontSize: 15, fontWeight: '900', color: '#1B5E20' },
-  routeMetaLabel: { fontSize: 9, color: '#558B2F', fontWeight: '700', textTransform: 'uppercase', marginTop: 1 },
-  routeCities: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
-  routeCityText: { fontSize: 12, color: '#558B2F', fontWeight: '600' },
-  routeCityArrow: { fontSize: 12, fontWeight: '700' },
-  routeChevronBox: { paddingRight: 16 },
-
-  // History card
-  historyCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 24, padding: 16, marginBottom: 10,
-    shadowColor: 'rgba(76,175,80,0.14)', shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1, shadowRadius: 14, elevation: 4,
-    borderWidth: 1, borderColor: 'rgba(200,230,201,0.5)',
-  },
-  historyTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
-  historyTitle: { fontSize: 16, fontWeight: '900', color: '#1B5E20' },
-  historyDates: { fontSize: 11, color: '#558B2F', marginTop: 2 },
-  statusBadge: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1 },
-  statusText: { fontSize: 11, fontWeight: '800' },
-  historyCities: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginBottom: 8 },
-  historyCityText: { fontSize: 12, color: '#558B2F', fontWeight: '600' },
-  historyCityArrow: { fontSize: 12, color: '#A5D6A7' },
-  historyFooter: {},
-  historySpent: { fontSize: 12, color: '#81C784' },
+  stopNumWrap: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  stopNum: { color: '#FFF', fontSize: 15, fontFamily: FONTS.display, fontWeight: '900' },
+  stopStem: { width: 2, flex: 1, marginTop: 4, minHeight: 16, borderRadius: 1 },
+  stopBody: { ...CLAY_CARD_V2, flex: 1, borderRadius: 28, padding: 18, marginLeft: 16, marginBottom: 0, borderWidth: 1.5 },
+  stopTop: { flexDirection: 'row', alignItems: 'flex-start' },
+  stopCity: { fontSize: 20, fontFamily: FONTS.display, fontWeight: '900', letterSpacing: -0.3 },
+  stopMeta: { fontSize: 13, fontFamily: FONTS.body, marginTop: 4 },
+  stopCost: { fontSize: 18, fontFamily: FONTS.display, fontWeight: '900' },
+  stopCostLabel: { fontSize: 11, fontFamily: FONTS.display, fontWeight: '800' },
+  pathRow: { ...CLAY_CARD_V2, flexDirection: 'row', alignItems: 'center', marginLeft: 52, marginVertical: 10, borderRadius: 24, padding: 16, borderWidth: 1.5 },
+  pathMode: { fontSize: 15, fontFamily: FONTS.display, fontWeight: '900' },
+  pathCost: { fontSize: 16, fontFamily: FONTS.display, fontWeight: '900' },
+  pathDur: { fontSize: 12, fontFamily: FONTS.display, fontWeight: '800', marginTop: 2 },
+  routeCard: { ...CLAY_CARD_V2, borderRadius: 36, marginBottom: 20, borderWidth: 1.5, overflow: 'hidden' },
+  routeImageBox: { width: '100%', height: 160, position: 'relative' },
+  routeImage: { width: '100%', height: '100%' },
+  routeImageFallback: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+  routeImageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 80, backgroundColor: 'rgba(0,0,0,0.4)' },
+  routeThemeBadge: { position: 'absolute', bottom: 14, left: 16, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  routeThemeBadgeText: { fontSize: 11, fontFamily: FONTS.display, fontWeight: '900', color: '#FFF', letterSpacing: 1 },
+  routeBody: { padding: 20 },
+  routeTitle: { fontSize: 20, fontFamily: FONTS.display, fontWeight: '900', letterSpacing: -0.3 },
+  routeTagline: { fontSize: 13, fontFamily: FONTS.body, marginTop: 4, marginBottom: 16 },
+  routeMetaGrid: { flexDirection: 'row', gap: 10 },
+  routeMetaPill: { flex: 1, borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1.5 },
+  routeMetaVal: { fontSize: 15, fontFamily: FONTS.display, fontWeight: '800' },
+  historyCard: { ...CLAY_CARD_V2, borderRadius: 28, padding: 20, marginBottom: 14, borderWidth: 1.5 },
+  historyTop: { flexDirection: 'row', alignItems: 'flex-start' },
+  historyTitle: { fontSize: 18, fontFamily: FONTS.display, fontWeight: '900' },
+  historyDates: { fontSize: 12, fontFamily: FONTS.body, marginTop: 4 },
+  statusBadge: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
+  statusText: { fontSize: 11, fontFamily: FONTS.display, fontWeight: '900' },
+  historySpent: { fontSize: 14, fontFamily: FONTS.display, fontWeight: '800' },
 });
 
-// ─── Modal styles ─────────────────────────────────────────────────────────────
 const md = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: '#FFFFFF', borderTopLeftRadius: 32, borderTopRightRadius: 32,
-    padding: 20, maxHeight: '92%',
-    borderWidth: 1, borderColor: 'rgba(200,230,201,0.5)',
-    shadowColor: 'rgba(76,175,80,0.2)', shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 1, shadowRadius: 20, elevation: 20,
-  },
-  handle: { width: 36, height: 4, backgroundColor: '#C8E6C9', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
-  topClose: { 
-    position: 'absolute', top: 12, right: 12, width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', zIndex: 10,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
-    shadowColor: 'rgba(165,214,167,0.35)', shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1, shadowRadius: 6, elevation: 4,
-  },
-  hero: { borderRadius: 20, padding: 18, marginBottom: 16, borderWidth: 1.5 },
-  themeBadge: { alignSelf: 'flex-start', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 },
-  themeText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
-  heroTitle: { fontSize: 22, fontWeight: '900', color: '#1B5E20', letterSpacing: -0.5 },
-  heroTagline: { fontSize: 13, color: '#558B2F', marginTop: 4, marginBottom: 12 },
-  heroMeta: { flexDirection: 'row', alignItems: 'center' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
+  sheet: { borderTopLeftRadius: 40, borderTopRightRadius: 40, maxHeight: Dimensions.get('window').height * 0.9, padding: 24 },
+  topClose: { position: 'absolute', top: 20, right: 20, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', zIndex: 10, borderWidth: 1.5 },
+  heroTitle: { fontSize: 28, fontFamily: FONTS.display, fontWeight: '900', color: '#FFF', letterSpacing: -0.5 },
+  themeBadge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginBottom: 8 },
+  themeText: { color: '#FFF', fontSize: 11, fontFamily: FONTS.display, fontWeight: '900', letterSpacing: 1 },
+  heroMeta: { flexDirection: 'row', borderRadius: 24, padding: 16, marginBottom: 24, borderWidth: 1.5 },
   metaItem: { flex: 1, alignItems: 'center' },
-  metaVal: { fontSize: 16, fontWeight: '900', color: '#1B5E20' },
-  metaLabel: { fontSize: 10, color: '#558B2F', marginTop: 2 },
-  metaDivider: { width: 1, height: 28, backgroundColor: 'rgba(200,230,201,0.6)' },
-  section: { fontSize: 14, fontWeight: '900', color: '#1B5E20', marginTop: 16, marginBottom: 10 },
-  hlRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  hlChip: { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1.5, backgroundColor: '#F0FAF1' },
-  hlText: { fontSize: 12, fontWeight: '700' },
-  dayCard: {
-    marginBottom: 12, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 16,
-    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
-    borderBottomColor: 'rgba(165,214,167,0.35)',
-    shadowColor: 'rgba(165,214,167,0.45)', shadowOffset: { width: 6, height: 6 },
-    shadowOpacity: 1, shadowRadius: 16, elevation: 6,
-    position: 'relative', overflow: 'hidden',
-    flexDirection: 'row', gap: 12,
-  },
-  daySheen: { position: 'absolute', top: 0, left: 0, right: 0, height: '40%', backgroundColor: 'rgba(255,255,255,0.3)' },
-  dayNum: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  dayNumText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
-  dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
-  dayCity: { fontSize: 15, fontWeight: '900', color: '#1B5E20' },
-  transportBadge: { backgroundColor: '#C8E6C9', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  transportText: { color: '#2E7D32', fontSize: 10, fontWeight: '700' },
-  actList: { marginTop: 8, paddingLeft: 4 },
-  actRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
-  actDot: { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
-  actText: { fontSize: 13, color: '#1B5E20', fontWeight: '600', flex: 1 },
-  stayBox: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, backgroundColor: '#F1F8F2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  stayText: { fontSize: 11, fontWeight: '800' },
-  citiesRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
-  cityChip: { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1.5, backgroundColor: '#F0FAF1' },
-  cityText: { fontSize: 13, fontWeight: '700' },
-  cityArrow: { fontSize: 14, fontWeight: '700' },
-  actions: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  bookBtnSmall: {
-    flex: 1, backgroundColor: NC.primary, borderRadius: 999, paddingVertical: 14,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
-    shadowColor: NC.shadowButton, shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 1, shadowRadius: 10, elevation: 6,
-  },
-  navBtnSmall: {
-    flex: 1, backgroundColor: '#1B5E20', borderRadius: 999, paddingVertical: 14,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)',
-    shadowColor: 'rgba(27,94,32,0.4)', shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 1, shadowRadius: 10, elevation: 6,
-  },
-  bookBtnText: { color: '#FFF', fontSize: 14, fontWeight: '900' },
-  bookBtn: {
-    backgroundColor: NC.primary, borderRadius: 999, paddingVertical: 16,
-    alignItems: 'center', marginTop: 16,
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
-    shadowColor: NC.shadowButton, shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 1, shadowRadius: 12, elevation: 6,
-  },
-  closeBtnFull: { 
-    marginTop: 12, backgroundColor: NC.surfaceLow, borderRadius: 999, paddingVertical: 18, alignItems: 'center', 
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', 
-    shadowColor: NC.shadowOuter, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 10, elevation: 3 
-  },
-  closeBtnText: { color: NC.primary, fontSize: 16, fontWeight: '800' },
-  routeHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  summaryCard: { backgroundColor: '#F0FAF1', borderRadius: 16, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(200,230,201,0.5)' },
-  optGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
-  optCard: {
-    width: '47%', backgroundColor: '#FFFFFF', borderRadius: 20, padding: 14,
-    alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(200,230,201,0.5)',
-    shadowColor: 'rgba(76,175,80,0.12)', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1, shadowRadius: 10, elevation: 3, position: 'relative',
-  },
-  optDot: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4 },
-  optIcon: { fontSize: 28, marginBottom: 6 },
-  optMode: { fontSize: 13, fontWeight: '900', marginBottom: 2 },
-  optLabel: { fontSize: 10, color: '#558B2F', marginBottom: 6, textAlign: 'center' },
-  optCost: { fontSize: 16, fontWeight: '900', color: '#1B5E20' },
-  optDur: { fontSize: 11, color: '#81C784', marginTop: 2 },
+  metaVal: { fontSize: 18, fontFamily: FONTS.display, fontWeight: '900' },
+  metaLabel: { fontSize: 11, fontFamily: FONTS.display, fontWeight: '700', textTransform: 'uppercase', marginTop: 4 },
+  metaDivider: { width: 1.5, height: '100%' },
+  section: { fontSize: 18, fontFamily: FONTS.display, fontWeight: '900', marginBottom: 14 },
+  hlRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
+  hlChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, borderWidth: 1.5, backgroundColor: 'rgba(0,0,0,0.05)' },
+  hlText: { fontSize: 13, fontFamily: FONTS.display, fontWeight: '800' },
+  dayCard: { borderRadius: 24, marginBottom: 16, borderWidth: 1.5, overflow: 'hidden' },
+  dayNum: { paddingVertical: 10, alignItems: 'center' },
+  dayNumText: { color: '#FFF', fontSize: 14, fontFamily: FONTS.display, fontWeight: '900' },
+  dayCity: { fontSize: 18, fontFamily: FONTS.display, fontWeight: '900', marginBottom: 12 },
+  actRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  actDot: { width: 6, height: 6, borderRadius: 3, marginRight: 10 },
+  actText: { fontSize: 14, fontFamily: FONTS.body },
+  actions: { flexDirection: 'row', gap: 12, marginTop: 10 },
+  bookBtnSmall: { ...CLAY_BTN_V2, flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 18, borderRadius: 24 },
+  bookBtnText: { color: '#FFF', fontSize: 15, fontFamily: FONTS.display, fontWeight: '900' },
+  optGrid: { gap: 12, marginBottom: 24 },
+  optCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 24, borderWidth: 2 },
+  optMode: { flex: 1, fontSize: 16, fontFamily: FONTS.display, fontWeight: '900', marginLeft: 16 },
+  optCost: { fontSize: 18, fontFamily: FONTS.display, fontWeight: '900' },
+  bookBtn: { ...CLAY_BTN_V2, padding: 20, borderRadius: 24, alignItems: 'center' },
 });

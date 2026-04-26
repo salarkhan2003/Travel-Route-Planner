@@ -28,10 +28,11 @@ export const NC_LIGHT = {
   onPrimaryFixed:'#1B5E20',   // dark on pale mint
 
   // ── Text ───────────────────────────────────────────────────────────────────
-  onSurface:        '#1B5E20',   // forest green — high contrast text
-  onSurfaceVariant: '#4A6741',   // muted green text
-  outline:          '#7CB87F',   // border / divider
-  outlineVariant:   '#B2D9B4',   // light border
+  onSurface:           '#1B5E20',   // forest green — high contrast text
+  onSurfaceSecondary:  '#4A6741',   // muted green — secondary text
+  onSurfaceVariant:    '#4A6741',   // muted green text
+  outline:             '#7CB87F',   // border / divider
+  outlineVariant:      '#B2D9B4',   // light border
 
   // ── Semantic ───────────────────────────────────────────────────────────────
   error:    '#C62828',
@@ -41,6 +42,14 @@ export const NC_LIGHT = {
   secondary: '#47624b',  // olive green
   secondaryContainer: '#DCEDC8',
   onSecondaryContainer: '#33691E',
+
+  // ── Accents ────────────────────────────────────────────────────────────────
+  colors: {
+    accentPink:   '#E91E63',
+    accentBlue:   '#2196F3',
+    accentYellow: '#FFC107',
+    accentOrange: '#FF9800',
+  },
 
   // ── Clay double-shadow recipe ──────────────────────────────────────────────
   shadowHighlight: 'rgba(255,255,255,0.85)',   // top-left inner glow
@@ -60,43 +69,53 @@ export const NC_LIGHT = {
 
 // ── Dark Theme Colors ─────────────────────────────────────────────────────────
 export const NC_DARK = {
-  // ── Page surfaces ──────────────────────────────────────────────────────────
-  background:    '#0F172A',   // slate 900 - modern dark bg
-  surfaceLowest: '#1E293B',   // slate 800 - cards
-  surfaceLow:    '#334155',   // slate 700 - elevated
-  surface:       '#475569',   // slate 600 - mid
-  surfaceHigh:   '#64748B',   // slate 500 - high
+  // ── Page surfaces — OLED Deep Black ──────────────────────────────────────
+  background:    '#000000',   // Pure Black for OLED depth
+  surfaceLowest: '#050505',   // Extremely deep slate
+  surfaceLow:    '#0F1117',   // Slate deep blue/black
+  surface:       '#1C1C1E',   // Modern card gray
+  surfaceHigh:   '#2C2C2E',   // Elevated elements
+  surfaceHighest:'#3A3A3C',
 
-  // ── Green palette (vibrant for dark mode) ───────────────────────────────────
-  primary:       '#22C55E',   // vibrant green
-  primaryLight:  '#4ADE80',   // light green
-  primaryFixed:  '#16A34A',   // accent green
-  primaryPale:   '#14532D',   // dark green bg
-  onPrimary:     '#FFFFFF',   // white on green
-  onPrimaryFixed:'#DCFCE7',   // light on green
+  // ── Vibrant Liquid palette (Electric Emerald & Neon accents) ────────────────
+  primary:       '#00F59B',   // Electric Neon Green (FitPro style)
+  primaryLight:  '#64FFDA',   // Bright Mint
+  primaryFixed:  '#004D40',   // Deep Emerald
+  primaryPale:   '#001A1A',   // Ambient Glow color
+  onPrimary:     '#000000',   // Black text on neon
+  onPrimaryFixed:'#E0F2F1',
 
-  // ── Text ───────────────────────────────────────────────────────────────────
-  onSurface:        '#F8FAFC',   // slate 50 - bright text
-  onSurfaceVariant: '#CBD5E1',   // slate 300 - muted text
-  outline:          '#22C55E',   // green border
-  outlineVariant:   '#334155',   // slate 700 border
+  // ── Text — High Fidelity contrast ──────────────────────────────────────────
+  onSurface:        '#FAFAFA',   // Pure crystal white
+  onSurfaceSecondary:'#A1A1AA',   // Muted gray
+  onSurfaceVariant: '#71717A',   // Zinc secondary
+  outline:          '#00F59B',   // Glowing outline
+  outlineVariant:   '#27272A',   // Subtle border
 
   // ── Semantic ───────────────────────────────────────────────────────────────
-  error:    '#EF4444',
-  warning:  '#F59E0B',
-  info:     '#3B82F6',
-  tertiary: '#06B6D4',   // cyan accent
-  secondary: '#8B5CF6',  // purple accent
-  secondaryContainer: '#4C1D95',
-  onSecondaryContainer: '#EDE9FE',
+  error:    '#FF3B30',   // iOS Red
+  warning:  '#FFD60A',   // iOS Yellow (Amber)
+  info:     '#0A84FF',   // iOS Blue
+  tertiary: '#BF5AF2',   // iOS Purple
+  secondary: '#FF9F0A',  // iOS Orange
+  secondaryContainer: '#4B2A00',
+  onSecondaryContainer: '#FFD60A',
 
-  // ── Clay double-shadow recipe ──────────────────────────────────────────────
-  shadowHighlight: 'rgba(255,255,255,0.08)',   // subtle highlight
-  shadowOuter:     'rgba(0,0,0,0.6)',        // dark shadow
-  shadowButton:    'rgba(0,0,0,0.5)',         // button shadow
-  shadowDeep:      'rgba(0,0,0,0.8)',        // deep pressed
+  // ── Accents ────────────────────────────────────────────────────────────────
+  colors: {
+    accentPink:   '#F06292',
+    accentBlue:   '#64B5F6',
+    accentYellow: '#FFC107',
+    accentOrange: '#FFB74D',
+  },
 
-  // ── Radius — same as light ───────────────────────────────────────────────
+  // ── Clay double-shadow recipe — Ultra-Neon Glow ────────────────────────────
+  shadowHighlight: 'rgba(0,245,155,0.06)',     // Neon rim light
+  shadowOuter:     'rgba(0,245,155,0.08)',     // Ambient neon cast
+  shadowButton:    'rgba(0, 245, 155, 0.45)',  // Intense primary glow
+  shadowDeep:      'rgba(0,0,0,0.95)',         // Total occlusion
+
+  // ── Radius ───────────────────────────────────────────────
   r8: 8, r12: 12, r16: 16, r20: 20, r24: 24,
   r32: 32, r40: 40, r48: 48, rFull: 999,
 
@@ -106,7 +125,7 @@ export const NC_DARK = {
   pressScale: 0.95,
 } as const;
 
-// ── Legacy export for backwards compatibility ─────────────────────────────────
+// ── Shared Export ─────────────────────────────────
 export const NC = NC_LIGHT;
 
 // ── Dynamic theme hook helper ─────────────────────────────────────────────
@@ -166,3 +185,52 @@ export const LIQUID_TRACK = {
   shadowRadius: 6,
   elevation: 2,
 } as const;
+
+// ════════════════════════════════════════════════════════════════════════════
+// MINT LIQUID CLAY v2 — Global Design System
+// ════════════════════════════════════════════════════════════════════════════
+export const MINT = {
+  50:  '#E8F5E9', 100: '#D1FAE5', 200: '#A7F3D0', 300: '#6EE7B7',
+  400: '#34D399', 500: '#10B981', 600: '#059669', 700: '#047857',
+  800: '#065F46', 900: '#064E3B', gold: '#D4AF37', goldLight: '#FEF3C7',
+} as const;
+
+export const ACCENTS = {
+  train:  { bg: '#D1FAE5', fg: '#10B981' },
+  flight: { bg: '#EDE9FE', fg: '#7C3AED' },
+  bus:    { bg: '#FEF3C7', fg: '#D97706' },
+  budget: { bg: '#FCE7F3', fg: '#DB2777' },
+  globe:  { bg: '#E0F2FE', fg: '#0EA5E9' },
+  family: { bg: '#FEF3C7', fg: '#F59E0B' },
+} as const;
+
+export const FONTS = {
+  display: 'Plus Jakarta Sans',
+  body:    'Nunito',
+  fallback:'System',
+} as const;
+
+export const CLAY_CARD_V2 = {
+  backgroundColor: '#FFFFFF', borderRadius: 28, borderWidth: 1.5,
+  borderColor: 'rgba(167,243,208,0.5)', elevation: 4, shadowColor: '#10B981',
+  shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 10,
+} as const;
+
+export const CLAY_BTN_V2 = {
+  borderRadius: 22, paddingVertical: 17, paddingHorizontal: 28,
+  backgroundColor: '#10B981', elevation: 8, shadowColor: '#10B981',
+  shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.42, shadowRadius: 14,
+} as const;
+
+export const CLAY_CHIP = {
+  flexDirection: 'row' as const, alignItems: 'center' as const,
+  borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7, gap: 6,
+} as const;
+
+export const FROSTED_NAV = {
+  light: { backgroundColor: 'rgba(255,255,255,0.94)', borderTopColor: 'rgba(167,243,208,0.35)' },
+  dark:  { backgroundColor: 'rgba(2,15,8,0.94)',      borderTopColor: 'rgba(0,245,155,0.10)'  },
+} as const;
+
+export const BLOB_COLORS = ['rgba(167,243,208,0.4)', 'rgba(110,231,183,0.25)', 'rgba(16,185,129,0.12)'] as const;
+export const CLAY_PRESS  = { scale: 0.94, damping: 14, stiffness: 200 } as const;

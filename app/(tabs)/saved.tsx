@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ALL_LOCATIONS } from '../../src/constants/locations';
 import { useSavedStore } from '../../src/store/savedStore';
 import { useCurrency } from '../../src/hooks/useCurrency';
-import { NC } from '../../src/constants/theme';
+import { NC, MINT, FONTS, CLAY_CARD_V2, CLAY_BTN_V2 } from '../../src/constants/theme';
 
 const FILTERS = ['All', 'India', 'Singapore', 'Spiritual', 'Beach', 'Heritage', 'Food'];
 
@@ -59,7 +59,7 @@ export default function SavedScreen() {
             ) : (
               filtered.map(loc => (
                 <View key={loc.id} style={s.card}>
-                  <View style={[s.accentBar, { backgroundColor: loc.country === 'Singapore' ? NC.tertiary : NC.primary }]} />
+                  <View style={[s.accentBar, { backgroundColor: loc.country === 'Singapore' ? NC.tertiary : MINT[500] }]} />
                   <View style={s.cardInner}>
                     <View style={s.cardHeader}>
                       <View style={{ flex: 1 }}>
@@ -104,13 +104,13 @@ export default function SavedScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: NC.background },
+  container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: 18, paddingBottom: 20 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 22 },
-  heading: { fontSize: 28, fontWeight: '900', color: NC.onSurface, letterSpacing: -0.5 },
-  sub: { fontSize: 12, color: NC.onSurfaceVariant, marginTop: 3, fontWeight: '600' },
+  heading: { fontSize: 28, fontFamily: FONTS.display, fontWeight: '900', color: MINT[900], letterSpacing: -0.5 },
+  sub: { fontSize: 12, color: MINT[700], marginTop: 3, fontWeight: '600' },
   countBadge: {
-    width: 50, height: 50, borderRadius: 25, backgroundColor: NC.primaryFixed,
+    width: 50, height: 50, borderRadius: 25, backgroundColor: MINT[300],
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.9)',
     borderBottomColor: 'rgba(165,214,167,0.35)',
@@ -118,23 +118,23 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(165,214,167,0.5)', shadowOffset: { width: 5, height: 5 },
     shadowOpacity: 1, shadowRadius: 12, elevation: 8,
   },
-  countText: { color: NC.onPrimaryFixed, fontSize: 18, fontWeight: '900' },
+  countText: { color: NC.onPrimaryFixed, fontSize: 18, fontFamily: FONTS.display, fontWeight: '900' },
   emptyState: { alignItems: 'center', paddingVertical: 72, paddingHorizontal: 32 },
   emptyIcon: {
-    width: 90, height: 90, borderRadius: 45, backgroundColor: NC.primaryFixed,
+    width: 90, height: 90, borderRadius: 45, backgroundColor: MINT[300],
     alignItems: 'center', justifyContent: 'center', marginBottom: 22,
     borderWidth: 3, borderColor: 'rgba(255,255,255,0.9)',
     borderBottomColor: 'rgba(165,214,167,0.35)',
     shadowColor: 'rgba(165,214,167,0.5)', shadowOffset: { width: 6, height: 6 },
     shadowOpacity: 1, shadowRadius: 18, elevation: 10,
   },
-  emptyIconText: { fontSize: 40, color: NC.primary },
-  emptyTitle: { fontSize: 22, fontWeight: '900', color: NC.onSurface, marginBottom: 10 },
-  emptyDesc: { fontSize: 14, color: NC.onSurfaceVariant, textAlign: 'center', lineHeight: 22 },
+  emptyIconText: { fontSize: 40, color: MINT[500] },
+  emptyTitle: { fontSize: 22, fontFamily: FONTS.display, fontWeight: '900', color: MINT[900], marginBottom: 10 },
+  emptyDesc: { fontSize: 14, color: MINT[700], textAlign: 'center', lineHeight: 22 },
   filterRow: { marginBottom: 20 },
   chip: {
     paddingHorizontal: 20, paddingVertical: 11, borderRadius: 999,
-    backgroundColor: NC.surfaceLowest,
+    backgroundColor: '#FFFFFF',
     borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
     borderBottomColor: 'rgba(165,214,167,0.35)',
     borderRightColor: 'rgba(165,214,167,0.25)',
@@ -142,17 +142,17 @@ const s = StyleSheet.create({
     shadowOpacity: 1, shadowRadius: 12, elevation: 6,
   },
   chipOn: {
-    backgroundColor: NC.primary,
+    backgroundColor: MINT[500],
     borderColor: 'rgba(255,255,255,0.4)',
     borderBottomColor: 'rgba(27,94,32,0.3)',
     shadowColor: 'rgba(27,94,32,0.4)', elevation: 8,
   },
-  chipText: { color: NC.onSurfaceVariant, fontSize: 13, fontWeight: '700' },
-  chipTextOn: { color: '#fff', fontWeight: '900' },
+  chipText: { color: MINT[700], fontSize: 13, fontFamily: FONTS.body, fontWeight: '700' },
+  chipTextOn: { color: '#fff', fontFamily: FONTS.display, fontWeight: '900' },
   emptyFilter: { paddingVertical: 36, alignItems: 'center' },
-  emptyFilterText: { color: NC.onSurfaceVariant, fontSize: 15 },
+  emptyFilterText: { color: MINT[700], fontSize: 15 },
   card: {
-    backgroundColor: NC.surfaceLowest, borderRadius: 36, marginBottom: 16,
+    backgroundColor: '#FFFFFF', borderRadius: 36, marginBottom: 16,
     flexDirection: 'row', overflow: 'hidden',
     borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
     borderBottomColor: 'rgba(165,214,167,0.3)',
@@ -163,31 +163,31 @@ const s = StyleSheet.create({
   accentBar: { width: 6, borderTopLeftRadius: 36, borderBottomLeftRadius: 36 },
   cardInner: { flex: 1, padding: 18 },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
-  cardCity: { fontSize: 22, fontWeight: '900', color: NC.onSurface, letterSpacing: -0.3 },
-  cardRegion: { fontSize: 12, color: NC.onSurfaceVariant, marginTop: 3 },
+  cardCity: { fontSize: 22, fontFamily: FONTS.display, fontWeight: '900', color: MINT[900], letterSpacing: -0.3 },
+  cardRegion: { fontSize: 12, color: MINT[700], marginTop: 3 },
   heartWrap: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: NC.surfaceLow,
+    width: 40, height: 40, borderRadius: 28, backgroundColor: MINT[50],
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.85)',
     borderBottomColor: 'rgba(165,214,167,0.3)',
     shadowColor: 'rgba(165,214,167,0.3)', shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1, shadowRadius: 6, elevation: 4,
   },
-  heartWrapActive: { backgroundColor: NC.primaryFixed },
-  heartIcon: { fontSize: 20, color: NC.onSurfaceVariant },
-  heartIconActive: { color: NC.primary },
-  cardDesc: { fontSize: 13, color: NC.onSurfaceVariant, lineHeight: 19, marginBottom: 14 },
+  heartWrapActive: { backgroundColor: MINT[300] },
+  heartIcon: { fontSize: 20, color: MINT[700] },
+  heartIconActive: { color: MINT[500] },
+  cardDesc: { fontSize: 13, color: MINT[700], lineHeight: 19, marginBottom: 14 },
   tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 14 },
   tag: {
-    backgroundColor: NC.surfaceLow, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5,
+    backgroundColor: MINT[50], borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5,
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)',
   },
-  tagText: { color: NC.primary, fontSize: 11, fontWeight: '700' },
-  tagMore: { backgroundColor: NC.primaryFixed, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5 },
-  tagMoreText: { color: NC.onPrimaryFixed, fontSize: 11, fontWeight: '800' },
+  tagText: { color: MINT[500], fontSize: 11, fontFamily: FONTS.body, fontWeight: '700' },
+  tagMore: { backgroundColor: MINT[300], borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5 },
+  tagMoreText: { color: NC.onPrimaryFixed, fontSize: 11, fontFamily: FONTS.display, fontWeight: '800' },
   cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardCost: { fontSize: 16, fontWeight: '900', color: NC.primary },
+  cardCost: { fontSize: 16, fontFamily: FONTS.display, fontWeight: '900', color: MINT[500] },
   tagsInline: { flexDirection: 'row', gap: 6 },
   tagSmall: { backgroundColor: NC.secondaryContainer, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
-  tagSmallText: { color: NC.onSecondaryContainer, fontSize: 10, fontWeight: '800' },
+  tagSmallText: { color: NC.onSecondaryContainer, fontSize: 10, fontFamily: FONTS.display, fontWeight: '800' },
 });

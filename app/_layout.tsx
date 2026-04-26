@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, PermissionsAndroid, Platform } from 'react-native';
+import { StyleSheet, PermissionsAndroid, Platform, AppState } from 'react-native';
 
 
 import CustomToast from '../src/components/CustomToast';
@@ -17,9 +17,9 @@ export default function RootLayout() {
   const showToast = useToastStore(s => s.showToast);
   const darkMode = useSettingsStore(s => s.darkMode);
   const theme = getTheme(darkMode);
+  const subscriptionRef = useRef<any>(null);
 
   useEffect(() => {
-    let subscription: any = null;
     let SmsListener: any = null;
     
     // Dynamically load SMS listener only on Android
@@ -31,52 +31,58 @@ export default function RootLayout() {
       }
     }
 
-    async function requestSmsPermission() {
-      if (Platform.OS === 'android') {
-        try {
-          const granted = await PermissionsAndroid.requestMultiple([
-            PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
-            PermissionsAndroid.PERMISSIONS.READ_SMS,
-          ]);
+    async function setupSmsListener() {
+      if (Platform.OS !== 'android' || !SmsListener) return;
 
-          const allGranted = 
-            granted[PermissionsAndroid.PERMISSIONS.RECEIVE_SMS] === PermissionsAndroid.RESULTS.GRANTED &&
-            granted[PermissionsAndroid.PERMISSIONS.READ_SMS] === PermissionsAndroid.RESULTS.GRANTED;
+      try {
+        const granted = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
+          PermissionsAndroid.PERMISSIONS.READ_SMS,
+        ]);
 
-          if (allGranted && SmsListener) {
-            subscription = SmsListener.addListener((message: any) => {
-              try {
-                // Ensure message body exists before parsing
-                const body = message.body || message.messageBody;
-                if (!body) return;
+        const allGranted = 
+          granted[PermissionsAndroid.PERMISSIONS.RECEIVE_SMS] === PermissionsAndroid.RESULTS.GRANTED &&
+          granted[PermissionsAndroid.PERMISSIONS.READ_SMS] === PermissionsAndroid.RESULTS.GRANTED;
 
-                const parsed = parseTransactionalSMS(body);
-                if (parsed) {
-                  addExtraExpense({
-                    ...parsed,
-                    text: parsed.merchant || 'Unknown Transaction'
-                  });
-                  const icon = parsed.type === 'credit' ? 'arrow-down-circle' : 'cash-outline';
-                  const verb = parsed.type === 'credit' ? 'Received' : 'Spent';
-                  showToast(`${verb} ₹${parsed.amount} - ${parsed.merchant}`, icon);
-                }
-              } catch (e) {
-                console.error('Roamio SMS track error', e);
+        if (allGranted) {
+          if (subscriptionRef.current) subscriptionRef.current.remove();
+          
+          subscriptionRef.current = SmsListener.addListener((message: any) => {
+            try {
+              const body = message.body || message.messageBody;
+              if (!body) return;
+
+              const parsed = parseTransactionalSMS(body);
+              if (parsed) {
+                addExtraExpense({
+                  ...parsed,
+                  text: parsed.merchant || 'Unknown Transaction'
+                });
+                const icon = parsed.type === 'credit' ? 'arrow-down-circle' : 'cash-outline';
+                const verb = parsed.type === 'credit' ? 'Received' : 'Spent';
+                showToast(`${verb} ₹${parsed.amount} - ${parsed.merchant}`, icon);
               }
-            });
-          }
-        } catch (err) {
-          console.warn('Permission error:', err);
+            } catch (e) {
+              console.error('Roamio SMS track error', e);
+            }
+          });
         }
+      } catch (err) {
+        console.warn('Permission error:', err);
       }
     }
 
-    requestSmsPermission();
+    setupSmsListener();
+
+    const appStateSub = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'active') {
+        setupSmsListener();
+      }
+    });
 
     return () => {
-      if (subscription) {
-        subscription.remove();
-      }
+      if (subscriptionRef.current) subscriptionRef.current.remove();
+      appStateSub.remove();
     };
   }, [addExtraExpense, showToast]);
 
@@ -87,8 +93,10 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="persona" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="settings" options={{ presentation: 'card', animation: 'slide_from_right' }} />
+        <Stack.Screen name="agent"        options={{ presentation: 'card',   animation: 'slide_from_right'  }} />
+        <Stack.Screen name="persona"       options={{ presentation: 'modal',   animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="settings"      options={{ presentation: 'card',   animation: 'slide_from_right'  }} />
+        <Stack.Screen name="subscription"  options={{ presentation: 'card',   animation: 'slide_from_right'  }} />
       </Stack>
       <CustomToast />
     </GestureHandlerRootView>

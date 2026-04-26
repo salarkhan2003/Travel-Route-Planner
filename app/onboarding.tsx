@@ -47,10 +47,10 @@ const SLIDES = [
     accent: '#1565C0', cardBg: '#BBDEFB', icon: 'BU',
   },
   {
-    id: '5', title: 'Travel as\nOne Family',
-    subtitle: 'Manage all members, split expenses, broadcast alerts and stay in sync.',
-    source: require('../animations/Adding Guests Interaction.json'),
-    accent: '#388E3C', cardBg: '#DCEDC8', icon: 'FM',
+    id: '5', title: 'Meet Your\nAI Travel Pilot',
+    subtitle: 'Roamio AI runs on Groq LPU — 10x faster than ChatGPT. Plan entire trips, compare routes and get instant answers in seconds.',
+    source: require('../animations/Man Planning A Sightseeing Route.json'),
+    accent: '#4F46E5', cardBg: '#EEF2FF', icon: 'AI',
   },
   {
     id: '6', title: "Let's Get\nStarted",

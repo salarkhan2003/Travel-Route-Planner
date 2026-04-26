@@ -7,6 +7,8 @@
  * ✦ All elements: double shadow, ultra-rounded, inner sheen
  */
 import React, { useRef, useState } from 'react';
+import { useSettingsStore } from '../../src/store/settingsStore';
+import { NC, getTheme, MINT, FONTS, CLAY_CARD_V2, CLAY_BTN_V2 } from '../../src/constants/theme';
 import {
   Alert, Animated, ScrollView, StyleSheet,
   Text, TextInput, TouchableOpacity, View, ActivityIndicator, Modal, Image
@@ -17,13 +19,23 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import Svg, { Polyline as SvgPolyline } from 'react-native-svg';
 import { useToastStore } from '../../src/store/toastStore';
-import { ClayCard } from '../../src/components/clay/ClayCard';
-import { ClayButton } from '../../src/components/clay/ClayButton';
+// ── Inline stubs — crash-safe replacements for ClayCard/ClayButton ────────────
+function ClayCard({ children, style, variant }: { children: React.ReactNode; style?: any; variant?: string; color?: string; radius?: number; padding?: number }) {
+  const darkMode = useSettingsStore((s) => s.darkMode);
+  const bg = variant === 'green' ? (darkMode ? '#001A0D' : '#1B5E20') : variant === 'mint' ? (darkMode ? '#0A120B' : '#E8F5E9') : (darkMode ? '#0F1117' : '#FFFFFF');
+  const bdr = darkMode ? '#27272A' : 'rgba(165,214,167,0.4)';
+  return <View style={[{ borderRadius: 36, padding: 22, marginBottom: 16, borderWidth: 1.5, borderColor: bdr, backgroundColor: bg }, style as any]}>{children}</View>;
+}
+function ClayButton({ label, onPress, color, textColor, style, small }: { label: string; onPress: () => void; color?: string; textColor?: string; style?: any; small?: boolean; ghost?: boolean; icon?: string }) {
+  const darkMode = useSettingsStore((s) => s.darkMode);
+  const bg2 = color ?? (darkMode ? '#00F59B' : '#2E7D32');
+  const fg = textColor ?? (darkMode ? '#000' : '#FFF');
+  return <TouchableOpacity onPress={onPress} style={[{ borderRadius: 999, paddingVertical: small ? 12 : 18, paddingHorizontal: small ? 24 : 36, backgroundColor: bg2, alignItems: 'center' as const, justifyContent: 'center' as const }, style]}><Text style={{ color: fg, fontSize: small ? 13 : 16, fontFamily: FONTS.display, fontWeight: '800' }}>{label}</Text></TouchableOpacity>;
+}
 import { useTripStore } from '../../src/store/tripStore';
 import { useFamilyStore } from '../../src/store/familyStore';
 import { CURRENCIES } from '../../src/constants/currencies';
 import { useCurrency } from '../../src/hooks/useCurrency';
-import { NC } from '../../src/constants/theme';
 import { useTranslation } from '../../src/hooks/useTranslation';
 
 const POPULAR_CITIES = [
@@ -61,7 +73,7 @@ function getPersonaInfo(p: string) {
     case 'solo': return { title: 'Solo Explorer', icon: 'person', color: '#00E676' };
     case 'business': return { title: 'Business Mover', icon: 'briefcase', color: '#2196F3' };
     case 'spiritual': return { title: 'Spiritual Pilgrim', icon: 'sunny', color: '#FFD600' };
-    default: return { title: 'Select Persona', icon: 'help-circle', color: NC.outline };
+    default: return { title: 'Select Persona', icon: 'help-circle', color: MINT[300] };
   }
 }
 
@@ -104,14 +116,15 @@ const DISCOVER_PREFERENCES = {
 };
 
 // ── Liquid Progress Bar — Glassmorphic clay gauge ─────────────────────────────
-function LiquidBar({ pct, color = NC.primary }: { pct: number; color?: string }) {
+function LiquidBar({ pct, color = MINT[500] }: { pct: number; color?: string }) {
+  const darkMode = useSettingsStore((s) => s.darkMode);
   const anim = useRef(new Animated.Value(0)).current;
   React.useEffect(() => {
     Animated.spring(anim, { toValue: pct, useNativeDriver: false, damping: 14, stiffness: 60 }).start();
   }, [pct]);
   const w = anim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
   return (
-    <View style={lb.track}>
+    <View style={[lb.track, { backgroundColor: darkMode ? '#121212' : '#DCF0DE', borderColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(165,214,167,0.5)' }]}>
       <Animated.View style={[lb.fill, { width: w as any, backgroundColor: color }]}>
         {/* Liquid sheen — glass highlight on fill */}
         <View style={lb.sheen} />
@@ -138,9 +151,10 @@ const lb = StyleSheet.create({
 
 // ── 3D Clay Icon — inflated sphere ────────────────────────────────────────────
 function ClayIcon({ icon, bg, size = 54 }: { icon: string; bg: string; size?: number }) {
+  const darkMode = useSettingsStore((s) => s.darkMode);
   return (
-    <View style={[ci.wrap, { width: size, height: size, borderRadius: size / 2, backgroundColor: bg }]}>
-      <View style={[ci.sheen, { borderTopLeftRadius: size / 2, borderTopRightRadius: size / 2 }]} />
+    <View style={[ci.wrap, { width: size, height: size, borderRadius: size / 2, backgroundColor: bg, borderColor: darkMode ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.9)', borderBottomColor: darkMode ? 'rgba(0,0,0,0.5)' : 'rgba(165,214,167,0.35)', borderRightColor: darkMode ? 'rgba(0,0,0,0.4)' : 'rgba(165,214,167,0.25)', shadowColor: darkMode ? 'rgba(0,245,155,0.3)' : 'rgba(27,94,32,0.3)' }]}>
+      <View style={[ci.sheen, { borderTopLeftRadius: size / 2, borderTopRightRadius: size / 2, backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)' }]} />
       <Text style={[ci.icon, { fontSize: size * 0.42 }]}>{icon}</Text>
     </View>
   );
@@ -164,10 +178,14 @@ const ci = StyleSheet.create({
 
 // ── Enhanced Discover Section Component ─────────────────────────────────────
 function DiscoverSection({ router }: { router: any }) {
+  const darkMode = useSettingsStore((s) => s.darkMode);
+  const theme = getTheme(darkMode);
   const [activeTab, setActiveTab] = useState<'weekend' | 'trending' | 'nearby' | 'fromBookings'>(DISCOVER_PREFERENCES.defaultTab);
   const [showPreferences, setShowPreferences] = useState(false);
   const [preferences, setPreferences] = useState(DISCOVER_PREFERENCES);
   const [userBookings, setUserBookings] = useState<any[]>([]);
+  const [isVisible, setIsVisible] = useState(true);
+
 
   // Simulate loading user's booked tickets and generating recommendations
   React.useEffect(() => {
@@ -200,31 +218,39 @@ function DiscoverSection({ router }: { router: any }) {
   return (
     <View>
       <View style={discoverStyles.header}>
-        <Text style={s.sectionHead}>Discover</Text>
-        <TouchableOpacity onPress={() => setShowPreferences(true)} style={discoverStyles.prefButton}>
-          <Ionicons name="options-outline" size={18} color={NC.primary} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={s.sectionHead}>Discover</Text>
+          <TouchableOpacity onPress={() => setIsVisible(!isVisible)} style={[discoverStyles.hideButton, { backgroundColor: darkMode ? '#1A1A1A' : '#F1F8F2', borderColor: darkMode ? 'rgba(0,245,155,0.2)' : 'rgba(165,214,167,0.4)' }]}>
+            <Ionicons name={isVisible ? "eye-off-outline" : "eye-outline"} size={16} color={theme.primary} />
+            <Text style={[discoverStyles.hideText, { color: theme.primary }]}>{isVisible ? "Hide" : "Show"}</Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity onPress={() => setShowPreferences(true)} style={[discoverStyles.prefButton, { backgroundColor: darkMode ? theme.surfaceLow : '#FFF', borderColor: darkMode ? 'rgba(0,245,155,0.2)' : 'rgba(165,214,167,0.3)' }]}>
+          <Ionicons name="options-outline" size={18} color={theme.primary} />
         </TouchableOpacity>
       </View>
 
-      <ClayCard variant="white" style={discoverStyles.card}>
+      {isVisible && (
+        <ClayCard variant="white" style={discoverStyles.card}>
         {/* Tab Bar */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={discoverStyles.tabBar}>
           {tabs.map(tab => (
             <TouchableOpacity
               key={tab.id}
-              style={[discoverStyles.tab, activeTab === tab.id && discoverStyles.tabActive]}
+              style={[discoverStyles.tab, { backgroundColor: darkMode ? '#0D0D12' : '#F1F8F2' }, activeTab === tab.id && discoverStyles.tabActive]}
               onPress={() => setActiveTab(tab.id as any)}
             >
               <View style={discoverStyles.tabIconWrap}>
-                <Ionicons name={tab.icon as any} size={14} color={activeTab === tab.id ? '#FFF' : NC.primary} />
+                <Ionicons name={tab.icon as any} size={14} color={activeTab === tab.id ? (darkMode ? '#000' : '#FFF') : theme.primary} />
                 {tab.badge && <View style={discoverStyles.tabBadge} />}
               </View>
-              <Text style={[discoverStyles.tabText, activeTab === tab.id && discoverStyles.tabTextActive]}>
+              <Text style={[discoverStyles.tabText, { color: darkMode ? '#94A3B8' : MINT[700] }, activeTab === tab.id && (darkMode ? { color: '#000', fontFamily: FONTS.display, fontWeight: '900' } : discoverStyles.tabTextActive)]}>
                 {tab.label}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
+
 
         {/* Content Title */}
         <View style={discoverStyles.contentHeader}>
@@ -264,12 +290,12 @@ function DiscoverSection({ router }: { router: any }) {
                 
                 <View style={discoverStyles.tripMeta}>
                   <View style={discoverStyles.metaItem}>
-                    <Ionicons name="time-outline" size={12} color={NC.onSurfaceVariant} />
+                    <Ionicons name="time-outline" size={12} color={MINT[700]} />
                     <Text style={discoverStyles.metaText}>{trip.days}D</Text>
                   </View>
                   <View style={discoverStyles.metaDivider} />
                   <View style={discoverStyles.metaItem}>
-                    <Ionicons name="navigate-outline" size={12} color={NC.onSurfaceVariant} />
+                    <Ionicons name="navigate-outline" size={12} color={MINT[700]} />
                     <Text style={discoverStyles.metaText}>{trip.distance}</Text>
                   </View>
                   <View style={discoverStyles.metaDivider} />
@@ -285,13 +311,13 @@ function DiscoverSection({ router }: { router: any }) {
               
               <View style={discoverStyles.tripCostCol}>
                 <Text style={discoverStyles.tripCost}>{trip.cost}</Text>
-                <Ionicons name="chevron-forward" size={18} color={NC.primary} />
+                <Ionicons name="chevron-forward" size={18} color={MINT[500]} />
               </View>
             </TouchableOpacity>
           ))
         ) : (
           <View style={discoverStyles.emptyState}>
-            <Ionicons name="compass-outline" size={40} color={NC.outlineVariant} />
+            <Ionicons name="compass-outline" size={40} color={MINT[200]} />
             <Text style={discoverStyles.emptyText}>No recommendations yet</Text>
             <Text style={discoverStyles.emptySub}>Book a trip to get personalized suggestions</Text>
           </View>
@@ -303,9 +329,10 @@ function DiscoverSection({ router }: { router: any }) {
           onPress={() => router.push('/(tabs)/explore')}
         >
           <Text style={discoverStyles.viewAllText}>Explore All Destinations</Text>
-          <Ionicons name="arrow-forward" size={16} color={NC.primary} />
+          <Ionicons name="arrow-forward" size={16} color={MINT[500]} />
         </TouchableOpacity>
       </ClayCard>
+      )}
 
       {/* Preferences Modal */}
       <Modal visible={showPreferences} transparent animationType="fade">
@@ -314,7 +341,7 @@ function DiscoverSection({ router }: { router: any }) {
             <View style={discoverStyles.modalHeader}>
               <Text style={discoverStyles.modalTitle}>Discover Preferences</Text>
               <TouchableOpacity onPress={() => setShowPreferences(false)}>
-                <Ionicons name="close" size={24} color={NC.primary} />
+                <Ionicons name="close" size={24} color={MINT[500]} />
               </TouchableOpacity>
             </View>
 
@@ -378,6 +405,12 @@ function getTagColor(tag: string): string {
 
 const discoverStyles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  hideButton: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+    backgroundColor: '#F1F8F2', borderWidth: 1, borderColor: 'rgba(165,214,167,0.4)',
+  },
+  hideText: { fontSize: 11, fontFamily: FONTS.body, fontWeight: '700', color: MINT[500] },
   prefButton: { 
     width: 36, height: 36, borderRadius: 18, 
     backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center',
@@ -389,13 +422,13 @@ const discoverStyles = StyleSheet.create({
   tab: { 
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 14, paddingVertical: 10, 
-    borderRadius: 20, marginRight: 8,
+    borderRadius: 28, marginRight: 8,
     backgroundColor: '#F1F8F2',
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)',
   },
   tabActive: { 
-    backgroundColor: NC.primary, 
-    borderColor: NC.primary,
+    backgroundColor: MINT[500], 
+    borderColor: MINT[500],
     shadowColor: 'rgba(46,125,50,0.3)', shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 6, elevation: 4,
   },
   tabIconWrap: { position: 'relative' },
@@ -404,11 +437,11 @@ const discoverStyles = StyleSheet.create({
     width: 8, height: 8, borderRadius: 4, backgroundColor: '#E53935',
     borderWidth: 1, borderColor: '#FFF',
   },
-  tabText: { fontSize: 13, fontWeight: '700', color: NC.onSurfaceVariant },
-  tabTextActive: { color: '#FFF', fontWeight: '800' },
+  tabText: { fontSize: 13, fontFamily: FONTS.body, fontWeight: '700', color: MINT[700] },
+  tabTextActive: { color: '#FFF', fontFamily: FONTS.display, fontWeight: '800' },
   contentHeader: { marginBottom: 14 },
-  contentTitle: { fontSize: 16, fontWeight: '900', color: NC.onSurface },
-  contentSub: { fontSize: 12, color: NC.onSurfaceVariant, marginTop: 2 },
+  contentTitle: { fontSize: 16, fontFamily: FONTS.display, fontWeight: '900', color: MINT[900] },
+  contentSub: { fontSize: 12, color: MINT[700], marginTop: 2 },
   tripRow: { 
     flexDirection: 'row', alignItems: 'center', 
     paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(165,214,167,0.2)',
@@ -421,70 +454,72 @@ const discoverStyles = StyleSheet.create({
   tripEmoji: { fontSize: 24 },
   tripInfo: { flex: 1 },
   tripHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  tripRoute: { fontSize: 15, fontWeight: '800', color: NC.onSurface },
+  tripRoute: { fontSize: 15, fontFamily: FONTS.display, fontWeight: '800', color: MINT[900] },
   trendingBadge: { 
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: '#4CAF50', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8,
   },
-  trendingText: { fontSize: 10, fontWeight: '900', color: '#FFF' },
+  trendingText: { fontSize: 10, fontFamily: FONTS.display, fontWeight: '900', color: '#FFF' },
   tripMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 12, color: NC.onSurfaceVariant, fontWeight: '600' },
-  metaDivider: { width: 3, height: 3, borderRadius: 2, backgroundColor: NC.outlineVariant },
+  metaText: { fontSize: 12, color: MINT[700], fontWeight: '600' },
+  metaDivider: { width: 3, height: 3, borderRadius: 2, backgroundColor: MINT[200] },
   tagBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  tagText: { fontSize: 10, fontWeight: '800', color: NC.onSurface },
-  reasonText: { fontSize: 11, color: NC.primary, marginTop: 4, fontWeight: '600' },
+  tagText: { fontSize: 10, fontFamily: FONTS.display, fontWeight: '800', color: MINT[900] },
+  reasonText: { fontSize: 11, color: MINT[500], marginTop: 4, fontWeight: '600' },
   tripCostCol: { alignItems: 'flex-end', marginLeft: 8 },
-  tripCost: { fontSize: 14, fontWeight: '900', color: NC.primary, marginBottom: 4 },
+  tripCost: { fontSize: 14, fontFamily: FONTS.display, fontWeight: '900', color: MINT[500], marginBottom: 4 },
   viewAllBtn: { 
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     marginTop: 16, paddingVertical: 12,
     borderTopWidth: 1, borderTopColor: 'rgba(165,214,167,0.3)',
   },
-  viewAllText: { fontSize: 14, fontWeight: '800', color: NC.primary },
+  viewAllText: { fontSize: 14, fontFamily: FONTS.display, fontWeight: '800', color: MINT[500] },
   emptyState: { alignItems: 'center', paddingVertical: 40 },
-  emptyText: { fontSize: 16, fontWeight: '700', color: NC.onSurfaceVariant, marginTop: 12 },
-  emptySub: { fontSize: 12, color: NC.outline, marginTop: 4 },
+  emptyText: { fontSize: 16, fontFamily: FONTS.body, fontWeight: '700', color: MINT[700], marginTop: 12 },
+  emptySub: { fontSize: 12, color: MINT[300], marginTop: 4 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalSheet: { 
     backgroundColor: '#FFF', borderTopLeftRadius: 40, borderTopRightRadius: 40,
     padding: 24, paddingBottom: 40,
   },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: '900', color: NC.onSurface },
-  prefLabel: { fontSize: 13, fontWeight: '800', color: NC.onSurfaceVariant, marginBottom: 12, marginTop: 16 },
+  modalTitle: { fontSize: 20, fontFamily: FONTS.display, fontWeight: '900', color: MINT[900] },
+  prefLabel: { fontSize: 13, fontFamily: FONTS.display, fontWeight: '800', color: MINT[700], marginBottom: 12, marginTop: 16 },
   prefOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   prefOption: { 
     paddingHorizontal: 16, paddingVertical: 10, 
-    borderRadius: 20, backgroundColor: '#F1F8F2',
+    borderRadius: 28, backgroundColor: '#F1F8F2',
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)',
   },
-  prefOptionActive: { backgroundColor: NC.primary, borderColor: NC.primary },
-  prefOptionText: { fontSize: 13, fontWeight: '700', color: NC.onSurface },
+  prefOptionActive: { backgroundColor: MINT[500], borderColor: MINT[500] },
+  prefOptionText: { fontSize: 13, fontFamily: FONTS.body, fontWeight: '700', color: MINT[900] },
   prefOptionTextActive: { color: '#FFF' },
   toggleRow: { 
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 12,
   },
-  toggleText: { fontSize: 14, fontWeight: '600', color: NC.onSurface },
+  toggleText: { fontSize: 14, fontWeight: '600', color: MINT[900] },
   toggle: { 
     width: 50, height: 28, borderRadius: 14, backgroundColor: '#E0E0E0',
     padding: 3,
   },
-  toggleActive: { backgroundColor: NC.primary },
+  toggleActive: { backgroundColor: MINT[500] },
   toggleDot: { 
     width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFF',
     shadowColor: 'rgba(0,0,0,0.2)', shadowOffset: { width: 1, height: 1 }, shadowOpacity: 1, shadowRadius: 2,
   },
   toggleDotActive: { marginLeft: 22 },
   saveBtn: { 
-    backgroundColor: NC.primary, borderRadius: 24, paddingVertical: 16, alignItems: 'center', marginTop: 24,
+    backgroundColor: MINT[500], borderRadius: 32, paddingVertical: 16, alignItems: 'center', marginTop: 24,
     shadowColor: 'rgba(46,125,50,0.4)', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 12, elevation: 8,
   },
-  saveBtnText: { fontSize: 16, fontWeight: '900', color: '#FFF' },
+  saveBtnText: { fontSize: 16, fontFamily: FONTS.display, fontWeight: '900', color: '#FFF' },
 });
 
 export default function HomeScreen() {
+  const darkMode = useSettingsStore((s) => s.darkMode);
+  const theme = getTheme(darkMode);
   const router = useRouter();
   const showToast = useToastStore(s => s.showToast);
   const members = useFamilyStore(s => s.members);
@@ -683,11 +718,30 @@ export default function HomeScreen() {
                   <Text style={s.personaMiniLabel}>{t('traveler_type') || 'TRAVELER TYPE'}</Text>
                   <Text style={s.personaMiniTitle}>{t(getPersonaInfo(persona).title.toLowerCase().replace(/ /g, '_'))}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={NC.outlineVariant} />
+                <Ionicons name="chevron-forward" size={18} color={MINT[200]} />
               </View>
             </ClayCard>
           </TouchableOpacity>
         )}
+
+        {/* ── Roamio AI Agent Banner ── */}
+        <TouchableOpacity
+          style={[s.agentBanner, { backgroundColor: darkMode ? '#0D0F1C' : '#FFFFFF', borderColor: darkMode ? '#1E2140' : 'rgba(99,102,241,0.25)' }]}
+          onPress={() => router.push('/agent' as any)}
+          activeOpacity={0.88}
+        >
+          <View style={s.agentPulseWrap}>
+            <View style={[s.agentPulseRing, { borderColor: '#00F59B55' }]} />
+            <View style={[s.agentPulseDot, { backgroundColor: '#00F59B' }]} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.agentBannerTitle, { color: darkMode ? '#F1F5F9' : '#1E1B4B' }]}>Roamio AI is watching your trip</Text>
+            <Text style={[s.agentBannerSub, { color: '#6B7280' }]}>Groq LPU  ·  Tap to open Command Center</Text>
+          </View>
+          <View style={[s.agentArrow, { backgroundColor: '#6366F118' }]}>
+            <Ionicons name="sparkles" size={16} color="#6366F1" />
+          </View>
+        </TouchableOpacity>
 
         {/* ── Clay Search Tube — sunken ditch ── */}
         <View style={s.searchTube}>
@@ -695,7 +749,7 @@ export default function HomeScreen() {
           <TextInput
             style={s.searchInput}
             placeholder={t('search_placeholder')}
-            placeholderTextColor={NC.outlineVariant}
+            placeholderTextColor={MINT[200]}
             value={search}
             onChangeText={handleSearchChange}
           />
@@ -707,16 +761,16 @@ export default function HomeScreen() {
 
         {/* Search Suggestions */}
         {searchSuggestions.length > 0 && (
-          <View style={{backgroundColor:NC.surfaceLowest,borderRadius:20,marginBottom:16,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',overflow:'hidden'}}>
+          <View style={{backgroundColor:'#FFFFFF',borderRadius: 28,marginBottom:16,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',overflow:'hidden'}}>
             {searchSuggestions.map((sg,i) => (
               <TouchableOpacity key={i} style={{flexDirection:'row',alignItems:'center',padding:14,borderBottomWidth:1,borderBottomColor:'rgba(0,0,0,0.04)'}}
                 onPress={() => { setSearch(sg.route.split(' → ')[0]); setSearchSuggestions([]); router.push({pathname:'/(tabs)/explore',params:{q:sg.route.split(' → ')[0]}}); }}>
-                <Ionicons name="compass" size={18} color={NC.primary} style={{marginRight:10}}/>
+                <Ionicons name="compass" size={18} color={MINT[500]} style={{marginRight:10}}/>
                 <View style={{flex:1}}>
-                  <Text style={{fontSize:14,fontWeight:'800',color:NC.onSurface}}>{sg.title}</Text>
-                  <Text style={{fontSize:11,color:NC.onSurfaceVariant,fontWeight:'600'}}>{sg.route} • {sg.days} Days</Text>
+                  <Text style={{fontSize:14,fontFamily: FONTS.display, fontWeight: '800',color:MINT[900]}}>{sg.title}</Text>
+                  <Text style={{fontSize:11,color:MINT[700],fontWeight:'600'}}>{sg.route} • {sg.days} Days</Text>
                 </View>
-                <Ionicons name="arrow-forward" size={16} color={NC.outlineVariant}/>
+                <Ionicons name="arrow-forward" size={16} color={MINT[200]}/>
               </TouchableOpacity>
             ))}
           </View>
@@ -758,7 +812,7 @@ export default function HomeScreen() {
             <Text style={s.heroBudgetLabel}>{fmtFull(spentBudget)} {t('spent') || 'spent'}</Text>
             <Text style={s.heroBudgetLabel}>{fmtFull(globalBudget - spentBudget)} {t('left') || 'left'}</Text>
           </View>
-          <LiquidBar pct={budgetPct} color={budgetPct > 80 ? NC.warning : NC.primaryFixed} />
+          <LiquidBar pct={budgetPct} color={budgetPct > 80 ? NC.warning : MINT[300]} />
         </ClayCard>
 
         {/* Bento row 1: Weather + Stats */}
@@ -767,7 +821,7 @@ export default function HomeScreen() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text style={s.bentoTileLabel}>Weather</Text>
               <TouchableOpacity onPress={() => fetchWeather()}>
-                <Ionicons name="refresh" size={14} color={NC.primary} />
+                <Ionicons name="refresh" size={14} color={MINT[500]} />
               </TouchableOpacity>
             </View>
             
@@ -809,7 +863,7 @@ export default function HomeScreen() {
           <ClayCard variant="white">
             <View style={{flexDirection:'row',justifyContent:'space-between', alignItems:'center'}}>
               <Text style={s.bentoTileLabel}>{t('budget_utilized') || 'Budget Utilized'}</Text>
-              <Ionicons name="pencil-outline" size={14} color={NC.outlineVariant}/>
+              <Ionicons name="pencil-outline" size={14} color={MINT[200]}/>
             </View>
             <View style={{flexDirection:'row',justifyContent:'space-between', alignItems:'flex-end', marginBottom: 16, marginTop: 4}}>
                <View>
@@ -818,7 +872,7 @@ export default function HomeScreen() {
                </View>
                <Text style={[s.budgetRemain, {fontSize: 16, marginBottom: 8}]}>{fmtFull(globalBudget - spentBudget)} left</Text>
             </View>
-            <LiquidBar pct={budgetPct} color={budgetPct > 80 ? NC.warning : NC.primary} />
+            <LiquidBar pct={budgetPct} color={budgetPct > 80 ? NC.warning : MINT[500]} />
           </ClayCard>
         </TouchableOpacity>
 
@@ -840,14 +894,14 @@ export default function HomeScreen() {
         <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom: 14, marginTop: 6}}>
           <Text style={[s.sectionHead, {marginBottom:0, marginTop:0}]}>Route Weather</Text>
           <TouchableOpacity onPress={() => setShowAddWeather(true)}>
-            <Ionicons name="add-circle" size={24} color={NC.primary} />
+            <Ionicons name="add-circle" size={24} color={MINT[500]} />
           </TouchableOpacity>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.hScroll}>
           {routeWeathers.map(w => (
             <ClayCard key={w.city} variant="white" style={s.weatherCard}>
               <TouchableOpacity style={{position:'absolute', top: 5, right: 5, padding: 4}} onPress={() => setRouteWeathers(routeWeathers.filter(rw => rw.city !== w.city))}>
-                <Ionicons name="close-circle" size={18} color={NC.outlineVariant} />
+                <Ionicons name="close-circle" size={18} color={MINT[200]} />
               </TouchableOpacity>
               <Text style={s.weatherCardIcon}>{w.icon}</Text>
               <Text style={s.weatherCardTemp}>{w.temp}</Text>
@@ -857,8 +911,8 @@ export default function HomeScreen() {
           ))}
           <TouchableOpacity onPress={() => setShowAddWeather(true)}>
             <ClayCard variant="white" style={[s.weatherCard, {paddingTop: 30, paddingBottom: 30}]}>
-              <Ionicons name="add" size={32} color={NC.primary} style={{marginBottom:4}}/>
-              <Text style={[s.weatherCardCity, {color:NC.primary}]}>Add</Text>
+              <Ionicons name="add" size={32} color={MINT[500]} style={{marginBottom:4}}/>
+              <Text style={[s.weatherCardCity, {color:MINT[500]}]}>Add</Text>
             </ClayCard>
           </TouchableOpacity>
         </ScrollView>
@@ -895,7 +949,7 @@ export default function HomeScreen() {
               <View style={s.fxBox}>
                 <Text style={s.fxBoxLabel}>FROM ({fromCur})</Text>
                 <TextInput style={s.fxInput} value={amount} onChangeText={setAmount}
-                  keyboardType="numeric" placeholderTextColor={NC.outlineVariant} />
+                  keyboardType="numeric" placeholderTextColor={MINT[200]} />
               </View>
               <TouchableOpacity style={s.fxSwap} onPress={() => { const t = fromCur; setFromCur(toCur); setToCur(t); }}>
                 <View style={s.fxSwapSheen} />
@@ -914,8 +968,8 @@ export default function HomeScreen() {
                 const range = (Number(max) - Number(min)).toFixed(2);
                 showToast(`High: ${max} ${toCur} | Low: ${min} ${toCur} | Var: ${range}`, 'analytics-outline');
               }} style={{marginTop:14,alignItems:'center'}}>
-                <Text style={{fontSize:10,fontWeight:'700',color:NC.onSurfaceVariant,marginBottom:4}}>14-Day Trend ({fromCur} → {toCur}) · Tap for info</Text>
-                <Text style={{fontSize:12,fontWeight:'800',color:NC.primary,marginBottom:8}}>High: {Math.max(...fxHistory).toFixed(2)}  •  Low: {Math.min(...fxHistory).toFixed(2)}</Text>
+                <Text style={{fontSize:10,fontFamily: FONTS.body, fontWeight: '700',color:MINT[700],marginBottom:4}}>14-Day Trend ({fromCur} → {toCur}) · Tap for info</Text>
+                <Text style={{fontSize:12,fontFamily: FONTS.display, fontWeight: '800',color:MINT[500],marginBottom:8}}>High: {Math.max(...fxHistory).toFixed(2)}  •  Low: {Math.min(...fxHistory).toFixed(2)}</Text>
                 <Svg width={260} height={50}>
                   <SvgPolyline
                     points={fxHistory.map((v,i) => {
@@ -924,7 +978,7 @@ export default function HomeScreen() {
                       const range = maxV - minV || 1;
                       return `${(i/(fxHistory.length-1))*258+1},${48 - ((v-minV)/range)*46}`;
                     }).join(' ') + ` 260,${48 - ((fxHistory[fxHistory.length-1]-Math.min(...fxHistory))/(Math.max(...fxHistory)-Math.min(...fxHistory) || 1))*46}`}
-                    fill="none" stroke={NC.primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    fill="none" stroke={MINT[500]} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                   />
                 </Svg>
               </TouchableOpacity>
@@ -966,14 +1020,14 @@ export default function HomeScreen() {
             ))}
           </View>
           <ClayButton label="Broadcast Next Step" onPress={() => showToast('Next step sent to family', 'radio')}
-            color={NC.primary} small style={{ marginTop: 16 }} />
+            color={MINT[500]} small style={{ marginTop: 16 }} />
         </ClayCard>
 
         {/* ── Group Polls ── */}
         <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:14,marginTop:12}}>
           <Text style={[s.sectionHead,{marginBottom:0,marginTop:0}]}>Group Polls</Text>
           <TouchableOpacity onPress={() => setShowAddPoll(true)}>
-            <Ionicons name="add-circle" size={24} color={NC.primary} />
+            <Ionicons name="add-circle" size={24} color={MINT[500]} />
           </TouchableOpacity>
         </View>
         {polls.map((poll, pi) => (
@@ -1007,11 +1061,11 @@ export default function HomeScreen() {
             <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 36, borderTopRightRadius: 36, height: '70%', padding: 26 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                 <View>
-                  <Text style={{ fontSize: 22, fontWeight: '900', color: NC.primary }}>Live Translator</Text>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: NC.onSurfaceVariant }}>Powered by MyMemory API</Text>
+                  <Text style={{ fontSize: 22, fontFamily: FONTS.display, fontWeight: '900', color: MINT[500] }}>Live Translator</Text>
+                  <Text style={{ fontSize: 11, fontFamily: FONTS.body, fontWeight: '700', color: MINT[700] }}>Powered by MyMemory API</Text>
                 </View>
-                <TouchableOpacity onPress={() => { setShowTranslator(false); setTransResult(''); }} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: NC.surfaceLow, alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="close" size={22} color={NC.onSurfaceVariant} />
+                <TouchableOpacity onPress={() => { setShowTranslator(false); setTransResult(''); }} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: MINT[50], alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="close" size={22} color={MINT[700]} />
                 </TouchableOpacity>
               </View>
 
@@ -1026,59 +1080,59 @@ export default function HomeScreen() {
                 ].map(lang => (
                   <TouchableOpacity key={lang.c} onPress={() => setTransLang(lang.c)}
                     style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, marginRight: 8,
-                      backgroundColor: transLang === lang.c ? NC.primary : NC.surfaceLow }}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: transLang === lang.c ? '#FFF' : NC.onSurfaceVariant }}>{lang.l}</Text>
+                      backgroundColor: transLang === lang.c ? MINT[500] : MINT[50] }}>
+                    <Text style={{ fontSize: 13, fontFamily: FONTS.display, fontWeight: '800', color: transLang === lang.c ? '#FFF' : MINT[700] }}>{lang.l}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
 
               <View style={{position:'relative'}}>
                 <TextInput 
-                  style={{ backgroundColor: NC.surfaceLowest, borderWidth: 2, borderColor: 'rgba(165,214,167,0.3)', borderRadius: 20, padding: 16, fontSize: 16, color: NC.onSurface, fontWeight: '700', minHeight: 80, textAlignVertical: 'top', paddingRight: 40 }} 
+                  style={{ backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: 'rgba(165,214,167,0.3)', borderRadius: 28, padding: 16, fontSize: 16, color: MINT[900], fontFamily: FONTS.body, fontWeight: '700', minHeight: 80, textAlignVertical: 'top', paddingRight: 40 }} 
                   placeholder="Type text or use voice typing..." 
                   multiline value={transInput} onChangeText={setTransInput} 
                 />
                 {(transInput.length > 0 || transResult.length > 0) && (
                   <TouchableOpacity style={{position:'absolute', right:10, top:10, padding:4}} onPress={() => { setTransInput(''); setTransResult(''); }}>
-                    <Ionicons name="close-circle" size={24} color={NC.outlineVariant} />
+                    <Ionicons name="close-circle" size={24} color={MINT[200]} />
                   </TouchableOpacity>
                 )}
               </View>
               
               <View style={{flexDirection:'row',gap:10,marginTop:14}}>
                 <TouchableOpacity style={{flex:1}} onPress={translateText}>
-                  <View style={{backgroundColor:NC.primary,padding:14,borderRadius:18,alignItems:'center'}}>
-                    <Text style={{color:'#FFF',fontWeight:'900',fontSize:14}}>{transLoading ? 'Translating...' : 'Translate'}</Text>
+                  <View style={{backgroundColor:MINT[500],padding:14,borderRadius:18,alignItems:'center'}}>
+                    <Text style={{color:'#FFF',fontFamily: FONTS.display, fontWeight: '900',fontSize:14}}>{transLoading ? 'Translating...' : 'Translate'}</Text>
                   </View>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleVoiceTyping} style={{width:50,height:50,borderRadius:25,backgroundColor:recognizing ? '#FF1744' : NC.surfaceLow,alignItems:'center',justifyContent:'center'}}>
-                  <Ionicons name={recognizing ? "stop" : "mic"} size={22} color={recognizing ? "#FFF" : NC.primary}/>
+                <TouchableOpacity onPress={handleVoiceTyping} style={{width:50,height:50,borderRadius:25,backgroundColor:recognizing ? '#FF1744' : MINT[50],alignItems:'center',justifyContent:'center'}}>
+                  <Ionicons name={recognizing ? "stop" : "mic"} size={22} color={recognizing ? "#FFF" : MINT[500]}/>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => { if(transInput.trim()) speakText(transInput); }} style={{width:50,height:50,borderRadius:25,backgroundColor:NC.surfaceLow,alignItems:'center',justifyContent:'center'}}>
-                  <Ionicons name="volume-high" size={22} color={NC.primary}/>
+                <TouchableOpacity onPress={() => { if(transInput.trim()) speakText(transInput); }} style={{width:50,height:50,borderRadius:25,backgroundColor:MINT[50],alignItems:'center',justifyContent:'center'}}>
+                  <Ionicons name="volume-high" size={22} color={MINT[500]}/>
                 </TouchableOpacity>
               </View>
 
               {transResult ? (
-                <View style={{ backgroundColor: '#E8F5E9', borderRadius: 20, padding: 18, marginTop: 16, borderWidth: 2, borderColor: 'rgba(165,214,167,0.4)' }}>
+                <View style={{ backgroundColor: '#E8F5E9', borderRadius: 28, padding: 18, marginTop: 16, borderWidth: 2, borderColor: 'rgba(165,214,167,0.4)' }}>
                   <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: NC.onSurfaceVariant, letterSpacing: 1 }}>TRANSLATION</Text>
+                    <Text style={{ fontSize: 10, fontFamily: FONTS.display, fontWeight: '800', color: MINT[700], letterSpacing: 1 }}>TRANSLATION</Text>
                     <TouchableOpacity onPress={() => speakText(transResult)}>
-                      <Ionicons name="volume-high" size={20} color={NC.primary}/>
+                      <Ionicons name="volume-high" size={20} color={MINT[500]}/>
                     </TouchableOpacity>
                   </View>
-                  <Text style={{ fontSize: 18, fontWeight: '800', color: NC.primary, lineHeight: 26 }}>{transResult}</Text>
+                  <Text style={{ fontSize: 18, fontFamily: FONTS.display, fontWeight: '800', color: MINT[500], lineHeight: 26 }}>{transResult}</Text>
                 </View>
               ) : null}
 
               {/* History */}
               {transHistory.length > 0 && (
                 <View style={{marginTop: 20}}>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: NC.outline, marginBottom: 8, letterSpacing: 1 }}>HISTORY</Text>
+                  <Text style={{ fontSize: 11, fontFamily: FONTS.display, fontWeight: '800', color: MINT[300], marginBottom: 8, letterSpacing: 1 }}>HISTORY</Text>
                   {transHistory.map((h, i) => (
-                    <TouchableOpacity key={i} onPress={() => { setTransInput(h.q); setTransResult(h.a); }} style={{backgroundColor:NC.surfaceLowest, padding:12, borderRadius: 14, marginBottom: 8, borderWidth:1, borderColor:'rgba(0,0,0,0.05)'}}>
-                      <Text style={{fontSize:12, color:NC.onSurfaceVariant, fontWeight:'600'}} numberOfLines={1}>{h.q}</Text>
-                      <Text style={{fontSize:14, color:NC.primary, fontWeight:'800', marginTop:2}} numberOfLines={1}>{h.a}</Text>
+                    <TouchableOpacity key={i} onPress={() => { setTransInput(h.q); setTransResult(h.a); }} style={{backgroundColor:'#FFFFFF', padding:12, borderRadius: 14, marginBottom: 8, borderWidth:1, borderColor:'rgba(0,0,0,0.05)'}}>
+                      <Text style={{fontSize:12, color:MINT[700], fontWeight:'600'}} numberOfLines={1}>{h.q}</Text>
+                      <Text style={{fontSize:14, color:MINT[500], fontFamily: FONTS.display, fontWeight: '800', marginTop:2}} numberOfLines={1}>{h.a}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -1090,21 +1144,21 @@ export default function HomeScreen() {
         {/* Add Weather Modal */}
         <Modal visible={showAddWeather} transparent animationType="fade">
           <View style={{flex:1,backgroundColor:'rgba(0,0,0,0.5)',justifyContent:'center',alignItems:'center'}}>
-            <View style={{backgroundColor:'#FFF',borderRadius:28,padding:24,width:'80%'}}>
-               <Text style={{fontSize:20,fontWeight:'900',color:NC.primary,marginBottom:16}}>Add Weather</Text>
-               <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:16,fontSize:18,fontWeight:'700',color:NC.onSurface}} placeholder="City name" placeholderTextColor={NC.outlineVariant} value={newWeatherCity} onChangeText={setNewWeatherCity}/>
+            <View style={{backgroundColor:'#FFF',borderRadius: 36,padding:24,width:'80%'}}>
+               <Text style={{fontSize:20,fontFamily: FONTS.display, fontWeight: '900',color:MINT[500],marginBottom:16}}>Add Weather</Text>
+               <TextInput style={{backgroundColor:'#FFFFFF',borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:16,fontSize:18,fontFamily: FONTS.body, fontWeight: '700',color:MINT[900]}} placeholder="City name" placeholderTextColor={MINT[200]} value={newWeatherCity} onChangeText={setNewWeatherCity}/>
                <View style={{flexDirection:'row',gap:10,marginTop:20}}>
-                 <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.surfaceLow,alignItems:'center'}} onPress={() => setShowAddWeather(false)}>
-                   <Text style={{fontWeight:'800',color:NC.onSurfaceVariant}}>Cancel</Text>
+                 <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:MINT[50],alignItems:'center'}} onPress={() => setShowAddWeather(false)}>
+                   <Text style={{fontFamily: FONTS.display, fontWeight: '800',color:MINT[700]}}>Cancel</Text>
                  </TouchableOpacity>
-                 <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.primary,alignItems:'center'}} onPress={() => {
+                 <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:MINT[500],alignItems:'center'}} onPress={() => {
                    if(newWeatherCity.trim()){
                      setRouteWeathers([...routeWeathers, {city: newWeatherCity, temp: '30C', cond:'Sunny', icon:'☀️'}]);
                      setNewWeatherCity('');
                    }
                    setShowAddWeather(false);
                  }}>
-                   <Text style={{fontWeight:'900',color:'#FFF'}}>Add</Text>
+                   <Text style={{fontFamily: FONTS.display, fontWeight: '900',color:'#FFF'}}>Add</Text>
                  </TouchableOpacity>
                </View>
             </View>
@@ -1114,16 +1168,16 @@ export default function HomeScreen() {
         {/* Add Poll Modal */}
         <Modal visible={showAddPoll} transparent animationType="fade">
           <View style={{flex:1,backgroundColor:'rgba(0,0,0,0.5)',justifyContent:'center',alignItems:'center'}}>
-            <View style={{backgroundColor:'#FFF',borderRadius:28,padding:24,width:'85%'}}>
-               <Text style={{fontSize:20,fontWeight:'900',color:NC.primary,marginBottom:16}}>New Poll</Text>
-               <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontWeight:'700',color:NC.onSurface,marginBottom:10}} placeholder="Question (e.g. Next stop?)" placeholderTextColor={NC.outlineVariant} value={newPollQ} onChangeText={setNewPollQ}/>
-               <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontWeight:'700',color:NC.onSurface,marginBottom:10}} placeholder="Option 1" placeholderTextColor={NC.outlineVariant} value={newPollOpt1} onChangeText={setNewPollOpt1}/>
-               <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontWeight:'700',color:NC.onSurface}} placeholder="Option 2" placeholderTextColor={NC.outlineVariant} value={newPollOpt2} onChangeText={setNewPollOpt2}/>
+            <View style={{backgroundColor:'#FFF',borderRadius: 36,padding:24,width:'85%'}}>
+               <Text style={{fontSize:20,fontFamily: FONTS.display, fontWeight: '900',color:MINT[500],marginBottom:16}}>New Poll</Text>
+               <TextInput style={{backgroundColor:'#FFFFFF',borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontFamily: FONTS.body, fontWeight: '700',color:MINT[900],marginBottom:10}} placeholder="Question (e.g. Next stop?)" placeholderTextColor={MINT[200]} value={newPollQ} onChangeText={setNewPollQ}/>
+               <TextInput style={{backgroundColor:'#FFFFFF',borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontFamily: FONTS.body, fontWeight: '700',color:MINT[900],marginBottom:10}} placeholder="Option 1" placeholderTextColor={MINT[200]} value={newPollOpt1} onChangeText={setNewPollOpt1}/>
+               <TextInput style={{backgroundColor:'#FFFFFF',borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontFamily: FONTS.body, fontWeight: '700',color:MINT[900]}} placeholder="Option 2" placeholderTextColor={MINT[200]} value={newPollOpt2} onChangeText={setNewPollOpt2}/>
                <View style={{flexDirection:'row',gap:10,marginTop:20}}>
-                 <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.surfaceLow,alignItems:'center'}} onPress={() => setShowAddPoll(false)}>
-                   <Text style={{fontWeight:'800',color:NC.onSurfaceVariant}}>Cancel</Text>
+                 <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:MINT[50],alignItems:'center'}} onPress={() => setShowAddPoll(false)}>
+                   <Text style={{fontFamily: FONTS.display, fontWeight: '800',color:MINT[700]}}>Cancel</Text>
                  </TouchableOpacity>
-                 <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.primary,alignItems:'center'}} onPress={() => {
+                 <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:MINT[500],alignItems:'center'}} onPress={() => {
                    if(newPollQ.trim() && newPollOpt1.trim() && newPollOpt2.trim()){
                      setPolls([...polls, {id: Date.now().toString(), q: newPollQ, opts: [newPollOpt1, newPollOpt2], votes: [0, 0]}]);
                      setNewPollQ(''); setNewPollOpt1(''); setNewPollOpt2('');
@@ -1132,7 +1186,7 @@ export default function HomeScreen() {
                      showToast('Please fill all fields', 'warning');
                    }
                  }}>
-                   <Text style={{fontWeight:'900',color:'#FFF'}}>Create</Text>
+                   <Text style={{fontFamily: FONTS.display, fontWeight: '900',color:'#FFF'}}>Create</Text>
                  </TouchableOpacity>
                </View>
             </View>
@@ -1142,20 +1196,20 @@ export default function HomeScreen() {
         {/* Budget Edit Modal */}
         <Modal visible={showBudgetEdit} transparent animationType="fade">
           <View style={{flex:1,backgroundColor:'rgba(0,0,0,0.5)',justifyContent:'center',alignItems:'center'}}>
-            <View style={{backgroundColor:'#FFF',borderRadius:28,padding:24,width:'80%'}}>
-              <Text style={{fontSize:20,fontWeight:'900',color:NC.primary,marginBottom:16}}>Edit Budget</Text>
-              <Text style={{fontSize:11,fontWeight:'800',color:NC.onSurfaceVariant,marginBottom:8}}>Total Budget (₹)</Text>
-              <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:16,fontSize:22,fontWeight:'900',color:NC.onSurface,textAlign:'center'}} keyboardType="numeric" value={budgetInput} onChangeText={setBudgetInput}/>
+            <View style={{backgroundColor:'#FFF',borderRadius: 36,padding:24,width:'80%'}}>
+              <Text style={{fontSize:20,fontFamily: FONTS.display, fontWeight: '900',color:MINT[500],marginBottom:16}}>Edit Budget</Text>
+              <Text style={{fontSize:11,fontFamily: FONTS.display, fontWeight: '800',color:MINT[700],marginBottom:8}}>Total Budget (₹)</Text>
+              <TextInput style={{backgroundColor:'#FFFFFF',borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:16,fontSize:22,fontFamily: FONTS.display, fontWeight: '900',color:MINT[900],textAlign:'center'}} keyboardType="numeric" value={budgetInput} onChangeText={setBudgetInput}/>
               <View style={{flexDirection:'row',gap:10,marginTop:20}}>
-                <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.surfaceLow,alignItems:'center'}} onPress={() => setShowBudgetEdit(false)}>
-                  <Text style={{fontWeight:'800',color:NC.onSurfaceVariant}}>Cancel</Text>
+                <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:MINT[50],alignItems:'center'}} onPress={() => setShowBudgetEdit(false)}>
+                  <Text style={{fontFamily: FONTS.display, fontWeight: '800',color:MINT[700]}}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.primary,alignItems:'center'}} onPress={() => {
+                <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:MINT[500],alignItems:'center'}} onPress={() => {
                   const val = parseInt(budgetInput);
                   if(val > 0){ setBudget(val); showToast('Budget updated!','construct'); }
                   setShowBudgetEdit(false);
                 }}>
-                  <Text style={{fontWeight:'900',color:'#FFF'}}>Save</Text>
+                  <Text style={{fontFamily: FONTS.display, fontWeight: '900',color:'#FFF'}}>Save</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1165,26 +1219,26 @@ export default function HomeScreen() {
         {/* Hero Edit Modal */}
         <Modal visible={showHeroEdit} transparent animationType="fade">
           <View style={{flex:1,backgroundColor:'rgba(0,0,0,0.5)',justifyContent:'center',alignItems:'center'}}>
-            <View style={{backgroundColor:'#FFF',borderRadius:28,padding:24,width:'85%'}}>
-              <Text style={{fontSize:20,fontWeight:'900',color:NC.primary,marginBottom:16}}>Edit Trip Card</Text>
-              <Text style={{fontSize:11,fontWeight:'800',color:NC.onSurfaceVariant,marginBottom:6}}>Title</Text>
-              <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontWeight:'700',color:NC.onSurface,marginBottom:14}} value={heroTitle} onChangeText={setHeroTitle}/>
+            <View style={{backgroundColor:'#FFF',borderRadius: 36,padding:24,width:'85%'}}>
+              <Text style={{fontSize:20,fontFamily: FONTS.display, fontWeight: '900',color:MINT[500],marginBottom:16}}>Edit Trip Card</Text>
+              <Text style={{fontSize:11,fontFamily: FONTS.display, fontWeight: '800',color:MINT[700],marginBottom:6}}>Title</Text>
+              <TextInput style={{backgroundColor:'#FFFFFF',borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontFamily: FONTS.body, fontWeight: '700',color:MINT[900],marginBottom:14}} value={heroTitle} onChangeText={setHeroTitle}/>
               <View style={{flexDirection:'row',gap:10}}>
                 <View style={{flex:1}}>
-                  <Text style={{fontSize:11,fontWeight:'800',color:NC.onSurfaceVariant,marginBottom:6}}>Departs In</Text>
-                  <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontWeight:'700',color:NC.onSurface}} value={heroDeparts} onChangeText={setHeroDeparts}/>
+                  <Text style={{fontSize:11,fontFamily: FONTS.display, fontWeight: '800',color:MINT[700],marginBottom:6}}>Departs In</Text>
+                  <TextInput style={{backgroundColor:'#FFFFFF',borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontFamily: FONTS.body, fontWeight: '700',color:MINT[900]}} value={heroDeparts} onChangeText={setHeroDeparts}/>
                 </View>
                 <View style={{flex:1}}>
-                  <Text style={{fontSize:11,fontWeight:'800',color:NC.onSurfaceVariant,marginBottom:6}}>Platform</Text>
-                  <TextInput style={{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontWeight:'700',color:NC.onSurface}} value={heroPlatform} onChangeText={setHeroPlatform}/>
+                  <Text style={{fontSize:11,fontFamily: FONTS.display, fontWeight: '800',color:MINT[700],marginBottom:6}}>Platform</Text>
+                  <TextInput style={{backgroundColor:'#FFFFFF',borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:15,fontFamily: FONTS.body, fontWeight: '700',color:MINT[900]}} value={heroPlatform} onChangeText={setHeroPlatform}/>
                 </View>
               </View>
               <View style={{flexDirection:'row',gap:10,marginTop:20}}>
-                <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.surfaceLow,alignItems:'center'}} onPress={() => setShowHeroEdit(false)}>
-                  <Text style={{fontWeight:'800',color:NC.onSurfaceVariant}}>Cancel</Text>
+                <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:MINT[50],alignItems:'center'}} onPress={() => setShowHeroEdit(false)}>
+                  <Text style={{fontFamily: FONTS.display, fontWeight: '800',color:MINT[700]}}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:NC.primary,alignItems:'center'}} onPress={() => { setShowHeroEdit(false); showToast('Trip updated!','construct'); }}>
-                  <Text style={{fontWeight:'900',color:'#FFF'}}>Save</Text>
+                <TouchableOpacity style={{flex:1,padding:14,borderRadius:18,backgroundColor:MINT[500],alignItems:'center'}} onPress={() => { setShowHeroEdit(false); showToast('Trip updated!','construct'); }}>
+                  <Text style={{fontFamily: FONTS.display, fontWeight: '900',color:'#FFF'}}>Save</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1198,7 +1252,7 @@ export default function HomeScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: NC.background },
+  container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: 18, paddingTop: 8 },
 
   // Header
@@ -1207,7 +1261,7 @@ const s = StyleSheet.create({
   
   // Clay logo circle — inflated sphere
   logoCircle: {
-    width: 48, height: 48, borderRadius: 24,
+    width: 48, height: 48, borderRadius: 32,
     backgroundColor: '#FFF',
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: 'rgba(255,255,255,1)',
@@ -1222,14 +1276,27 @@ const s = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, height: '40%',
     backgroundColor: 'rgba(255,255,255,0.4)', zIndex: 2
   },
-  logoText: { fontSize: 24, fontWeight: '900', color: '#fff', zIndex: 1 },
-  appName: { fontSize: 24, fontWeight: '900', color: '#1B5E20', letterSpacing: -0.5 },
-  sub: { fontSize: 12, color: NC.onSurfaceVariant, marginTop: 2, fontWeight: '600' },
+  logoText: { fontSize: 24, fontFamily: FONTS.display, fontWeight: '900', color: '#fff', zIndex: 1 },
+  appName: { fontSize: 24, fontFamily: FONTS.display, fontWeight: '900', color: '#1B5E20', letterSpacing: -0.5 },
+  sub: { fontSize: 12, color: MINT[700], marginTop: 2, fontWeight: '600' },
+
+  // Roamio AI Agent banner
+  agentBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: 18, borderWidth: 1.5, padding: 14, marginBottom: 16,
+    elevation: 4, shadowColor: '#6366F1', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 8,
+  },
+  agentPulseWrap: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  agentPulseRing: { position: 'absolute', width: 34, height: 34, borderRadius: 17, borderWidth: 2 },
+  agentPulseDot: { width: 14, height: 14, borderRadius: 7 },
+  agentBannerTitle: { fontSize: 13, fontFamily: FONTS.display, fontWeight: '900' },
+  agentBannerSub: { fontSize: 10, marginTop: 2, fontFamily: FONTS.body, fontWeight: '700' },
+  agentArrow: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   
   // Clay avatar — inflated sphere
   avatar: {
     width: 50, height: 50, borderRadius: 25,
-    backgroundColor: NC.primary, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: MINT[500], alignItems: 'center', justifyContent: 'center',
     position: 'relative', overflow: 'hidden',
     borderWidth: 3, borderColor: 'rgba(255,255,255,0.85)',
     borderBottomColor: 'rgba(27,94,32,0.25)',
@@ -1240,7 +1307,7 @@ const s = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, height: '45%',
     backgroundColor: 'rgba(255,255,255,0.3)', borderTopLeftRadius: 25, borderTopRightRadius: 25,
   },
-  avatarText: { fontSize: 22, fontWeight: '900', color: '#fff', zIndex: 1 },
+  avatarText: { fontSize: 22, fontFamily: FONTS.display, fontWeight: '900', color: '#fff', zIndex: 1 },
   avatarOnline: { position: 'absolute', top: 2, right: 2, width: 12, height: 12, borderRadius: 6, backgroundColor: '#4CAF50', borderWidth: 2, borderColor: '#fff', zIndex: 2 },
 
   // Search tube — sunken/concave clay ditch
@@ -1255,10 +1322,10 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(165,214,167,0.25)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 10, elevation: 3,
     marginBottom: 22, gap: 10,
   },
-  searchTubeIcon: { fontSize: 18, color: NC.outline },
-  searchInput: { flex: 1, color: NC.onSurface, fontSize: 15, fontWeight: '600' },
+  searchTubeIcon: { fontSize: 18, color: MINT[300] },
+  searchInput: { flex: 1, color: MINT[900], fontSize: 15, fontWeight: '600' },
   planBtn: {
-    backgroundColor: NC.primary, borderRadius: 999,
+    backgroundColor: MINT[500], borderRadius: 999,
     paddingHorizontal: 20, paddingVertical: 10,
     position: 'relative', overflow: 'hidden',
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)',
@@ -1270,21 +1337,21 @@ const s = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, height: '55%',
     backgroundColor: 'rgba(255,255,255,0.15)', borderTopLeftRadius: 999, borderTopRightRadius: 999,
   },
-  planBtnText: { color: '#fff', fontSize: 14, fontWeight: '900', zIndex: 1 },
+  planBtnText: { color: '#fff', fontSize: 14, fontFamily: FONTS.display, fontWeight: '900', zIndex: 1 },
 
   // Hero card
   heroCard: { marginBottom: 16 },
   heroBadgeRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   livePill: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)' },
-  livePillText: { color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
-  dayPill: { color: NC.primaryFixed, fontSize: 12, fontWeight: '700', alignSelf: 'center' },
+  livePillText: { color: '#fff', fontSize: 9, fontFamily: FONTS.display, fontWeight: '900', letterSpacing: 1.5 },
+  dayPill: { color: MINT[300], fontSize: 12, fontFamily: FONTS.body, fontWeight: '700', alignSelf: 'center' },
   heroBody: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
   heroLeft: { flex: 1 },
-  heroTitle: { fontSize: 26, fontWeight: '900', color: '#fff', lineHeight: 32, marginBottom: 14, letterSpacing: -0.5 },
+  heroTitle: { fontSize: 26, fontFamily: FONTS.display, fontWeight: '900', color: '#fff', lineHeight: 32, marginBottom: 14, letterSpacing: -0.5 },
   heroMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 0 },
   heroMetaDivider: { width: 1.5, height: 34, backgroundColor: 'rgba(255,255,255,0.2)', marginHorizontal: 18 },
-  heroMetaLabel: { fontSize: 9, fontWeight: '800', color: 'rgba(197,248,199,0.75)', letterSpacing: 1.2, marginBottom: 3 },
-  heroMetaVal: { fontSize: 22, fontWeight: '900', color: '#fff' },
+  heroMetaLabel: { fontSize: 9, fontFamily: FONTS.display, fontWeight: '800', color: 'rgba(197,248,199,0.75)', letterSpacing: 1.2, marginBottom: 3 },
+  heroMetaVal: { fontSize: 22, fontFamily: FONTS.display, fontWeight: '900', color: '#fff' },
   
   // 3D hero icon — inflated sphere
   heroIconWrap: {
@@ -1302,24 +1369,24 @@ const s = StyleSheet.create({
   },
   heroIcon: { fontSize: 42, zIndex: 1 },
   heroBudgetRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  heroBudgetLabel: { color: 'rgba(197,248,199,0.8)', fontSize: 12, fontWeight: '700' },
+  heroBudgetLabel: { color: 'rgba(197,248,199,0.8)', fontSize: 12, fontFamily: FONTS.body, fontWeight: '700' },
 
   // Bento grid
   bentoRow: { flexDirection: 'row', gap: 12, marginBottom: 0 },
   bentoHalf: { flex: 1, marginBottom: 16 },
-  bentoTileLabel: { fontSize: 10, fontWeight: '800', color: NC.onSurfaceVariant, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 },
+  bentoTileLabel: { fontSize: 10, fontFamily: FONTS.display, fontWeight: '800', color: MINT[700], letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 },
 
   // Weather tile
-  weatherCityEdit: { fontSize: 13, borderBottomWidth: 1, borderBottomColor: '#1B5E20', color: '#1B5E20', fontWeight: '800', paddingVertical: 2, marginTop: 2, minWidth: 60 },
+  weatherCityEdit: { fontSize: 13, borderBottomWidth: 1, borderBottomColor: '#1B5E20', color: '#1B5E20', fontFamily: FONTS.display, fontWeight: '800', paddingVertical: 2, marginTop: 2, minWidth: 60 },
   weatherBig: { fontSize: 34, marginBottom: 4 },
-  weatherTemp: { fontSize: 24, fontWeight: '900', color: NC.onSurface },
-  weatherCity: { fontSize: 12, fontWeight: '800', color: NC.onSurface, marginTop: 2 },
-  weatherCond: { fontSize: 11, color: NC.onSurfaceVariant, marginTop: 1 },
+  weatherTemp: { fontSize: 24, fontFamily: FONTS.display, fontWeight: '900', color: MINT[900] },
+  weatherCity: { fontSize: 12, fontFamily: FONTS.display, fontWeight: '800', color: MINT[900], marginTop: 2 },
+  weatherCond: { fontSize: 11, color: MINT[700], marginTop: 1 },
 
   // Budget tile
-  budgetBig: { fontSize: 34, fontWeight: '900', color: NC.primary, marginBottom: 2 },
-  budgetSub: { fontSize: 12, color: NC.onSurfaceVariant, marginBottom: 10 },
-  budgetRemain: { fontSize: 12, fontWeight: '700', color: NC.primary, marginTop: 6 },
+  budgetBig: { fontSize: 34, fontFamily: FONTS.display, fontWeight: '900', color: MINT[500], marginBottom: 2 },
+  budgetSub: { fontSize: 12, color: MINT[700], marginBottom: 10 },
+  budgetRemain: { fontSize: 12, fontFamily: FONTS.body, fontWeight: '700', color: MINT[500], marginTop: 6 },
 
   // SOS tile
   sosCard: { alignItems: 'center', justifyContent: 'center' },
@@ -1337,30 +1404,30 @@ const s = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, height: '45%',
     backgroundColor: 'rgba(255,255,255,0.25)', borderTopLeftRadius: 34, borderTopRightRadius: 34,
   },
-  sosText: { color: '#fff', fontSize: 15, fontWeight: '900', letterSpacing: 1, zIndex: 1 },
-  sosLabel: { fontSize: 14, fontWeight: '900', color: NC.onSurface },
-  sosSub: { fontSize: 10, color: NC.onSurfaceVariant, marginTop: 2 },
+  sosText: { color: '#fff', fontSize: 15, fontFamily: FONTS.display, fontWeight: '900', letterSpacing: 1, zIndex: 1 },
+  sosLabel: { fontSize: 14, fontFamily: FONTS.display, fontWeight: '900', color: MINT[900] },
+  sosSub: { fontSize: 10, color: MINT[700], marginTop: 2 },
 
   // Stats tile
   statRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(165,214,167,0.2)' },
-  statLabel: { fontSize: 12, color: NC.onSurfaceVariant, fontWeight: '600' },
-  statVal: { fontSize: 18, fontWeight: '900', color: NC.primary },
+  statLabel: { fontSize: 12, color: MINT[700], fontWeight: '600' },
+  statVal: { fontSize: 18, fontFamily: FONTS.display, fontWeight: '900', color: MINT[500] },
 
   // Weather strip
-  sectionHead: { fontSize: 16, fontWeight: '900', color: NC.onSurface, marginBottom: 14, marginTop: 6, letterSpacing: -0.2 },
+  sectionHead: { fontSize: 16, fontFamily: FONTS.display, fontWeight: '900', color: MINT[900], marginBottom: 14, marginTop: 6, letterSpacing: -0.2 },
   hScroll: { marginBottom: 20 },
   weatherCard: { width: 100, marginRight: 12, alignItems: 'center', padding: 16, marginBottom: 0 },
   weatherCardIcon: { fontSize: 30, marginBottom: 4 },
-  weatherCardTemp: { fontSize: 20, fontWeight: '900', color: NC.primary },
-  weatherCardCity: { fontSize: 11, fontWeight: '800', color: NC.onSurface, marginTop: 3 },
-  weatherCardCond: { fontSize: 10, color: NC.onSurfaceVariant, textAlign: 'center', marginTop: 1 },
+  weatherCardTemp: { fontSize: 20, fontFamily: FONTS.display, fontWeight: '900', color: MINT[500] },
+  weatherCardCity: { fontSize: 11, fontFamily: FONTS.display, fontWeight: '800', color: MINT[900], marginTop: 3 },
+  weatherCardCond: { fontSize: 10, color: MINT[700], textAlign: 'center', marginTop: 1 },
 
   // Tools grid — 3D clay icon boxes
   toolsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 22 },
   toolBtn: { alignItems: 'center', width: '14%' },
   toolIconBox: {
     width: 56, height: 56, borderRadius: 22,
-    backgroundColor: NC.surfaceLowest, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
     position: 'relative', overflow: 'hidden',
     borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
     borderBottomColor: 'rgba(165,214,167,0.4)',
@@ -1372,27 +1439,27 @@ const s = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, height: '45%',
     backgroundColor: 'rgba(255,255,255,0.25)', borderTopLeftRadius: 22, borderTopRightRadius: 22,
   },
-  toolIconText: { fontSize: 22, color: NC.primary, fontWeight: '900', zIndex: 1 },
-  toolLabel: { fontSize: 10, fontWeight: '700', color: NC.onSurfaceVariant, textAlign: 'center' },
+  toolIconText: { fontSize: 22, color: MINT[500], fontFamily: FONTS.display, fontWeight: '900', zIndex: 1 },
+  toolLabel: { fontSize: 10, fontFamily: FONTS.body, fontWeight: '700', color: MINT[700], textAlign: 'center' },
 
   // FX converter
   fxCard: { marginBottom: 20 },
-  fxTitle: { fontSize: 22, fontWeight: '900', color: NC.onSurface, letterSpacing: -0.3 },
-  fxSub: { fontSize: 12, color: NC.onSurfaceVariant, marginBottom: 16 },
+  fxTitle: { fontSize: 22, fontFamily: FONTS.display, fontWeight: '900', color: MINT[900], letterSpacing: -0.3 },
+  fxSub: { fontSize: 12, color: MINT[700], marginBottom: 16 },
   fxRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   fxBox: {
-    flex: 1, backgroundColor: '#F1F8F2', borderRadius: 28, padding: 16,
+    flex: 1, backgroundColor: '#F1F8F2', borderRadius: 36, padding: 16,
     // Concave (sunken) look
     borderWidth: 1.5, borderColor: 'rgba(165,214,167,0.4)',
     borderTopColor: 'rgba(27,94,32,0.06)',
     borderLeftColor: 'rgba(27,94,32,0.04)',
     shadowColor: 'rgba(165,214,167,0.2)', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8, elevation: 2,
   },
-  fxBoxLabel: { fontSize: 9, fontWeight: '800', color: NC.onSurfaceVariant, letterSpacing: 1, marginBottom: 4 },
-  fxInput: { fontSize: 24, fontWeight: '900', color: NC.onSurface },
-  fxResult: { fontSize: 24, fontWeight: '900', color: NC.primary },
+  fxBoxLabel: { fontSize: 9, fontFamily: FONTS.display, fontWeight: '800', color: MINT[700], letterSpacing: 1, marginBottom: 4 },
+  fxInput: { fontSize: 24, fontFamily: FONTS.display, fontWeight: '900', color: MINT[900] },
+  fxResult: { fontSize: 24, fontFamily: FONTS.display, fontWeight: '900', color: MINT[500] },
   fxSwap: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: NC.primary,
+    width: 44, height: 44, borderRadius: 22, backgroundColor: MINT[500],
     alignItems: 'center', justifyContent: 'center',
     position: 'relative', overflow: 'hidden',
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)',
@@ -1404,7 +1471,7 @@ const s = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, height: '45%',
     backgroundColor: 'rgba(255,255,255,0.2)', borderTopLeftRadius: 22, borderTopRightRadius: 22,
   },
-  fxSwapText: { color: '#fff', fontSize: 20, fontWeight: '900', zIndex: 1 },
+  fxSwapText: { color: '#fff', fontSize: 20, fontFamily: FONTS.display, fontWeight: '900', zIndex: 1 },
   fxChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, marginRight: 8,
@@ -1414,18 +1481,18 @@ const s = StyleSheet.create({
     borderRightColor: 'rgba(165,214,167,0.2)',
     shadowColor: 'rgba(165,214,167,0.3)', shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 8, elevation: 3,
   },
-  fxChipOn: { backgroundColor: NC.primary, borderColor: 'rgba(255,255,255,0.4)' },
+  fxChipOn: { backgroundColor: MINT[500], borderColor: 'rgba(255,255,255,0.4)' },
   fxChipFlag: { fontSize: 15 },
-  fxChipCode: { fontSize: 12, fontWeight: '800', color: NC.onSurfaceVariant },
+  fxChipCode: { fontSize: 12, fontFamily: FONTS.display, fontWeight: '800', color: MINT[700] },
 
   // Discover
   discoverCard: { marginBottom: 16 },
-  discoverTitle: { fontSize: 14, fontWeight: '900', color: NC.onSurface, marginBottom: 14 },
+  discoverTitle: { fontSize: 14, fontFamily: FONTS.display, fontWeight: '900', color: MINT[900], marginBottom: 14 },
   discoverRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   discoverDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)' },
-  discoverName: { fontSize: 14, fontWeight: '700', color: NC.onSurface },
-  discoverSub: { fontSize: 11, color: NC.onSurfaceVariant, marginTop: 1 },
-  discoverCost: { fontSize: 14, fontWeight: '900', color: NC.primary },
+  discoverName: { fontSize: 14, fontFamily: FONTS.body, fontWeight: '700', color: MINT[900] },
+  discoverSub: { fontSize: 11, color: MINT[700], marginTop: 1 },
+  discoverCost: { fontSize: 14, fontFamily: FONTS.display, fontWeight: '900', color: MINT[500] },
 
   // Family hub
   familyCard: { marginBottom: 20 },
@@ -1434,7 +1501,7 @@ const s = StyleSheet.create({
   familyAvatar: { alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' },
   familyAvatarLeader: {
     width: 60, height: 60, borderRadius: 30,
-    backgroundColor: NC.primary,
+    backgroundColor: MINT[500],
     borderWidth: 3, borderColor: 'rgba(255,255,255,0.85)',
     borderBottomColor: 'rgba(27,94,32,0.3)',
     borderRightColor: 'rgba(27,94,32,0.2)',
@@ -1442,7 +1509,7 @@ const s = StyleSheet.create({
   },
   familyAvatarMember: {
     width: 46, height: 46, borderRadius: 23,
-    backgroundColor: NC.primaryFixed,
+    backgroundColor: MINT[300],
     borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.9)',
     borderBottomColor: 'rgba(165,214,167,0.4)',
     borderRightColor: 'rgba(165,214,167,0.3)',
@@ -1452,7 +1519,7 @@ const s = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, height: '45%',
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
-  familyAvatarText: { fontSize: 18, fontWeight: '900', color: '#fff', zIndex: 1 },
+  familyAvatarText: { fontSize: 18, fontFamily: FONTS.display, fontWeight: '900', color: '#fff', zIndex: 1 },
   leaderCrown: {
     position: 'absolute', top: -8, left: '50%', marginLeft: -9,
     width: 18, height: 18, borderRadius: 9,
@@ -1461,27 +1528,27 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(249,168,37,0.4)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 4, elevation: 3,
   },
   familyOnline: { position: 'absolute', top: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: '#4CAF50', borderWidth: 2, borderColor: '#fff', zIndex: 2 },
-  familyName: { fontSize: 10, fontWeight: '700', color: NC.onSurface, marginTop: 5 },
+  familyName: { fontSize: 10, fontFamily: FONTS.body, fontWeight: '700', color: MINT[900], marginTop: 5 },
 
   // Polls
   pollCard: { marginBottom: 12 },
-  pollQ: { fontSize: 16, fontWeight: '900', color: NC.onSurface, marginBottom: 14 },
+  pollQ: { fontSize: 16, fontFamily: FONTS.display, fontWeight: '900', color: MINT[900], marginBottom: 14 },
   pollOpt: {
-    borderRadius: 24, overflow: 'hidden', backgroundColor: '#F1F8F2',
+    borderRadius: 32, overflow: 'hidden', backgroundColor: '#F1F8F2',
     flexDirection: 'row', alignItems: 'center', padding: 14, marginBottom: 8,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.85)',
     borderBottomColor: 'rgba(165,214,167,0.3)',
     borderRightColor: 'rgba(165,214,167,0.2)',
     shadowColor: 'rgba(165,214,167,0.25)', shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 8, elevation: 3,
   },
-  pollOptVoted: { borderColor: NC.primary, borderWidth: 2.5 },
-  pollFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: 'rgba(46,125,50,0.1)', borderRadius: 24 },
-  pollOptText: { flex: 1, color: NC.onSurface, fontSize: 14, fontWeight: '700' },
-  pollPct: { color: NC.primary, fontSize: 14, fontWeight: '900' },
+  pollOptVoted: { borderColor: MINT[500], borderWidth: 2.5 },
+  pollFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: 'rgba(46,125,50,0.1)', borderRadius: 32 },
+  pollOptText: { flex: 1, color: MINT[900], fontSize: 14, fontFamily: FONTS.body, fontWeight: '700' },
+  pollPct: { color: MINT[500], fontSize: 14, fontFamily: FONTS.display, fontWeight: '900' },
   personaMiniCard: { marginHorizontal: 20, marginBottom: 16, padding: 12 },
   personaMiniRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  personaMiniIconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.05)', alignItems: 'center', justifyContent: 'center' },
-  personaMiniLabel: { fontSize: 9, fontWeight: '900', color: NC.outline, letterSpacing: 1 },
-  personaMiniTitle: { fontSize: 15, fontWeight: '900', color: NC.onSurface, marginTop: 1 },
+  personaMiniIconBox: { width: 40, height: 40, borderRadius: 28, backgroundColor: 'rgba(0,0,0,0.05)', alignItems: 'center', justifyContent: 'center' },
+  personaMiniLabel: { fontSize: 9, fontFamily: FONTS.display, fontWeight: '900', color: MINT[300], letterSpacing: 1 },
+  personaMiniTitle: { fontSize: 15, fontFamily: FONTS.display, fontWeight: '900', color: MINT[900], marginTop: 1 },
   personaMiniCardTrigger: { width: '100%' },
 });

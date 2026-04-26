@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from '../../src/hooks/useTranslation';
-import { NC } from '../../src/constants/theme';
+import { NC, MINT, FONTS, CLAY_CARD_V2, CLAY_BTN_V2 } from '../../src/constants/theme';
 import { ClayCard } from '../../src/components/clay/ClayCard';
 import { useTripStore } from '../../src/store/tripStore';
 import {
@@ -30,6 +30,9 @@ import {
   searchPOI,
   calculateReachableRange,
 } from '../../src/hooks/useTomTomServices';
+
+let LottieView: any = null;
+try { LottieView = require('lottie-react-native').default; } catch (_) {}
 
 let ExpoLocation: any = null;
 try { ExpoLocation = require('expo-location'); } catch (_) {}
@@ -376,8 +379,36 @@ export default function ExploreScreen() {
       const locId = id.replace('loc_', '');
       const loc = ALL_LOCATIONS.find(l => l.id === locId);
       if (loc) openCard(loc);
+    } else if (id.startsWith('ev_')) {
+      const idx = parseInt(id.replace('ev_', ''), 10);
+      const station = evStations[idx];
+      if (station && station.position) {
+        setSelectedPlace({
+          place_id: `ev_${idx}`,
+          name: station.poi?.name || 'EV Charging Station',
+          formatted_address: station.address?.freeformAddress || 'Unknown Address',
+          geometry: { location: { lat: station.position.lat, lng: station.position.lon } }
+        });
+        setSelectedLoc(null);
+        cardAnim.setValue(400);
+        Animated.spring(cardAnim, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 120 }).start();
+      }
+    } else if (id.startsWith('poi_')) {
+      const idx = parseInt(id.replace('poi_', ''), 10);
+      const poi = poiResults[idx];
+      if (poi && poi.position) {
+        setSelectedPlace({
+          place_id: `poi_${idx}`,
+          name: poi.poi?.name || 'Point of Interest',
+          formatted_address: poi.address?.freeformAddress || 'Unknown Address',
+          geometry: { location: { lat: poi.position.lat, lng: poi.position.lon } }
+        });
+        setSelectedLoc(null);
+        cardAnim.setValue(400);
+        Animated.spring(cardAnim, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 120 }).start();
+      }
     }
-  }, [openCard]);
+  }, [openCard, evStations, poiResults, cardAnim]);
 
   const handlePolylinePress = useCallback((id: string) => {
     setShowMasterGuide(true);
@@ -403,6 +434,23 @@ export default function ExploreScreen() {
         onMarkerPress={handleMarkerPress}
         onPolylinePress={handlePolylinePress}
       />
+
+      {/* ── Map Loading Lottie Overlay ── */}
+      {!mapReady && (
+        <View style={s.mapLoadOverlay}>
+          {LottieView ? (
+            <LottieView
+              source={require('../../animations/Map pin location loading.json')}
+              autoPlay
+              loop
+              style={{ width: 200, height: 200 }}
+            />
+          ) : (
+            <ActivityIndicator size="large" color="#2E7D32" />
+          )}
+          <Text style={s.mapLoadText}>Loading Map...</Text>
+        </View>
+      )}
 
       {/* ── Overlay ── */}
       <SafeAreaView style={s.overlay} edges={['top']}>
@@ -562,7 +610,7 @@ export default function ExploreScreen() {
               <Text style={s.startDriveText}>Drive</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[s.stepsBtn, { backgroundColor: NC.primary }]} 
+              style={[s.stepsBtn, { backgroundColor: MINT[500] }]} 
               onPress={() => setShowSegmentedGuide(true)}
             >
               <Ionicons name="map" size={14} color="#FFF" style={{ marginRight: 4 }} />
@@ -608,24 +656,24 @@ export default function ExploreScreen() {
       </Modal>
 
       {/* ── Full Screen Navigation Mode (Turn-by-Turn) ── */}
-      <Modal visible={fullNavMode} animationType="fade" presentationStyle="fullScreen">
-        <View style={{ flex: 1, backgroundColor: '#000' }}>
+      {fullNavMode && (
+        <View style={{ ...StyleSheet.absoluteFillObject, zIndex: 100, elevation: 100 }} pointerEvents="box-none">
           {/* Top Navigation Header */}
           <View style={{
-            position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100,
+            position: 'absolute', top: 0, left: 0, right: 0,
             backgroundColor: '#0D47A1', paddingTop: 50, paddingHorizontal: 20, paddingBottom: 16,
             borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
             shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 20
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
               <View style={{ 
-                width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.2)',
+                width: 56, height: 56, borderRadius: 36, backgroundColor: 'rgba(255,255,255,0.2)',
                 justifyContent: 'center', alignItems: 'center'
               }}>
                 <Ionicons name="arrow-forward" size={32} color="#FFF" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#FFF', fontSize: 28, fontWeight: '800' }}>
+                <Text style={{ color: '#FFF', fontSize: 28, fontFamily: FONTS.display, fontWeight: '800' }}>
                   {navRoute?.totalDistance || '0 km'}
                 </Text>
                 <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 16, fontWeight: '600' }}>
@@ -633,7 +681,7 @@ export default function ExploreScreen() {
                 </Text>
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ color: '#4FC3F7', fontSize: 32, fontWeight: '900' }}>
+                <Text style={{ color: '#4FC3F7', fontSize: 32, fontFamily: FONTS.display, fontWeight: '900' }}>
                   {navRoute?.totalDuration?.split(' ')?.[0] || '--'}
                 </Text>
                 <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>min</Text>
@@ -641,117 +689,106 @@ export default function ExploreScreen() {
             </View>
             {/* Street Name */}
             <View style={{ marginTop: 12, paddingHorizontal: 8 }}>
-              <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: '700' }} numberOfLines={1}>
+              <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 15, fontFamily: FONTS.body, fontWeight: '700' }} numberOfLines={1}>
                 on {navDest?.name || 'Main Street'}
               </Text>
             </View>
           </View>
 
-          {/* Map Area — reuse main map ref */}
-          <View style={{ flex: 1, marginTop: 140 }}>
-            <TomTomMap
-              ref={mapRef}
-              style={{ flex: 1 }}
-              initialLat={userCoords?.lat ?? 28.6139}
-              initialLng={userCoords?.lng ?? 77.2090}
-              initialZoom={16}
-              onMapReady={() => setMapReady(true)}
-              onMarkerPress={handleMarkerPress}
-              onPolylinePress={handlePolylinePress}
-            />
+          <View style={{ flex: 1, pointerEvents: 'none' }} />
 
-            {/* Steps scroll overlay */}
-            {navRoute && navRoute.steps.length > 0 && (
-              <ScrollView
-                style={{
-                  position: 'absolute', bottom: 120, left: 12, right: 12,
-                  maxHeight: 220, borderRadius: 20,
-                  backgroundColor: 'rgba(255,255,255,0.95)',
-                }}
-                showsVerticalScrollIndicator={false}
-              >
-                {navRoute.steps.slice(0, 5).map((step, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={{
-                      flexDirection: 'row', alignItems: 'center', gap: 10,
-                      padding: 12, borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: '#E8F5E9',
-                      backgroundColor: i === currentStepIdx ? '#E3F2FD' : 'transparent',
-                    }}
-                    onPress={() => {
-                      setCurrentStepIdx(i);
-                      mapRef.current?.flyTo(step.start_location.lat, step.start_location.lng, 16);
-                    }}
-                  >
-                    <View style={{
-                      width: 26, height: 26, borderRadius: 13,
-                      backgroundColor: i === currentStepIdx ? '#1565C0' : '#90CAF9',
-                      alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>{i + 1}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: '#1B5E20', fontSize: 12, fontWeight: '700' }} numberOfLines={1}>
-                        {step.html_instructions.replace(/<[^>]+>/g, '')}
-                      </Text>
-                      <Text style={{ color: '#558B2F', fontSize: 10, marginTop: 1 }}>{step.distance.text}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-
-            {/* Bottom Control Bar */}
-            <View style={{
-              position: 'absolute', bottom: 30, left: 20, right: 20,
-              flexDirection: 'row', alignItems: 'center', gap: 12,
-            }}>
-              <View style={{
-                flex: 1, backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 20,
-                padding: 16, flexDirection: 'row', alignItems: 'center', gap: 16,
-                shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 10,
-              }}>
-                <View style={{ alignItems: 'center' }}>
+          {/* Steps scroll overlay positioned slightly above the bottom bar */}
+          {navRoute && navRoute.steps.length > 0 && (
+            <ScrollView
+              style={{
+                position: 'absolute', bottom: 120, left: 12, right: 12,
+                maxHeight: 220, borderRadius: 28,
+                backgroundColor: 'rgba(255,255,255,0.95)',
+              }}
+              showsVerticalScrollIndicator={false}
+              pointerEvents="auto"
+            >
+              {navRoute.steps.slice(0, 5).map((step, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 10,
+                    padding: 12, borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: '#E8F5E9',
+                    backgroundColor: i === currentStepIdx ? '#E3F2FD' : 'transparent',
+                  }}
+                  onPress={() => {
+                    setCurrentStepIdx(i);
+                    mapRef.current?.flyTo(step.start_location.lat, step.start_location.lng, 16);
+                  }}
+                >
                   <View style={{
-                    width: 60, height: 60, borderRadius: 30, backgroundColor: '#0D47A1',
-                    justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#2979FF',
+                    width: 26, height: 26, borderRadius: 13,
+                    backgroundColor: i === currentStepIdx ? '#1565C0' : '#90CAF9',
+                    alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Text style={{ color: '#FFF', fontSize: 20, fontWeight: '900' }}>--</Text>
+                    <Text style={{ color: '#FFF', fontSize: 11, fontFamily: FONTS.display, fontWeight: '900' }}>{i + 1}</Text>
                   </View>
-                  <Text style={{ color: '#666', fontSize: 11, marginTop: 4, fontWeight: '600' }}>km/h</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#333', fontSize: 14, fontWeight: '700' }}>Arrive at</Text>
-                  <Text style={{ color: '#0D47A1', fontSize: 20, fontWeight: '900' }}>
-                    {new Date(Date.now() + (parseInt(navRoute?.totalDuration?.replace(/\D/g, '') || '0') || 0) * 60000)
-                      .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                  <Text style={{ color: '#666', fontSize: 12, marginTop: 2 }}>{navRoute?.totalDistance || '0 km'} remaining</Text>
-                </View>
-              </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#1B5E20', fontSize: 12, fontFamily: FONTS.body, fontWeight: '700' }} numberOfLines={1}>
+                      {step.html_instructions.replace(/<[^>]+>/g, '')}
+                    </Text>
+                    <Text style={{ color: '#558B2F', fontSize: 10, marginTop: 1 }}>{step.distance.text}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
 
-              <TouchableOpacity style={{
-                width: 56, height: 56, borderRadius: 28, backgroundColor: '#FFF',
+          {/* Bottom Control Bar */}
+          <View style={{
+            position: 'absolute', bottom: 30, left: 20, right: 20,
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+          }} pointerEvents="box-none">
+            <View style={{
+              flex: 1, backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 28,
+              padding: 16, flexDirection: 'row', alignItems: 'center', gap: 16,
+              shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 10,
+            }}>
+              <View style={{ alignItems: 'center' }}>
+                <View style={{
+                  width: 60, height: 60, borderRadius: 30, backgroundColor: '#0D47A1',
+                  justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#2979FF',
+                }}>
+                  <Text style={{ color: '#FFF', fontSize: 20, fontFamily: FONTS.display, fontWeight: '900' }}>--</Text>
+                </View>
+                <Text style={{ color: '#666', fontSize: 11, marginTop: 4, fontWeight: '600' }}>km/h</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#333', fontSize: 14, fontFamily: FONTS.body, fontWeight: '700' }}>Arrive at</Text>
+                <Text style={{ color: '#0D47A1', fontSize: 20, fontFamily: FONTS.display, fontWeight: '900' }}>
+                  {new Date(Date.now() + (parseInt(navRoute?.totalDuration?.replace(/\D/g, '') || '0') || 0) * 60000)
+                    .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+                <Text style={{ color: '#666', fontSize: 12, marginTop: 2 }}>{navRoute?.totalDistance || '0 km'} remaining</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={{
+              width: 56, height: 56, borderRadius: 36, backgroundColor: '#FFF',
+              justifyContent: 'center', alignItems: 'center',
+              shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 8,
+            }}>
+              <Ionicons name="volume-high" size={24} color="#333" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                width: 56, height: 56, borderRadius: 36, backgroundColor: '#D32F2F',
                 justifyContent: 'center', alignItems: 'center',
                 shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 8,
-              }}>
-                <Ionicons name="volume-high" size={24} color="#333" />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={{
-                  width: 56, height: 56, borderRadius: 28, backgroundColor: '#D32F2F',
-                  justifyContent: 'center', alignItems: 'center',
-                  shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 8,
-                }}
-                onPress={() => setFullNavMode(false)}
-              >
-                <Ionicons name="close" size={28} color="#FFF" />
-              </TouchableOpacity>
-            </View>
+              }}
+              onPress={() => setFullNavMode(false)}
+            >
+              <Ionicons name="close" size={28} color="#FFF" />
+            </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      )}
 
       {/* ── Travel Guide Modal ── */}
       <Modal visible={showGuide} animationType="slide" transparent presentationStyle="overFullScreen">
@@ -836,7 +873,7 @@ export default function ExploreScreen() {
             <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
               <Text style={s.guideCity}>🗺️ Map Tools</Text>
               <TouchableOpacity onPress={() => setShowMapTools(false)}>
-                <Ionicons name="close" size={24} color={NC.primary} />
+                <Ionicons name="close" size={24} color={MINT[500]} />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -844,7 +881,7 @@ export default function ExploreScreen() {
               <Text style={s.guideSection}>⚡ EV Charging Stations</Text>
               <View style={{flexDirection:'row',gap:10,marginBottom:12}}>
                 <TouchableOpacity 
-                  style={[s.navBtn, {flex:1, backgroundColor: showEVStations ? '#00BCD4' : NC.primary}]}
+                  style={[s.navBtn, {flex:1, backgroundColor: showEVStations ? '#00BCD4' : MINT[500]}]}
                   onPress={() => {
                     setShowMapTools(false);
                     if (showEVStations) {
@@ -868,7 +905,7 @@ export default function ExploreScreen() {
               <Text style={s.guideSection}>🚦 Traffic Flow</Text>
               <View style={{flexDirection:'row',gap:10,marginBottom:12}}>
                 <TouchableOpacity 
-                  style={[s.navBtn, {flex:1, backgroundColor: trafficEnabled ? '#E53935' : NC.primary}]}
+                  style={[s.navBtn, {flex:1, backgroundColor: trafficEnabled ? '#E53935' : MINT[500]}]}
                   onPress={() => {
                     setShowMapTools(false);
                     if (trafficEnabled) {
@@ -884,7 +921,7 @@ export default function ExploreScreen() {
               </View>
               {trafficInfo?.flowSegmentData && (
                 <ClayCard variant="white" style={{marginBottom:12,padding:12}}>
-                  <Text style={{fontSize:13,fontWeight:'800',color:'#1B5E20'}}>
+                  <Text style={{fontSize:13,fontFamily: FONTS.display, fontWeight: '800',color:'#1B5E20'}}>
                     Current Speed: {trafficInfo.flowSegmentData.currentSpeed} km/h
                   </Text>
                   <Text style={{fontSize:12,color:'#558B2F',marginTop:2}}>
@@ -903,7 +940,7 @@ export default function ExploreScreen() {
                 {[15, 30, 60].map(minutes => (
                   <TouchableOpacity 
                     key={minutes}
-                    style={[s.chip, {backgroundColor: NC.primary}]}
+                    style={[s.chip, {backgroundColor: MINT[500]}]}
                     onPress={() => calculateRange(minutes)}
                   >
                     <Text style={[s.chipText, {color:'#FFF'}]}>{minutes} min</Text>
@@ -1001,6 +1038,17 @@ const s = StyleSheet.create({
   map: { flex: 1 },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20 },
 
+  // Map loading Lottie overlay
+  mapLoadOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#F0FFF4',
+    alignItems: 'center', justifyContent: 'center', zIndex: 15,
+  },
+  mapLoadText: {
+    fontSize: 15, fontFamily: FONTS.display, fontWeight: '800', color: '#2E7D32',
+    marginTop: -20, letterSpacing: 0.5,
+  },
+
   searchRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 14, marginTop: 6, gap: 10 },
   // Concave clay tube — sunken ditch in the clay surface
   searchPill: {
@@ -1031,11 +1079,11 @@ const s = StyleSheet.create({
     shadowOffset: { width: 6, height: 6 },
     shadowOpacity: 1, shadowRadius: 14, elevation: 10,
   },
-  locBtnText: { fontSize: 22, color: '#2E7D32', fontWeight: '900' },
+  locBtnText: { fontSize: 22, color: '#2E7D32', fontFamily: FONTS.display, fontWeight: '900' },
 
   dropdown: {
     backgroundColor: 'rgba(241,248,242,0.98)',
-    marginHorizontal: 14, marginTop: 6, borderRadius: 28,
+    marginHorizontal: 14, marginTop: 6, borderRadius: 36,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.95)',
     borderBottomColor: 'rgba(165,214,167,0.3)',
     shadowColor: 'rgba(165,214,167,0.45)', shadowOffset: { width: 6, height: 6 },
@@ -1045,9 +1093,9 @@ const s = StyleSheet.create({
   dropItem: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(165,214,167,0.2)' },
   dropBadge: { width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)' },
   dropBadgeText: { fontSize: 16 },
-  dropMain: { color: '#1B5E20', fontSize: 15, fontWeight: '800' },
+  dropMain: { color: '#1B5E20', fontSize: 15, fontFamily: FONTS.display, fontWeight: '800' },
   dropSub: { color: '#558B2F', fontSize: 11, marginTop: 1 },
-  dropType: { color: '#81C784', fontSize: 10, fontWeight: '800' },
+  dropType: { color: '#81C784', fontSize: 10, fontFamily: FONTS.display, fontWeight: '800' },
 
   filterScroll: { marginTop: 8 },
   filterContent: { paddingHorizontal: 14, paddingBottom: 6, gap: 8 },
@@ -1071,8 +1119,8 @@ const s = StyleSheet.create({
     shadowOffset: { width: 4, height: 4 },
     shadowRadius: 10, elevation: 10,
   },
-  chipText: { color: '#2E7D32', fontSize: 13, fontWeight: '800' },
-  chipTextActive: { color: '#FFF', fontWeight: '900' },
+  chipText: { color: '#2E7D32', fontSize: 13, fontFamily: FONTS.display, fontWeight: '800' },
+  chipTextActive: { color: '#FFF', fontFamily: FONTS.display, fontWeight: '900' },
 
   // Location detail card — inflated clay bottom sheet
   card: {
@@ -1086,7 +1134,7 @@ const s = StyleSheet.create({
   },
   cardHandle: { width: 40, height: 5, backgroundColor: '#A5D6A7', borderRadius: 3, alignSelf: 'center', marginBottom: 14 },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
-  cardCity: { color: '#1B5E20', fontSize: 24, fontWeight: '900', letterSpacing: -0.3 },
+  cardCity: { color: '#1B5E20', fontSize: 24, fontFamily: FONTS.display, fontWeight: '900', letterSpacing: -0.3 },
   cardRegion: { color: '#558B2F', fontSize: 12, marginTop: 3 },
   cardClose: {
     width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8F5E9',
@@ -1096,20 +1144,20 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(165,214,167,0.3)', shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1, shadowRadius: 6, elevation: 4,
   },
-  cardCloseText: { color: '#1B5E20', fontSize: 14, fontWeight: '900' },
+  cardCloseText: { color: '#1B5E20', fontSize: 14, fontFamily: FONTS.display, fontWeight: '900' },
   cardDesc: { color: '#2E7D32', fontSize: 13, lineHeight: 19 },
   hlChip: {
     backgroundColor: '#C8E6C9', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 6, marginRight: 8,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)',
     borderBottomColor: 'rgba(165,214,167,0.3)',
   },
-  hlText: { color: '#1B5E20', fontSize: 11, fontWeight: '800' },
+  hlText: { color: '#1B5E20', fontSize: 11, fontFamily: FONTS.display, fontWeight: '800' },
   tagChip: { backgroundColor: '#DCEDC8', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5, marginRight: 6, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)' },
-  tagText: { color: '#33691E', fontSize: 10, fontWeight: '700' },
+  tagText: { color: '#33691E', fontSize: 10, fontFamily: FONTS.body, fontWeight: '700' },
 
   navModeRow: { flexDirection: 'row', gap: 8, marginTop: 14, marginBottom: 6 },
   navModeBtn: {
-    flex: 1, paddingVertical: 10, borderRadius: 20, alignItems: 'center',
+    flex: 1, paddingVertical: 10, borderRadius: 28, alignItems: 'center',
     backgroundColor: '#E8F5E9',
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)',
     borderBottomColor: 'rgba(165,214,167,0.3)',
@@ -1117,12 +1165,12 @@ const s = StyleSheet.create({
     shadowOpacity: 1, shadowRadius: 6, elevation: 3,
   },
   navModeBtnActive: { backgroundColor: '#4CAF50', borderColor: 'rgba(255,255,255,0.5)' },
-  navModeBtnText: { color: '#2E7D32', fontSize: 12, fontWeight: '800' },
-  navModeBtnTextActive: { color: '#FFF', fontWeight: '900' },
+  navModeBtnText: { color: '#2E7D32', fontSize: 12, fontFamily: FONTS.display, fontWeight: '800' },
+  navModeBtnTextActive: { color: '#FFF', fontFamily: FONTS.display, fontWeight: '900' },
 
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
-  cardCostLabel: { color: '#558B2F', fontSize: 10, fontWeight: '700' },
-  cardCost: { color: '#1B5E20', fontSize: 20, fontWeight: '900' },
+  cardCostLabel: { color: '#558B2F', fontSize: 10, fontFamily: FONTS.body, fontWeight: '700' },
+  cardCost: { color: '#1B5E20', fontSize: 20, fontFamily: FONTS.display, fontWeight: '900' },
   cardActions: { flexDirection: 'row', gap: 10 },
   navBtn: {
     backgroundColor: '#2E7D32', borderRadius: 999, paddingHorizontal: 22, paddingVertical: 13,
@@ -1133,7 +1181,7 @@ const s = StyleSheet.create({
     shadowOpacity: 1, shadowRadius: 14, elevation: 10,
     alignItems: 'center', justifyContent: 'center', minWidth: 100,
   },
-  navBtnText: { color: '#FFF', fontSize: 14, fontWeight: '900' },
+  navBtnText: { color: '#FFF', fontSize: 14, fontFamily: FONTS.display, fontWeight: '900' },
   guideBtn: {
     backgroundColor: '#FFFFFF', borderRadius: 999, paddingHorizontal: 20, paddingVertical: 13,
     borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.98)',
@@ -1142,7 +1190,7 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(165,214,167,0.45)', shadowOffset: { width: 5, height: 5 },
     shadowOpacity: 1, shadowRadius: 12, elevation: 6,
   },
-  guideBtnText: { color: '#2E7D32', fontSize: 14, fontWeight: '900' },
+  guideBtnText: { color: '#2E7D32', fontSize: 14, fontFamily: FONTS.display, fontWeight: '900' },
 
   // Navigation HUD — inflated clay panel
   navHUD: {
@@ -1158,9 +1206,9 @@ const s = StyleSheet.create({
   navHUDLeft: { alignItems: 'center', gap: 2 },
   navDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)' },
   navStem: { width: 2, height: 22, backgroundColor: '#C8E6C9' },
-  navFrom: { fontSize: 12, color: '#558B2F', fontWeight: '700' },
-  navTo: { fontSize: 18, color: '#1B5E20', fontWeight: '900', marginTop: 2 },
-  navMeta: { fontSize: 13, color: '#2E7D32', fontWeight: '700', marginTop: 3 },
+  navFrom: { fontSize: 12, color: '#558B2F', fontFamily: FONTS.body, fontWeight: '700' },
+  navTo: { fontSize: 18, color: '#1B5E20', fontFamily: FONTS.display, fontWeight: '900', marginTop: 2 },
+  navMeta: { fontSize: 13, color: '#2E7D32', fontFamily: FONTS.body, fontWeight: '700', marginTop: 3 },
   navHUDRight: { alignItems: 'flex-end', gap: 8 },
   stepsBtn: {
     backgroundColor: '#E8F5E9', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 8,
@@ -1169,7 +1217,7 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(165,214,167,0.25)', shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1, shadowRadius: 6, elevation: 3,
   },
-  stepsBtnText: { color: '#1B5E20', fontSize: 12, fontWeight: '900' },
+  stepsBtnText: { color: '#1B5E20', fontSize: 12, fontFamily: FONTS.display, fontWeight: '900' },
   navEnd: {
     backgroundColor: '#E53935', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 9,
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
@@ -1177,7 +1225,7 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(198,40,40,0.3)', shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1, shadowRadius: 8, elevation: 5,
   },
-  navEndText: { color: '#FFF', fontSize: 13, fontWeight: '900' },
+  navEndText: { color: '#FFF', fontSize: 13, fontFamily: FONTS.display, fontWeight: '900' },
   startDriveBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: '#1565C0', borderRadius: 16,
@@ -1187,7 +1235,7 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(21,101,192,0.4)', shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1, shadowRadius: 8, elevation: 5,
   },
-  startDriveText: { color: '#FFF', fontSize: 12, fontWeight: '900' },
+  startDriveText: { color: '#FFF', fontSize: 12, fontFamily: FONTS.display, fontWeight: '900' },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   // Steps sheet — clay bottom sheet
@@ -1199,8 +1247,8 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(165,214,167,0.5)', shadowOffset: { width: 0, height: -8 },
     shadowOpacity: 1, shadowRadius: 24, elevation: 20,
   },
-  stepsTitle: { color: '#1B5E20', fontSize: 20, fontWeight: '900', marginBottom: 2 },
-  stepsMeta: { color: '#558B2F', fontSize: 13, fontWeight: '700', marginBottom: 6 },
+  stepsTitle: { color: '#1B5E20', fontSize: 20, fontFamily: FONTS.display, fontWeight: '900', marginBottom: 2 },
+  stepsMeta: { color: '#558B2F', fontSize: 13, fontFamily: FONTS.body, fontWeight: '700', marginBottom: 6 },
   stepItem: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
     backgroundColor: '#E8F5E9', borderRadius: 22, padding: 14, marginBottom: 8,
@@ -1216,8 +1264,8 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)',
   },
   stepNumActive: { backgroundColor: '#4CAF50' },
-  stepNumText: { color: '#FFF', fontSize: 12, fontWeight: '900' },
-  stepInstr: { color: '#1B5E20', fontSize: 13, fontWeight: '700', lineHeight: 19 },
+  stepNumText: { color: '#FFF', fontSize: 12, fontFamily: FONTS.display, fontWeight: '900' },
+  stepInstr: { color: '#1B5E20', fontSize: 13, fontFamily: FONTS.body, fontWeight: '700', lineHeight: 19 },
   stepDist: { color: '#558B2F', fontSize: 11, marginTop: 3, fontWeight: '600' },
   stepsClose: {
     backgroundColor: '#2E7D32', borderRadius: 999, paddingVertical: 16, alignItems: 'center', marginTop: 10,
@@ -1227,7 +1275,7 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(27,94,32,0.4)', shadowOffset: { width: 5, height: 5 },
     shadowOpacity: 1, shadowRadius: 14, elevation: 10,
   },
-  stepsCloseText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
+  stepsCloseText: { color: '#FFF', fontSize: 16, fontFamily: FONTS.display, fontWeight: '900' },
 
   // Guide sheet — clay modal
   guideSheet: {
@@ -1238,9 +1286,9 @@ const s = StyleSheet.create({
     shadowOpacity: 1, shadowRadius: 24, elevation: 20,
   },
   guideHandle: { width: 40, height: 5, backgroundColor: '#A5D6A7', borderRadius: 3, alignSelf: 'center', marginBottom: 18 },
-  guideCity: { color: '#1B5E20', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 },
+  guideCity: { color: '#1B5E20', fontSize: 28, fontFamily: FONTS.display, fontWeight: '900', letterSpacing: -0.5 },
   guideRegion: { color: '#558B2F', fontSize: 14, marginBottom: 4 },
-  guideSection: { color: '#1B5E20', fontSize: 15, fontWeight: '900', marginTop: 18, marginBottom: 12 },
+  guideSection: { color: '#1B5E20', fontSize: 15, fontFamily: FONTS.display, fontWeight: '900', marginTop: 18, marginBottom: 12 },
   guideBody: { color: '#2E7D32', fontSize: 14, lineHeight: 21 },
   guideItem: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   guideItemDot: {
@@ -1249,8 +1297,8 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(165,214,167,0.3)', shadowOffset: { width: 2, height: 2 },
     shadowOpacity: 1, shadowRadius: 4, elevation: 3,
   },
-  guideItemNum: { color: '#FFF', fontSize: 12, fontWeight: '900' },
-  guideItemText: { color: '#1B5E20', fontSize: 14, fontWeight: '700', flex: 1 },
+  guideItemNum: { color: '#FFF', fontSize: 12, fontFamily: FONTS.display, fontWeight: '900' },
+  guideItemText: { color: '#1B5E20', fontSize: 14, fontFamily: FONTS.body, fontWeight: '700', flex: 1 },
   seasonRow: { flexDirection: 'row', gap: 10 },
   seasonChip: {
     flex: 1, borderRadius: 22, padding: 14, alignItems: 'center',
@@ -1260,7 +1308,7 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(165,214,167,0.25)', shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1, shadowRadius: 6, elevation: 3,
   },
-  seasonLabel: { fontSize: 13, fontWeight: '900' },
+  seasonLabel: { fontSize: 13, fontFamily: FONTS.display, fontWeight: '900' },
   seasonPeriod: { color: '#558B2F', fontSize: 10, marginTop: 3, fontWeight: '600' },
   transportCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
@@ -1275,7 +1323,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)',
   },
-  transportMode: { color: '#1B5E20', fontSize: 14, fontWeight: '900' },
+  transportMode: { color: '#1B5E20', fontSize: 14, fontFamily: FONTS.display, fontWeight: '900' },
   transportDetail: { color: '#2E7D32', fontSize: 12, lineHeight: 18, marginTop: 2 },
   guideActions: { flexDirection: 'row', gap: 12, marginTop: 22 },
   guideNavBtn: {
@@ -1286,7 +1334,7 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(27,94,32,0.4)', shadowOffset: { width: 5, height: 5 },
     shadowOpacity: 1, shadowRadius: 14, elevation: 10,
   },
-  guideNavBtnText: { color: '#FFF', fontSize: 17, fontWeight: '900' },
+  guideNavBtnText: { color: '#FFF', fontSize: 17, fontFamily: FONTS.display, fontWeight: '900' },
   guideCloseBtn: {
     flex: 1, backgroundColor: '#E8F5E9', borderRadius: 999, paddingVertical: 18, alignItems: 'center',
     borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.95)',
@@ -1294,7 +1342,7 @@ const s = StyleSheet.create({
     shadowColor: 'rgba(165,214,167,0.4)', shadowOffset: { width: 5, height: 5 },
     shadowOpacity: 1, shadowRadius: 12, elevation: 6,
   },
-  guideCloseBtnText: { color: '#1B5E20', fontSize: 17, fontWeight: '900' },
+  guideCloseBtnText: { color: '#1B5E20', fontSize: 17, fontFamily: FONTS.display, fontWeight: '900' },
 
   // Map Tools
   mapToolsBtn: {

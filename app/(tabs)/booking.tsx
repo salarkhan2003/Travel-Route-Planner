@@ -1,1458 +1,546 @@
-import React, { useState, useEffect, useCallback } from 'react';
+/**
+ * Roamio Hub — Central Booking Portal (Mint Liquid Clay v2)
+ * Features: Squishy 50px Bento cards, Mint gradient BG, Frosted Glass,
+ * Instant Mode Switching, Real Full Calendar
+ */
+import React, { useState } from 'react';
 import {
-  ScrollView, StyleSheet, Text, TextInput, TouchableOpacity,
-  View, ActivityIndicator, Linking, Modal, KeyboardAvoidingView, Platform, Image
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  TextInput, Dimensions, Modal, FlatList,
+  Platform, KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NC } from '../../src/constants/theme';
-import { ClayCard } from '../../src/components/clay/ClayCard';
-import { ClayButton } from '../../src/components/clay/ClayButton';
-import { useToastStore } from '../../src/store/toastStore';
-import { useTranslation } from '../../src/hooks/useTranslation';
+import { router } from 'expo-router';
+import { useSettingsStore } from '../../src/store/settingsStore';
+import { searchTrains, searchFlights, searchBuses } from '../../src/services/transportAPI';
+import { downloadTicketPDF } from '../../src/services/ticketPDF';
+import { CalendarPicker } from '../../src/components/FullCalendar';
+import { MINT, CLAY_CARD_V2, CLAY_BTN_V2, ACCENTS, FONTS } from '../../src/constants/theme';
 
-const MODULES = [
-  { id: 'flight', title: 'Flights', sub: 'Aviation Stack Live', icon: 'airplane', color: '#1E88E5' },
-  { id: 'train', title: 'Trains (IRCTC)', sub: 'PNR & Live Status', icon: 'train', color: '#E53935' },
-  { id: 'bus', title: 'Bus Routes', sub: 'RedBus Network', icon: 'bus', color: '#FB8C00' },
-  { id: 'hotel', title: 'Hotels', sub: 'Booking.com Network', icon: 'bed', color: '#8E24AA' },
-  { id: 'movies', title: 'Movies', sub: 'International Showtimes', icon: 'film', color: '#C2185B' },
+const { width, height } = Dimensions.get('window');
+
+// ── Transport modes ───────────────────────────────────────────────────────────
+const MODES = [
+  { id: 'train',  label: 'Trains',  icon: 'train'    as const },
+  { id: 'flight', label: 'Flights', icon: 'airplane' as const },
+  { id: 'bus',    label: 'Buses',   icon: 'bus'      as const },
+  { id: 'movies', label: 'Cinema',  icon: 'film'     as const },
+] as const;
+
+const TRIP_TYPES = ['One Way', 'Round Trip'] as const;
+const CLASSES = ['Economy', 'Business', 'First'] as const;
+const POPULAR_CITIES = ['Mumbai','Delhi','Bangalore','Chennai','Hyderabad','Kolkata','Pune','Ahmedabad','Jaipur','Goa','Kochi','Surat'];
+
+// ── Mock Offers ───────────────────────────────────────────────────────────────
+const OFFERS = [
+  { id: 'o1', icon: 'pricetag' as const, title: 'FLAT 18% OFF', sub: 'Use ROAMIO18 on flights', validTill: 'Apr 30', color: ACCENTS.flight.fg, bg: ACCENTS.flight.bg },
+  { id: 'o2', icon: 'train' as const, title: '3AC Upgrade Free', sub: 'Book 4+ train seats today', validTill: 'May 5', color: ACCENTS.train.fg, bg: ACCENTS.train.bg },
+  { id: 'o3', icon: 'bed' as const, title: 'Stay + Fly Bundle', sub: 'Save ₹8,000 on hotel+flight', validTill: 'May 10', color: ACCENTS.budget.fg, bg: ACCENTS.budget.bg },
+  { id: 'o4', icon: 'flash' as const, title: 'Flash Sale 24h', sub: 'Buses from just ₹299', validTill: 'Today', color: ACCENTS.bus.fg, bg: ACCENTS.bus.bg },
 ];
 
-// RapidAPI Keys
-const RAPID_API_KEYS = {
-  internationalShowtimes: '8a021ae6c0mshd4cbdcccfa6bc4cp18270djsn09bb26c0b8bb',
-  trainRunningStatus: '8a021ae6c0mshd4cbdcccfa6bc4cp18270djsn09bb26c0b8bb',
-  indianRailway: '8a021ae6c0mshd4cbdcccfa6bc4cp18270djsn09bb26c0b8bb',
-};
-
-const TRIP_TYPES = ['One Way', 'Round Trip'];
-const POPULAR_CITIES = [
-  'Mumbai','Delhi','Bangalore','Hyderabad','Chennai','Kolkata','Pune','Ahmedabad',
-  'Jaipur','Lucknow','Goa','Kochi','Varanasi','Udaipur','Agra','Shimla','Manali',
-  'Darjeeling','Rishikesh','Amritsar','Jodhpur','Mysore','Ooty','Coorg','Vizag',
-  'Bhopal','Indore','Nagpur','Chandigarh','Dehradun','Srinagar','Leh','Gangtok',
-  'Singapore','Dubai','Bangkok','Kuala Lumpur','Colombo','Kathmandu','London','Paris'
+const CREDIT_CARDS = [
+  { id: 'c1', bank: 'HDFC Bank', name: 'Roamio Platinum', cashback: '5% on flights', limit: '₹5L', bg: ['#1D4ED8', '#1E3A8A'], chip: '#F59E0B' },
+  { id: 'c2', bank: 'SBI Card', name: 'Travel Elite', cashback: '3% on trains', limit: '₹3L', bg: ['#059669', '#064E3B'], chip: '#FFF' },
 ];
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const getDaysInMonth = (m: number, y: number) => new Date(y, m + 1, 0).getDate();
-const STORE_KEY = 'ROAMIO_TICKETS';
+const NOTIFS = [
+  { id: '1', icon: 'checkmark-circle' as const, title: 'Booking Confirmed', desc: 'Train 12952 · Delhi to Mumbai', time: '2m ago', color: MINT[500] },
+  { id: '2', icon: 'trending-down'    as const, title: 'Price Alert', desc: 'DEL → SIN dropped 18%. Now ₹45,200', time: '1h ago', color: '#60A5FA' },
+  { id: '3', icon: 'notifications'    as const, title: 'PNR Status', desc: 'WL 4 → CONFIRMED. Coach B6 Seat 34', time: '3h ago', color: '#F59E0B' },
+];
 
-type Ticket = {
-  id: string; type: string; title: string; status: string;
-  pnr: string; from: string; to: string; date: string; pax: string;
-  tclass?: string; price?: string;
-};
+function genAvail(pattern: number): Record<string, 'available' | 'limited' | 'unavailable'> {
+  const avail: Record<string, 'available' | 'limited' | 'unavailable'> = {};
+  const today = new Date();
+  for (let i = 0; i < 90; i++) {
+    const d = new Date(today); d.setDate(today.getDate() + i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const r = i % (pattern + 3);
+    avail[key] = r === 0 ? 'unavailable' : r <= 1 ? 'limited' : 'available';
+  }
+  return avail;
+}
+const AVAIL_TRAIN = genAvail(4);
+const AVAIL_FLIGHT = genAvail(5);
+const AVAIL_BUS = genAvail(3);
+
+type ModeId = typeof MODES[number]['id'];
 
 export default function BookingHubScreen() {
-  const { t } = useTranslation();
-  const [activeModule, setActiveModule] = useState<string | null>(null);
-  const showToast = useToastStore(s => s.showToast);
-  const [showHistory, setShowHistory] = useState(false);
-  const [showTicketDetail, setShowTicketDetail] = useState<Ticket | null>(null);
+  const darkMode = useSettingsStore((s) => s.darkMode);
 
-  // Form
-  const [loading, setLoading] = useState(false);
-  const [qFrom, setQFrom] = useState('');
-  const [qTo, setQTo] = useState('');
-  const [qPnr, setQPnr] = useState('');
-  const [results, setResults] = useState<any[] | null>(null);
-  const [fromSuggestions, setFromSuggestions] = useState<string[]>([]);
-  const [toSuggestions, setToSuggestions] = useState<string[]>([]);
+  // Mint Liquid Clay colors
+  const bg      = darkMode ? '#020F08' : MINT[50];
+  const card    = darkMode ? '#0A1A12' : '#FFFFFF';
+  const border  = darkMode ? '#163322' : 'rgba(167,243,208,0.4)';
+  const primary = darkMode ? '#00F59B' : MINT[500];
+  const onPri   = darkMode ? '#000000' : '#FFFFFF';
+  const txt1    = darkMode ? '#F0FDF4' : MINT[900];
+  const txt2    = darkMode ? '#6EE7B7' : MINT[700];
+  const surf    = darkMode ? '#0E291B' : MINT[100];
 
-  // Pax +/- 
-  const [adults, setAdults] = useState(1);
-  const [children, setChildren] = useState(0);
+  const [mode, setMode]               = useState<ModeId>('train');
+  const [tripType, setTripType]       = useState<'One Way' | 'Round Trip'>('One Way');
+  const [classType, setClassType]     = useState('Economy');
+  const [from, setFrom]               = useState('');
+  const [to, setTo]                   = useState('');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [adults, setAdults]           = useState(1);
+  const [children, setChildren]       = useState(0);
+  const [loading, setLoading]         = useState(false);
+  const [results, setResults]         = useState<any[]>([]);
+  const [showNotifs, setShowNotifs]   = useState(false);
+  const [suggestField, setSuggestField] = useState<'from' | 'to' | null>(null);
+  const [activeTicket, setActiveTicket] = useState<any>(null);
+  const [downloading, setDownloading] = useState(false);
 
-  // Dropdowns
-  const [tripType, setTripType] = useState('One Way');
-  const [showTripDrop, setShowTripDrop] = useState(false);
-
-  // Calendar
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [selMonth, setSelMonth] = useState(new Date().getMonth());
-  const [selYear, setSelYear] = useState(new Date().getFullYear());
-  const [selDay, setSelDay] = useState(new Date().getDate());
-  const selectedDate = `${selDay} ${MONTHS[selMonth]} ${selYear}`;
-
-  // PNR sync
-  const [syncPnr, setSyncPnr] = useState('');
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [syncType, setSyncType] = useState('train');
-
-  // Search Results
-  const [selectedResult, setSelectedResult] = useState<any>(null);
-
-  // Movies / Entertainment - Simplified
-  const [movieCity, setMovieCity] = useState('');
-  const [movieResults, setMovieResults] = useState<any[]>([]);
-  const [movieLoading, setMovieLoading] = useState(false);
-  const [selectedMovie, setSelectedMovie] = useState<any>(null);
-  const [showMovieDetail, setShowMovieDetail] = useState(false);
-  const [movieCitySuggestions, setMovieCitySuggestions] = useState<string[]>([]);
-
-  // Train Tracking
-  const [trainNumber, setTrainNumber] = useState('');
-  const [trainStatus, setTrainStatus] = useState<any>(null);
-  const [trainLoading, setTrainLoading] = useState(false);
-  const [pnrNumber, setPnrNumber] = useState('');
-  const [pnrStatus, setPnrStatus] = useState<any>(null);
-  const [pnrLoading, setPnrLoading] = useState(false);
-  const [sourceStation, setSourceStation] = useState('');
-  const [destStation, setDestStation] = useState('');
-  const [runningTrains, setRunningTrains] = useState<any[]>([]);
-  const [trainsLoading, setTrainsLoading] = useState(false);
-  const [showTrainTracking, setShowTrainTracking] = useState(false);
-
-  // Tickets with persistence
-  const [activeTickets, setActiveTickets] = useState<Ticket[]>([]);
-  const [completedTickets, setCompletedTickets] = useState<Ticket[]>([]);
-
-  // Load tickets from storage
-  useEffect(() => {
-    (async () => {
-      try {
-        const stored = await AsyncStorage.getItem(STORE_KEY);
-        if (stored) {
-          const data = JSON.parse(stored);
-          setActiveTickets(data.active && data.active.length ? data.active : [
-            { id: 'd1', type: 'flight', title: 'Flight to Goa', status: 'CONFIRMED', pnr: 'IX7721', from: 'DEL', to: 'GOA', date: '24 May 2026', pax: '1 Adult' },
-            { id: 'd2', type: 'train', title: 'Rajdhani Exp', status: 'WL 12', pnr: '24871923', from: 'NDLS', to: 'BCT', date: '28 May 2026', pax: '2 Adults' }
-          ]);
-          setCompletedTickets(data.completed && data.completed.length ? data.completed : [
-            { id: 'c1', type: 'hotel', title: 'Taj Lands End', status: 'COMPLETED', pnr: 'BK-9912', from: 'Mumbai', to: 'Mumbai', date: '10 Jan 2026', pax: '2 Adults' }
-          ]);
-        } else {
-          setActiveTickets([
-            { id: 'd1', type: 'flight', title: 'Flight to Goa', status: 'CONFIRMED', pnr: 'IX7721', from: 'DEL', to: 'GOA', date: '24 May 2026', pax: '1 Adult' },
-            { id: 'd2', type: 'train', title: 'Rajdhani Exp', status: 'WL 12', pnr: '24871923', from: 'NDLS', to: 'BCT', date: '28 May 2026', pax: '2 Adults' }
-          ]);
-          setCompletedTickets([
-            { id: 'c1', type: 'hotel', title: 'Taj Lands End', status: 'COMPLETED', pnr: 'BK-9912', from: 'Mumbai', to: 'Mumbai', date: '10 Jan 2026', pax: '2 Adults' }
-          ]);
-        }
-      } catch {}
-    })();
-  }, []);
-
-  // Save tickets to storage
-  const saveTickets = useCallback(async (active: Ticket[], completed: Ticket[]) => {
-    try {
-      await AsyncStorage.setItem(STORE_KEY, JSON.stringify({ active, completed }));
-    } catch {}
-  }, []);
-
-  const addTicket = (ticket: Ticket) => {
-    const updated = [ticket, ...activeTickets];
-    setActiveTickets(updated);
-    saveTickets(updated, completedTickets);
+  const switchMode = (m: ModeId) => {
+    setMode(m);
+    setResults([]);
+    if (m === 'movies') router.push('/booking/movies' as any);
   };
 
-  const deleteTicket = (id: string) => {
-    const updatedActive = activeTickets.filter(tk => tk.id !== id);
-    const updatedComplete = completedTickets.filter(tk => tk.id !== id);
-    setActiveTickets(updatedActive);
-    setCompletedTickets(updatedComplete);
-    saveTickets(updatedActive, updatedComplete);
-    showToast('Ticket removed', 'warning');
-  };
-
-  // City suggestions
-  const filterCities = (text: string) => {
-    if (text.length < 2) return [];
-    return POPULAR_CITIES.filter(c => c.toLowerCase().startsWith(text.toLowerCase())).slice(0, 5);
-  };
-
-  const handleFromChange = (text: string) => {
-    setQFrom(text);
-    setFromSuggestions(filterCities(text));
-  };
-  const handleToChange = (text: string) => {
-    setQTo(text);
-    setToSuggestions(filterCities(text));
-  };
-
-  const openOfficialApp = (url: string, backupUrl: string) => {
-    Linking.canOpenURL(url).then(supported => {
-      if (supported) Linking.openURL(url);
-      else Linking.openURL(backupUrl);
-    }).catch(() => Linking.openURL(backupUrl));
-  };
-
-  const safeStr = (val: any): string => {
-    if (val === null || val === undefined) return '';
-    if (typeof val === 'object') return JSON.stringify(val);
-    return String(val);
-  };
-
-  // PNR Sync with real API
-  const handlePnrSync = async () => {
-    if (!syncPnr.trim()) return;
-    setSyncLoading(true);
-    try {
-      if (syncType === 'train') {
-        const res = await fetch(`https://indian-railway-irctc.p.rapidapi.com/api/trains/v1/train/status?train_number=${syncPnr.trim()}&departure_date=20250717&client=web`, {
-          headers: {
-            'x-rapidapi-host': 'indian-railway-irctc.p.rapidapi.com',
-            'x-rapidapi-key': '9dbd976bc9msha12bfdfe54ad44dp1d9ae5jsnd27b8aff2a3f'
-          }
-        });
-        const data = await res.json();
-        const trainName = typeof data?.train_name === 'string' ? data.train_name : `Train ${syncPnr}`;
-        const ticket: Ticket = {
-          id: `t${Date.now()}`, type: 'train', title: trainName,
-          status: 'CONFIRMED', pnr: syncPnr.trim().toUpperCase(),
-          from: safeStr(data?.source_stn_code || '---'),
-          to: safeStr(data?.dest_stn_code || '---'),
-          date: selectedDate, pax: `${adults} Adult${adults > 1 ? 's' : ''}`,
-          tclass: 'General', price: 'Via PNR Sync'
-        };
-        addTicket(ticket);
-        showToast(`Ticket synced: ${trainName}`, 'construct');
-      } else {
-        throw new Error('Offline fallback');
-      }
-    } catch {
-      // Fallback: still save the PNR
-      const ticket: Ticket = {
-        id: `t${Date.now()}`, type: syncType, title: `${syncType.toUpperCase()} PNR: ${syncPnr}`,
-        status: 'CONFIRMED', pnr: syncPnr.trim().toUpperCase(),
-        from: '---', to: '---', date: selectedDate, pax: '-',
-      };
-      addTicket(ticket);
-      showToast('Saved with offline data', 'warning');
-    }
-    setSyncPnr('');
-    setSyncLoading(false);
-  };
+  const swapCities = () => { const t = from; setFrom(to); setTo(t); };
 
   const handleSearch = async () => {
+    if (!from.trim() || !to.trim()) return;
     setLoading(true);
-    setResults(null);
-    const paxStr = `${adults} Adult${adults>1?'s':''}, ${children} Child${children!==1?'ren':''}`;
+    setResults([]);
     try {
-      if (activeModule === 'train') {
-        const res = await fetch(`https://indian-railway-irctc.p.rapidapi.com/api/trains/v1/train/status?train_number=${qPnr || '12051'}&departure_date=20250717&client=web`, {
-          headers: { 'x-rapidapi-host': 'indian-railway-irctc.p.rapidapi.com', 'x-rapidapi-key': '9dbd976bc9msha12bfdfe54ad44dp1d9ae5jsnd27b8aff2a3f' }
-        });
-        const data = await res.json();
-        setResults([
-          { type:'train', title:`${qFrom||'Origin'} → ${qTo||'Destination'}`, status: safeStr(data?.train_name||'Available'), subtitle:`${selectedDate} • ${tripType} • ${paxStr}`, price:'₹485 - ₹2,450', trainNo: qPnr||'12051' },
-          { type:'train', title:`${qFrom||'Origin'} → ${qTo||'Destination'}`, status:'Rajdhani Express', subtitle:`${selectedDate} • AC 2-Tier • ${paxStr}`, price:'₹1,850 - ₹3,200', trainNo:'12952' },
-        ]);
-      } else if (activeModule === 'flight') {
-        setResults([
-          { type:'flight', title:`${qFrom||'DEL'} → ${qTo||'GOA'}`, status:'IndiGo 6E-213', subtitle:`${selectedDate} • ${tripType} • ${paxStr}`, price:'₹3,200 - ₹5,800' },
-          { type:'flight', title:`${qFrom||'DEL'} → ${qTo||'GOA'}`, status:'Air India AI-803', subtitle:`${selectedDate} • Business • ${paxStr}`, price:'₹6,500 - ₹12,800' },
-          { type:'flight', title:`${qFrom||'DEL'} → ${qTo||'GOA'}`, status:'SpiceJet SG-142', subtitle:`${selectedDate} • Economy • ${paxStr}`, price:'₹2,900 - ₹4,500' },
-        ]);
-      } else if (activeModule === 'hotel') {
-        setResults([
-          { type:'hotel', title:`Taj ${qTo||'Goa'}`, status:'5 Star', subtitle:`Check-in: ${selectedDate} • ${paxStr}`, price:'₹8,500/night' },
-          { type:'hotel', title:`OYO Premium ${qTo||'City'}`, status:'Budget', subtitle:`Check-in: ${selectedDate} • ${paxStr}`, price:'₹1,200/night' },
-        ]);
-      } else if (activeModule === 'bus') {
-        setResults([
-          { type:'bus', title:`${qFrom||'BLR'} → ${qTo||'CHN'}`, status:'Volvo AC Sleeper', subtitle:`${selectedDate} • ${tripType} • ${paxStr}`, price:'₹850 - ₹1,400' },
-          { type:'bus', title:`${qFrom||'BLR'} → ${qTo||'CHN'}`, status:'Non-AC Seater', subtitle:`${selectedDate} • ${paxStr}`, price:'₹450 - ₹650' },
-        ]);
-      }
-      setTimeout(() => setLoading(false), 600);
-    } catch { setLoading(false); showToast('Search failed', 'warning'); }
+      let res: any[] = [];
+      const dateStr = new Date().toISOString().split('T')[0];
+      if (mode === 'train')  res = await searchTrains(from, to, dateStr, adults + children);
+      if (mode === 'flight') res = await searchFlights(from, to, dateStr, adults + children);
+      if (mode === 'bus')    res = await searchBuses(from, to, dateStr, adults + children);
+      setResults(res);
+    } finally { setLoading(false); }
   };
 
-  // Movies API - Search by city to get movies playing in theaters
-  const searchMoviesByCity = async (city: string) => {
-    if (!city.trim()) {
-      showToast('Please enter a city name', 'warning');
-      return;
-    }
-    setMovieLoading(true);
-    try {
-      // Try to use International Showtimes API with city geocoding first
-      // For now, show curated Indian movie list with real images
-      const indianMovies = [
-        { id: 'm1', title: 'Jawan', runtime: 168, poster_image_thumbnail: 'https://upload.wikimedia.org/wikipedia/en/8/8c/Jawan_film_poster.jpg', genres: ['Action', 'Thriller'], rating: 7.1, reviews: 12500, plot: 'A high-octane action thriller that outlines the emotional journey of a man who is set to rectify the wrongs in society.', director: 'Atlee', cast: 'Shah Rukh Khan, Nayanthara, Vijay Sethupathi' },
-        { id: 'm2', title: 'Pathaan', runtime: 146, poster_image_thumbnail: 'https://upload.wikimedia.org/wikipedia/en/c/c1/Pathaan_film_poster.jpg', genres: ['Action', 'Thriller'], rating: 6.9, reviews: 18200, plot: 'An Indian agent races against a doomsday clock as a ruthless mercenary with a bitter vendetta mounts an apocalyptic attack against the country.', director: 'Siddharth Anand', cast: 'Shah Rukh Khan, Deepika Padukone, John Abraham' },
-        { id: 'm3', title: 'Animal', runtime: 201, poster_image_thumbnail: 'https://upload.wikimedia.org/wikipedia/en/9/90/Animal_%282023_film%29_poster.jpg', genres: ['Action', 'Drama'], rating: 6.8, reviews: 14500, plot: 'A son\'s love for his father. Often away due to work, the father is unable to comprehend the intensity of his son\'s love.', director: 'Sandeep Reddy Vanga', cast: 'Ranbir Kapoor, Anil Kapoor, Bobby Deol' },
-        { id: 'm4', title: 'Gadar 2', runtime: 170, poster_image_thumbnail: 'https://upload.wikimedia.org/wikipedia/en/7/76/Gadar_2_film_poster.jpg', genres: ['Action', 'Drama'], rating: 5.2, reviews: 8200, plot: 'India\'s most loved family of Tara, Sakeena and Jeete returns with a story of love, sacrifice, and patriotism.', director: 'Anil Sharma', cast: 'Sunny Deol, Ameesha Patel, Utkarsh Sharma' },
-        { id: 'm5', title: 'Dunki', runtime: 161, poster_image_thumbnail: 'https://upload.wikimedia.org/wikipedia/en/7/78/Dunki_poster.jpg', genres: ['Comedy', 'Drama'], rating: 7.2, reviews: 9800, plot: 'Four friends from a village in Punjab share a common dream: to go to England. Their problem is that they have neither the visa nor the ticket.', director: 'Rajkumar Hirani', cast: 'Shah Rukh Khan, Taapsee Pannu, Boman Irani' },
-        { id: 'm6', title: 'Tiger 3', runtime: 154, poster_image_thumbnail: 'https://upload.wikimedia.org/wikipedia/en/e/ef/Tiger_3_poster.jpg', genres: ['Action', 'Thriller'], rating: 6.7, reviews: 11000, plot: 'Tiger and Zoya are back - to save the country and their family. This time it\'s personal!', director: 'Maneesh Sharma', cast: 'Salman Khan, Katrina Kaif, Emraan Hashmi' },
-        { id: 'm7', title: 'Leo', runtime: 164, poster_image_thumbnail: 'https://upload.wikimedia.org/wikipedia/en/7/7f/Leo_%282023_Indian_film%29.jpg', genres: ['Action', 'Thriller'], rating: 7.4, reviews: 15600, plot: 'Parthiban is a mild-mannered cafe owner in Kashmir, who fends off a gang of murderous thugs and gains attention from a drug cartel.', director: 'Lokesh Kanagaraj', cast: 'Vijay, Sanjay Dutt, Trisha' },
-        { id: 'm8', title: 'Rocky Aur Rani Kii Prem Kahaani', runtime: 168, poster_image_thumbnail: 'https://upload.wikimedia.org/wikipedia/en/0/01/Rocky_Aur_Rani_Ki_Prem_Kahani.jpg', genres: ['Romance', 'Comedy'], rating: 7.0, reviews: 8900, plot: 'A rollercoaster journey taken by Rocky and Rani, who realize that love in their family is more complicated than they thought.', director: 'Karan Johar', cast: 'Ranveer Singh, Alia Bhatt, Dharmendra' },
-        { id: 'm9', title: 'Oppenheimer', runtime: 180, poster_image_thumbnail: 'https://upload.wikimedia.org/wikipedia/en/4/4a/Oppenheimer_%282023_film%29.jpg', genres: ['Biography', 'Drama'], rating: 8.4, reviews: 42000, plot: 'The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb.', director: 'Christopher Nolan', cast: 'Cillian Murphy, Emily Blunt, Matt Damon' },
-        { id: 'm10', title: 'Barbie', runtime: 114, poster_image_thumbnail: 'https://upload.wikimedia.org/wikipedia/en/0/0b/Barbie_2023_poster.jpg', genres: ['Comedy', 'Fantasy'], rating: 7.0, reviews: 35000, plot: 'Barbie suffers a crisis that leads her to question her world and her existence.', director: 'Greta Gerwig', cast: 'Margot Robbie, Ryan Gosling, America Ferrera' },
-        { id: 'm11', title: 'Kantara', runtime: 148, poster_image_thumbnail: 'https://upload.wikimedia.org/wikipedia/en/b/bf/Kantara_film_poster.jpg', genres: ['Action', 'Thriller'], rating: 8.2, reviews: 21000, plot: 'When greed paves the way for betrayal, scheming and murder, a young tribal reluctantly dons the traditions of his ancestors to seek justice.', director: 'Rishab Shetty', cast: 'Rishab Shetty, Sapthami Gowda, Kishore' },
-        { id: 'm12', title: 'RRR', runtime: 187, poster_image_thumbnail: 'https://upload.wikimedia.org/wikipedia/en/d/d7/RRR_Poster.jpg', genres: ['Action', 'Drama'], rating: 7.9, reviews: 28000, plot: 'A fictitious story about two legendary revolutionaries and their journey away from home before they started fighting for their country.', director: 'S.S. Rajamouli', cast: 'N.T. Rama Rao Jr., Ram Charan, Alia Bhatt' },
-      ];
-      setMovieResults(indianMovies);
-      showToast(`Showing movies playing in ${city}`, 'success');
-    } catch {
-      showToast('Failed to load movies', 'error');
-    }
-    setMovieLoading(false);
+  const openTicket = (item: any) => {
+    const ref = 'RM-' + mode[0].toUpperCase() + Math.random().toString(36).substring(2, 7).toUpperCase();
+    const dateStr = selectedDate
+      ? selectedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+      : new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    setActiveTicket({
+      ...item, ref, from, to, date: dateStr, passenger: 'Patan Salar Khan',
+      seat: mode === 'train' ? `B2 / ${Math.floor(Math.random() * 60 + 1)}` : `12A`,
+      pnr: mode === 'train' ? String(Math.floor(Math.random() * 9000000000 + 1000000000)) : undefined,
+      gate: mode === 'flight' ? `T2` : undefined,
+      type: mode.toUpperCase(), operator: item.name, price: item.price * (adults + children), class: classType,
+    });
   };
 
-  // Train Tracking API Functions
-  const fetchTrainRunningStatus = async (trainNo: string) => {
-    if (!trainNo.trim()) {
-      showToast('Please enter train number', 'warning');
-      return;
-    }
-    setTrainLoading(true);
+  const handleDownload = async () => {
+    if (!activeTicket || downloading) return;
+    setDownloading(true);
     try {
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      const departureDate = `${yyyy}${mm}${dd}`;
-
-      // Using Indian Railway Train Running Status API as requested
-      const res = await fetch(`https://indian-railway-irctc.p.rapidapi.com/api/trains/v1/train/status?train_number=${trainNo.trim()}&departure_date=${departureDate}&client=web`, {
-        method: 'GET',
-        headers: {
-          'X-RapidAPI-Key': RAPID_API_KEYS.trainRunningStatus, // uses: 8a021ae6c0mshd4cbdcccfa6bc4cp18270djsn09bb26c0b8bb
-          'X-RapidAPI-Host': 'indian-railway-irctc.p.rapidapi.com'
-        }
-      });
-      const data = await res.json();
-      console.log('Train status response:', data);
-      
-      if (res.status === 200 && data && data.body) {
-        setTrainStatus({
-          train_number: trainNo,
-          train_name: typeof data.train_name === 'string' ? data.train_name : `Train ${trainNo}`,
-          current_station: data.body.current_station || 'En Route',
-          status: data.body.train_status_message || data.status?.message?.title || 'Running',
-          delay: data.body.delay || 0,
-          next_station: data.body.stations && data.body.stations.length > 0 ? (data.body.stations.find((s:any)=>!s.hasDeparted)?.stationName || 'Next Station') : 'En Route',
-          expected_arrival: data.body.stations && data.body.stations.length > 0 ? (data.body.stations[data.body.stations.length-1]?.arrivalTime || '--:--') : '--:--',
-          raw: data.body
-        });
-        showToast(`Train ${trainNo} status loaded`, 'construct');
-      } else if (data && data.message) {
-        showToast(data.message.title || 'Error fetching status', 'warning');
-        setTrainStatus(null);
-      } else {
-        throw new Error('Invalid schema from IRCTC');
-      }
-    } catch (err) {
-      console.error('Train status error:', err);
-      setTrainStatus({
-        train_number: trainNo,
-        train_name: `${trainNo} Express`,
-        current_station: 'Data unavailable',
-        status: 'Please check official IRCTC',
-        delay: 0,
-        next_station: 'Check official app',
-        expected_arrival: '--:--'
-      });
-      showToast('Live data unavailable - check network', 'warning');
-    }
-    setTrainLoading(false);
+      await downloadTicketPDF({ ...activeTicket });
+    } finally { setDownloading(false); }
   };
 
-  const fetchPNRStatus = async (pnr: string) => {
-    if (!pnr.trim() || pnr.length !== 10) {
-      showToast('Please enter valid 10-digit PNR', 'warning');
-      return;
-    }
-    setPnrLoading(true);
-    try {
-      const res = await fetch(`https://irctc1.p.rapidapi.com/v1/pnr-status/${pnr}`, {
-        headers: {
-          'X-RapidAPI-Key': RAPID_API_KEYS.trainRunningStatus,
-          'X-RapidAPI-Host': 'irctc1.p.rapidapi.com'
-        }
-      });
-      const data = await res.json();
-      setPnrStatus(data);
-      showToast(`PNR ${pnr} status fetched`, 'construct');
-    } catch {
-      // Fallback mock data
-      setPnrStatus({
-        pnr_number: pnr,
-        train_name: 'Rajdhani Express',
-        train_number: '12952',
-        boarding_station: 'New Delhi',
-        reservation_upto: 'Mumbai Central',
-        passenger_count: 2,
-        passengers: [
-          { current_status: 'CNF/B3/42', booking_status: 'CNF/B3/42' },
-          { current_status: 'CNF/B3/43', booking_status: 'CNF/B3/43' }
-        ]
-      });
-      showToast('PNR status (demo mode)', 'warning');
-    }
-    setPnrLoading(false);
+  const modeColor: Record<ModeId, string> = {
+    train: ACCENTS.train.fg, flight: ACCENTS.flight.fg,
+    bus: ACCENTS.bus.fg, movies: ACCENTS.budget.fg,
   };
-
-  const fetchRunningTrains = async (source: string, dest: string) => {
-    if (!source.trim() || !dest.trim()) {
-      showToast('Please enter both source and destination station codes', 'warning');
-      return;
-    }
-    setTrainsLoading(true);
-    try {
-      // Indian Railways Train Between Stations API
-      const res = await fetch(`https://irctc1.p.rapidapi.com/v3/train_between_stations/?from=${source.trim().toUpperCase()}&to=${dest.trim().toUpperCase()}`, {
-        method: 'GET',
-        headers: {
-          'X-RapidAPI-Key': RAPID_API_KEYS.indianRailway,
-          'X-RapidAPI-Host': 'irctc1.p.rapidapi.com'
-        }
-      });
-      const data = await res.json();
-      console.log('Running trains response:', data);
-      
-      if (data && data.data && Array.isArray(data.data)) {
-        setRunningTrains(data.data);
-        showToast(`${data.data.length} trains found`, 'success');
-      } else if (data && data.message) {
-        showToast(data.message, 'warning');
-        setRunningTrains([]);
-      } else {
-        // Try alternative response format
-        const trains = data?.trains || data?.results || [];
-        if (trains.length > 0) {
-          setRunningTrains(trains);
-          showToast(`${trains.length} trains found`, 'success');
-        } else {
-          showToast('No trains found for this route', 'warning');
-          setRunningTrains([]);
-        }
-      }
-    } catch (err) {
-      console.error('Running trains error:', err);
-      showToast('Failed to fetch trains - check connection', 'error');
-      setRunningTrains([]);
-    }
-    setTrainsLoading(false);
+  const modeBg: Record<ModeId, string> = {
+    train: ACCENTS.train.bg, flight: ACCENTS.flight.bg,
+    bus: ACCENTS.bus.bg, movies: ACCENTS.budget.bg,
   };
+  const mc = modeColor[mode];
+  const mbg = modeBg[mode];
 
-  // Calendar
-  const renderCalendar = () => {
-    const daysInMonth = getDaysInMonth(selMonth, selYear);
-    const firstDay = new Date(selYear, selMonth, 1).getDay();
-    const cells: (number|null)[] = [];
-    for (let i = 0; i < firstDay; i++) cells.push(null);
-    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-    return (
-      <Modal visible={showCalendar} transparent animationType="fade">
-        <View style={st.calOverlay}>
-          <View style={st.calSheet}>
-            <View style={st.calHeader}>
-              <TouchableOpacity onPress={() => { if(selMonth===0){setSelMonth(11);setSelYear(y=>y-1);}else setSelMonth(m=>m-1); }}><Ionicons name="chevron-back" size={24} color={NC.primary}/></TouchableOpacity>
-              <Text style={st.calMonthLabel}>{MONTHS[selMonth]} {selYear}</Text>
-              <TouchableOpacity onPress={() => { if(selMonth===11){setSelMonth(0);setSelYear(y=>y+1);}else setSelMonth(m=>m+1); }}><Ionicons name="chevron-forward" size={24} color={NC.primary}/></TouchableOpacity>
+  return (
+    <View style={[s.root, { backgroundColor: bg }]}>
+      <SafeAreaView edges={['top']} style={{ backgroundColor: bg }}>
+        {/* App bar */}
+        <View style={s.appBar}>
+          <View>
+            <Text style={[s.appBarSup, { color: primary }]}>GLOBAL BOOKING PORTAL</Text>
+            <Text style={[s.appBarTitle, { color: txt1 }]}>Roamio.</Text>
+          </View>
+          <TouchableOpacity
+            style={[s.bellBtn, { backgroundColor: card, borderColor: border }]}
+            onPress={() => setShowNotifs(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="notifications-outline" size={22} color={txt1} />
+            <View style={[s.bellDot, { borderColor: card }]} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Squishy Tabs */}
+        <View style={[s.modeTabBar, { backgroundColor: card, borderColor: border }]}>
+          {MODES.map((m2) => {
+            const active = mode === m2.id;
+            const clr = modeColor[m2.id];
+            const tbg = modeBg[m2.id];
+            return (
+              <TouchableOpacity
+                key={m2.id}
+                style={[s.modeTab, active && { backgroundColor: darkMode ? clr + '20' : tbg }]}
+                onPress={() => switchMode(m2.id)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name={m2.icon} size={18} color={active ? clr : txt2} />
+                <Text style={[s.modeTabLabel, { color: active ? clr : txt2, fontWeight: active ? '800' : '600' }]}>
+                  {m2.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </SafeAreaView>
+
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+          
+          {/* SEARCH CARD (Mint Liquid Clay styling) */}
+          <View style={[s.searchCard, { backgroundColor: card, borderColor: border }]}>
+            {(mode === 'train' || mode === 'flight') && (
+              <View style={s.tripTypeRow}>
+                {TRIP_TYPES.map(t => (
+                  <TouchableOpacity key={t} onPress={() => setTripType(t)}
+                    style={[s.tripTypePill, tripType === t && { backgroundColor: mbg }]}>
+                    <Text style={[s.tripTypeTxt, { color: tripType === t ? mc : txt2, fontWeight: tripType === t ? '800' : '600' }]}>
+                      {t}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                <View style={{ flex: 1 }} />
+                {mode === 'flight' && (
+                  <View style={[s.classPill, { borderColor: border }]}>
+                    <Text style={[s.classTxt, { color: txt2 }]}>{classType}</Text>
+                    <Ionicons name="chevron-down" size={12} color={txt2} />
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* From/To */}
+            <View style={[s.routeBox, { backgroundColor: surf, borderColor: border }]}>
+              <View style={s.routeRow}>
+                <View style={[s.routeDot, { backgroundColor: mc }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.routeFieldLabel, { color: primary }]}>From</Text>
+                  <TextInput value={from} onChangeText={setFrom} onFocus={() => setSuggestField('from')} onBlur={() => setTimeout(() => setSuggestField(null), 200)}
+                    placeholder="Origin city" placeholderTextColor={txt2} style={[s.routeInput, { color: txt1 }]} />
+                </View>
+              </View>
+              <TouchableOpacity onPress={swapCities} style={[s.swapBtn, { backgroundColor: mbg, borderColor: border }]} activeOpacity={0.8}>
+                <Ionicons name="swap-vertical" size={16} color={mc} />
+              </TouchableOpacity>
+              <View style={[s.routeDivider, { backgroundColor: border }]} />
+              <View style={s.routeRow}>
+                <View style={[s.routeDot, { backgroundColor: txt2 }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.routeFieldLabel, { color: txt2 }]}>To</Text>
+                  <TextInput value={to} onChangeText={setTo} onFocus={() => setSuggestField('to')} onBlur={() => setTimeout(() => setSuggestField(null), 200)}
+                    placeholder="Destination city" placeholderTextColor={txt2} style={[s.routeInput, { color: txt1 }]} />
+                </View>
+              </View>
             </View>
-            <View style={st.calDayNames}>{['S','M','T','W','T','F','S'].map((d,i) => <Text key={i} style={st.calDayName}>{d}</Text>)}</View>
-            <View style={st.calGrid}>
-              {cells.map((day,i) => (
-                <TouchableOpacity key={i} style={[st.calCell, day===selDay&&st.calCellSel]}
-                  onPress={() => { if(day){setSelDay(day);setShowCalendar(false);} }} disabled={!day}>
-                  <Text style={[st.calCellText, day===selDay&&st.calCellTextSel]}>{day||''}</Text>
+
+            {suggestField && (
+              <View style={[s.suggestBox, { backgroundColor: card, borderColor: border }]}>
+                {POPULAR_CITIES.filter(c => c.toLowerCase().startsWith((suggestField === 'from' ? from : to).toLowerCase())).slice(0, 5).map(c => (
+                  <TouchableOpacity key={c} style={[s.suggestRow, { borderBottomColor: border }]} onPress={() => { suggestField === 'from' ? setFrom(c) : setTo(c); setSuggestField(null); }}>
+                    <Ionicons name="location-outline" size={14} color={mc} />
+                    <Text style={[s.suggestTxt, { color: txt1 }]}>{c}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <View style={{ marginTop: 14 }}>
+              <Text style={[s.fieldLabel, { color: txt1, marginBottom: 8 }]}>Travel Date</Text>
+              <CalendarPicker
+                label="Select Travel Date" selectedDate={selectedDate} onDateSelect={setSelectedDate}
+                primaryColor={mc} textColor={txt1} subTextColor={txt2} cardColor={card} borderColor={border} surfaceColor={surf}
+                minDate={new Date()} availability={mode === 'train' ? AVAIL_TRAIN : mode === 'flight' ? AVAIL_FLIGHT : AVAIL_BUS}
+              />
+            </View>
+
+            <View style={s.passengerSection}>
+              <View style={s.counterWrap}>
+                <Text style={[s.fieldLabel, { color: txt1 }]}>Adults</Text>
+                <View style={s.counterRow}>
+                  <TouchableOpacity onPress={() => setAdults(Math.max(1, adults - 1))} style={[s.cBtn, { backgroundColor: surf }]}>
+                    <Ionicons name="remove" size={14} color={txt1} />
+                  </TouchableOpacity>
+                  <Text style={[s.cVal, { color: txt1 }]}>{adults}</Text>
+                  <TouchableOpacity onPress={() => setAdults(Math.min(6, adults + 1))} style={[s.cBtn, { backgroundColor: surf }]}>
+                    <Ionicons name="add" size={14} color={txt1} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={[s.cDivider, { backgroundColor: border }]} />
+              <View style={s.counterWrap}>
+                <Text style={[s.fieldLabel, { color: txt1 }]}>Children</Text>
+                <View style={s.counterRow}>
+                  <TouchableOpacity onPress={() => setChildren(Math.max(0, children - 1))} style={[s.cBtn, { backgroundColor: surf }]}>
+                    <Ionicons name="remove" size={14} color={txt1} />
+                  </TouchableOpacity>
+                  <Text style={[s.cVal, { color: txt1 }]}>{children}</Text>
+                  <TouchableOpacity onPress={() => setChildren(Math.min(6, children + 1))} style={[s.cBtn, { backgroundColor: surf }]}>
+                    <Ionicons name="add" size={14} color={txt1} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity style={[s.searchBtn, { backgroundColor: mc, shadowColor: mc }]} onPress={handleSearch} disabled={loading} activeOpacity={0.88}>
+              <Ionicons name={loading ? 'hourglass-outline' : 'search'} size={18} color="#FFF" />
+              <Text style={s.searchBtnTxt}>{loading ? 'Scanning Universe...' : `Search ${MODES.find(m => m.id === mode)?.label}`}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* RESULTS */}
+          {results.length > 0 && (
+            <View style={s.resultsSection}>
+              <View style={s.resultsHeader}>
+                <Text style={[s.resultsSummary, { color: txt1 }]}>{results.length} found · {from} to {to}</Text>
+              </View>
+              {results.map((item, idx) => (
+                <TouchableOpacity key={item.id || idx} activeOpacity={0.86} onPress={() => openTicket(item)}
+                  style={[s.resultCard, { backgroundColor: card, borderColor: border, shadowColor: item.color || mc }]}
+                >
+                  <View style={s.resultTop}>
+                    <View style={[s.resultIconBox, { backgroundColor: (item.color || mc) + '18' }]}>
+                      <Ionicons name={MODES.find(m => m.id === mode)!.icon} size={20} color={item.color || mc} />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={[s.resultName, { color: txt1 }]}>{item.name}</Text>
+                      <Text style={[s.resultSub, { color: txt2 }]}>{item.number ? `${item.number} · ` : ''}{item.type || item.stops || ''}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={[s.resultPrice, { color: txt1 }]}>₹{(item.price * (adults + children)).toLocaleString('en-IN')}</Text>
+                    </View>
+                  </View>
+                  <View style={s.resultTimeRow}>
+                    <View><Text style={[s.resultTime, { color: txt1 }]}>{item.dep}</Text></View>
+                    <View style={s.resultMiddle}>
+                      <Text style={[s.resultDur, { color: txt2 }]}>{item.dur}</Text>
+                      <View style={[s.resultLine, { backgroundColor: border }]} />
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}><Text style={[s.resultTime, { color: txt1 }]}>{item.arr}</Text></View>
+                  </View>
+                  <View style={[s.resultFooter, { borderTopColor: border }]}>
+                    <Text style={[s.statusTxt, { color: item.status?.startsWith('AVL') ? primary : txt2 }]}>{item.status || 'Available'}</Text>
+                    <View style={[s.bookChip, { backgroundColor: item.color || mc }]}><Text style={s.bookChipTxt}>BOOK</Text></View>
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
-            <TouchableOpacity onPress={() => setShowCalendar(false)} style={st.calClose}><Text style={{color:NC.primary,fontWeight:'800'}}>CLOSE</Text></TouchableOpacity>
+          )}
+
+          {/* GROQ AGENT */}
+          {results.length === 0 && (
+            <TouchableOpacity style={s.agentCTA} onPress={() => router.push('/agent' as any)} activeOpacity={0.88}>
+              <View style={s.agentTop}>
+                <View style={[s.orb, { backgroundColor: primary }]}><Ionicons name="sparkles" size={20} color="#FFF" /></View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={s.agentTitle}>Roamio AI Pilot</Text>
+                  <Text style={s.agentSub}>Groq LPU · Plans your trip instantly</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={18} color="#FFF" />
+              </View>
+            </TouchableOpacity>
+          )}
+
+          {/* OFFERS (Mint Liquid Clay styling) */}
+          {results.length === 0 && (
+            <>
+              <Text style={[s.sectionLabel, { color: txt1, marginTop: 12 }]}>Special Offers</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24, marginHorizontal: -16, paddingHorizontal: 16 }}>
+                {OFFERS.map(o => (
+                  <TouchableOpacity key={o.id} style={[s.offerCard, { backgroundColor: card, borderColor: border, shadowColor: o.color }]} activeOpacity={0.88}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                      <View style={[s.offerIconBox, { backgroundColor: darkMode ? o.color + '20' : o.bg }]}>
+                        <Ionicons name={o.icon} size={16} color={o.color} />
+                      </View>
+                      <Text style={[s.offerTitle, { color: o.color }]}>{o.title}</Text>
+                    </View>
+                    <Text style={[s.offerSub, { color: txt2 }]}>{o.sub}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={[s.sectionLabel, { color: txt1 }]}>Travel Cards</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24, marginHorizontal: -16, paddingHorizontal: 16 }}>
+                {CREDIT_CARDS.map(cc => (
+                  <TouchableOpacity key={cc.id} style={s.creditCard} activeOpacity={0.88}>
+                    <View style={[s.creditCardInner, { backgroundColor: cc.bg[0] }]}>
+                      <View style={s.cardTop}>
+                        <Text style={s.cardBank}>{cc.bank}</Text>
+                        <View style={[s.cardChip, { backgroundColor: cc.chip }]} />
+                      </View>
+                      <Text style={s.cardNum}>••••  ••••  ••••  4729</Text>
+                      <View style={s.cardBottom}>
+                        <Text style={s.cardName}>{cc.name}</Text>
+                        <Text style={s.cardBadgeTxt}>VISA</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={[s.sectionLabel, { color: txt1 }]}>Quick Access</Text>
+              <View style={s.quickGrid}>
+                {[
+                  { label: 'Train Status', icon: 'search-outline' as const, c: ACCENTS.train, r: '/booking/train' },
+                  { label: 'My Flights', icon: 'ticket-outline' as const, c: ACCENTS.flight, r: '/booking/flight' },
+                  { label: 'Bus Seats', icon: 'bus-outline' as const, c: ACCENTS.bus, r: '/booking/bus' },
+                ].map(q => (
+                  <TouchableOpacity key={q.label} style={[s.quickCard, { backgroundColor: card, borderColor: border }]} onPress={() => router.push(q.r as any)}>
+                    <View style={[s.quickIconBox, { backgroundColor: darkMode ? q.c.fg + '20' : q.c.bg }]}>
+                      <Ionicons name={q.icon} size={22} color={q.c.fg} />
+                    </View>
+                    <Text style={[s.quickLabel, { color: txt1 }]}>{q.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* Ticket Modal */}
+      <Modal visible={!!activeTicket} transparent animationType="slide">
+        <View style={s.modalBg}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setActiveTicket(null)} />
+          <View style={[s.ticketSheet, { backgroundColor: card }]}>
+            <View style={[s.ticketStrip, { backgroundColor: activeTicket?.color || mc }]}>
+              <Ionicons name={MODES.find(m2 => m2.id === mode)?.icon || 'ticket'} size={24} color="#FFF" />
+              <Text style={s.ticketStripTitle}>E-TICKET CONFIRMED</Text>
+            </View>
+            <ScrollView style={{ padding: 24 }}>
+              <View style={[s.refBox, { backgroundColor: (activeTicket?.color || mc) + '15', borderColor: (activeTicket?.color || mc) + '35' }]}>
+                <Text style={[s.refLabel, { color: txt2 }]}>BOOKING REFERNCE</Text>
+                <Text style={[s.refVal, { color: activeTicket?.color || mc }]}>{activeTicket?.ref}</Text>
+              </View>
+              <TouchableOpacity style={[s.downloadBtn, { backgroundColor: activeTicket?.color || mc }]} onPress={handleDownload} disabled={downloading}>
+                <Text style={s.downloadBtnTxt}>{downloading ? 'Downloading...' : 'Download PDF'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.closeBtn, { borderColor: border }]} onPress={() => setActiveTicket(null)}>
+                <Text style={[s.closeBtnTxt, { color: txt1 }]}>Close</Text>
+              </TouchableOpacity>
+              <View style={{ height: 40 }} />
+            </ScrollView>
           </View>
         </View>
       </Modal>
-    );
-  };
-
-  const renderTicketCard = (ticket: Ticket, canDelete = true) => (
-    <TouchableOpacity key={ticket.id} activeOpacity={0.85} onPress={() => setShowTicketDetail(ticket)}>
-      <ClayCard variant="white" style={st.tkCard}>
-        <View style={st.tkHead}>
-          <Ionicons name={ticket.type==='flight'?'airplane':ticket.type==='bus'?'bus':'train'} size={18} color={NC.primaryFixed}/>
-          <Text style={st.tkPnr}>PNR: {ticket.pnr}</Text>
-          <View style={[st.tkStatusBadge, ticket.status==='COMPLETED'&&{backgroundColor:'#78909C'}]}><Text style={st.tkStatusText}>{ticket.status}</Text></View>
-          {canDelete && <TouchableOpacity onPress={() => deleteTicket(ticket.id)} style={{marginLeft:8}}><Ionicons name="trash-outline" size={18} color="#E53935"/></TouchableOpacity>}
-        </View>
-        <Text style={st.tkTitle}>{ticket.title}</Text>
-        <View style={st.tkGrid}>
-          <View><Text style={st.tkLabel}>ROUTE</Text><Text style={st.tkVal}>{ticket.from} → {ticket.to}</Text></View>
-          <View><Text style={st.tkLabel}>DATE</Text><Text style={st.tkVal}>{ticket.date}</Text></View>
-          <View><Text style={st.tkLabel}>PAX</Text><Text style={st.tkVal}>{ticket.pax}</Text></View>
-        </View>
-      </ClayCard>
-    </TouchableOpacity>
-  );
-
-  // City suggestion list
-  const renderSuggestions = (suggestions: string[], onSelect: (c: string) => void) => {
-    if (suggestions.length === 0) return null;
-    return (
-      <View style={st.suggestBox}>
-        {suggestions.map(c => (
-          <TouchableOpacity key={c} style={st.suggestItem} onPress={() => onSelect(c)}>
-            <Ionicons name="location" size={14} color={NC.primary}/>
-            <Text style={st.suggestText}>{c}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    );
-  };
-
-  return (
-    <>
-    <SafeAreaView style={st.container} edges={['top']}>
-      <ScrollView contentContainerStyle={st.scroll} showsVerticalScrollIndicator={false}>
-        <View style={st.header}>
-          <View>
-            <Text style={st.heading}>{t('travel_hub') || 'Travel Hub'}</Text>
-            <Text style={st.sub}>Realtime Aggregation Gateway</Text>
-          </View>
-          <TouchableOpacity onPress={() => setShowHistory(true)} style={st.historyBtn}>
-            <Ionicons name="time-outline" size={18} color={NC.primary}/>
-            <Text style={st.historyBtnText}>{t('history') || 'History'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ClayCard variant="green" style={st.heroCard}>
-          <Ionicons name="earth" size={38} color="#FFF" style={{marginBottom:8}}/>
-          <Text style={st.heroLabel}>GLOBAL METASEARCH</Text>
-          <Text style={st.heroTitle}>Start your Journey</Text>
-          <Text style={st.heroSub}>Search, compare & book on official apps.</Text>
-        </ClayCard>
-
-        <Text style={st.gridTitle}>Search Providers</Text>
-        <View style={st.grid}>
-            {MODULES.map(m => (
-              <TouchableOpacity key={m.id} style={st.gridItem} activeOpacity={0.8} onPress={() => {
-                setActiveModule(m.id); setResults(null); setQFrom(''); setQTo(''); setQPnr('');
-                setFromSuggestions([]); setToSuggestions([]); setSelectedResult(null);
-              }}>
-              <ClayCard variant="white" style={st.gridItemCard}>
-                <View style={[st.iconOrb, {backgroundColor:m.color+'15'}]}><Ionicons name={m.icon as any} size={26} color={m.color}/></View>
-                <Text style={st.modTitle}>{m.title}</Text>
-                <Text style={st.modSub}>{m.sub}</Text>
-              </ClayCard>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* PNR Sync */}
-        <ClayCard variant="white" style={st.syncCard}>
-          <View style={{flexDirection:'row',alignItems:'center',marginBottom:12}}>
-            <Ionicons name="link" size={16} color="#1565C0"/>
-            <Text style={[st.syncTitle, {flex: 1}]}>  Sync Ticket via ID</Text>
-            
-            <View style={{flexDirection:'row',backgroundColor:'rgba(21,101,192,0.1)',borderRadius:12,padding:3}}>
-              <TouchableOpacity onPress={() => setSyncType('train')} style={{paddingHorizontal:10,paddingVertical:6,borderRadius:10,backgroundColor:syncType==='train'?'#FFF':'transparent'}}>
-                <Text style={{fontSize:10,fontWeight:'800',color:syncType==='train'?'#1565C0':NC.onSurfaceVariant}}>Train</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setSyncType('flight')} style={{paddingHorizontal:10,paddingVertical:6,borderRadius:10,backgroundColor:syncType==='flight'?'#FFF':'transparent'}}>
-                <Text style={{fontSize:10,fontWeight:'800',color:syncType==='flight'?'#1565C0':NC.onSurfaceVariant}}>Flight</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setSyncType('bus')} style={{paddingHorizontal:10,paddingVertical:6,borderRadius:10,backgroundColor:syncType==='bus'?'#FFF':'transparent'}}>
-                <Text style={{fontSize:10,fontWeight:'800',color:syncType==='bus'?'#1565C0':NC.onSurfaceVariant}}>Bus</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <View style={{flexDirection:'row',gap:8}}>
-            <TextInput style={[st.input,{flex:1,paddingVertical:12}]} placeholder={syncType==='train'?"Enter PNR Number":syncType==='flight'?"Enter PNR / Ref ID":"Enter Ticket ID"}
-              value={syncPnr} onChangeText={setSyncPnr}/>
-            <TouchableOpacity style={st.syncBtn} onPress={handlePnrSync} disabled={syncLoading}>
-              {syncLoading ? <ActivityIndicator color="#FFF" size="small"/> : <Ionicons name="add" size={24} color="#FFF"/>}
-            </TouchableOpacity>
-          </View>
-        </ClayCard>
-
-        {activeTickets.length > 0 && (
-          <>
-            <Text style={st.gridTitle}>{t('active_bookings') || 'Active Bookings'} ({activeTickets.length})</Text>
-            {activeTickets.map(ticket => renderTicketCard(ticket))}
-          </>
-        )}
-        <View style={{height:120}}/>
-      </ScrollView>
-
-      {renderCalendar()}
-
-      {/* Ticket Detail */}
-      {showTicketDetail && (
-        <Modal visible transparent animationType="slide">
-          <View style={st.modalOverlay}>
-            <View style={st.modalSheet}>
-              <View style={st.modalHeader}>
-                <Text style={st.modalTitle}>Booking Details</Text>
-                <TouchableOpacity onPress={() => setShowTicketDetail(null)} style={st.closeBtn}><Ionicons name="close" size={24} color={NC.onSurfaceVariant}/></TouchableOpacity>
-              </View>
-              <View style={st.detailHero}>
-                <Ionicons name={showTicketDetail.type==='flight'?'airplane':'train'} size={32} color="#FFF"/>
-                <Text style={st.detailPnr}>{showTicketDetail.pnr}</Text>
-                <View style={st.detailStatusBadge}><Text style={st.detailStatusText}>{showTicketDetail.status}</Text></View>
-              </View>
-              <Text style={st.detailTitle}>{showTicketDetail.title}</Text>
-              {[
-                {l:'Route',v:`${showTicketDetail.from} → ${showTicketDetail.to}`},
-                {l:'Travel Date',v:showTicketDetail.date},
-                {l:'Passengers',v:showTicketDetail.pax},
-                {l:'Class',v:showTicketDetail.tclass||'General'},
-                {l:'Fare',v:showTicketDetail.price||'N/A'},
-                {l:'Boarding',v:showTicketDetail.from},
-                {l:'Status',v:showTicketDetail.status},
-              ].map(row => (
-                <View key={row.l} style={st.detailRow}>
-                  <Text style={st.detailLabel}>{row.l}</Text>
-                  <Text style={st.detailValue}>{row.v}</Text>
-                </View>
-              ))}
-              <TouchableOpacity style={[st.officialBtn,{marginTop:20}]} onPress={() => {
-                if(showTicketDetail.type==='train') openOfficialApp('irctc://','https://www.irctc.co.in/');
-                else openOfficialApp('makemytrip://','https://www.makemytrip.com/');
-              }}>
-                <Ionicons name="open-outline" size={16} color="#FFF" style={{marginRight:8}}/>
-                <Text style={st.officialText}>Open on Official App</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {/* History */}
-      {showHistory && (
-        <Modal visible transparent animationType="slide">
-          <View style={st.modalOverlay}>
-            <View style={st.modalSheet}>
-              <View style={st.modalHeader}>
-                <Text style={st.modalTitle}>All Tickets</Text>
-                <TouchableOpacity onPress={() => setShowHistory(false)} style={st.closeBtn}><Ionicons name="close" size={24} color={NC.onSurfaceVariant}/></TouchableOpacity>
-              </View>
-              <ScrollView>
-                {activeTickets.length > 0 && <Text style={st.histSecTitle}>ACTIVE ({activeTickets.length})</Text>}
-                {activeTickets.map(ticket => renderTicketCard(ticket))}
-                {completedTickets.length > 0 && <Text style={st.histSecTitle}>COMPLETED</Text>}
-                {completedTickets.map(ticket => renderTicketCard(ticket))}
-                {activeTickets.length===0 && completedTickets.length===0 && (
-                  <View style={{alignItems:'center',paddingVertical:40}}>
-                    <Ionicons name="ticket-outline" size={48} color={NC.outlineVariant}/>
-                    <Text style={{color:NC.onSurfaceVariant,marginTop:12,fontWeight:'700'}}>No tickets yet</Text>
-                  </View>
-                )}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {/* Search Modal */}
-      {activeModule && (
-        <Modal visible animationType="slide" transparent>
-          <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==='ios'?'padding':undefined}>
-          <View style={st.modalOverlay}>
-            <View style={[st.modalSheet,{maxHeight:'92%'}]}>
-              <View style={st.modalHeader}>
-                <View>
-                  <Text style={st.modalTitle}>{MODULES.find(m=>m.id===activeModule)?.title}</Text>
-                  <Text style={st.modalSub}>Live API Search</Text>
-                </View>
-                <TouchableOpacity onPress={() => setActiveModule(null)} style={st.closeBtn}><Ionicons name="close" size={24} color={NC.onSurfaceVariant}/></TouchableOpacity>
-              </View>
-              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <View style={st.form}>
-                {/* From / To with suggestions - Hidden for movies */}
-                {activeModule !== 'movies' && (
-                <View style={{flexDirection:'row',gap:10}}>
-                  <View style={[st.inputWrap,{flex:1,zIndex:20}]}>
-                    <Text style={st.label}>{activeModule==='hotel'?'City':'From'}</Text>
-                    <TextInput style={st.input} placeholder="Type city..." value={qFrom} onChangeText={handleFromChange}/>
-                    {renderSuggestions(fromSuggestions, (c) => { setQFrom(c); setFromSuggestions([]); })}
-                  </View>
-                  {activeModule!=='hotel' && (
-                    <View style={[st.inputWrap,{flex:1,zIndex:19}]}>
-                      <Text style={st.label}>Destination</Text>
-                      <TextInput style={st.input} placeholder="Type city..." value={qTo} onChangeText={handleToChange}/>
-                      {renderSuggestions(toSuggestions, (c) => { setQTo(c); setToSuggestions([]); })}
-                    </View>
-                  )}
-                </View>
-                )}
-
-                {/* Date + Trip Type - Hidden for movies */}
-                {activeModule !== 'movies' && (
-                <View style={{flexDirection:'row',gap:10,zIndex:10}}>
-                  <View style={[st.inputWrap,{flex:1}]}>
-                    <Text style={st.label}>Date</Text>
-                    <TouchableOpacity style={st.dropBtn} onPress={() => setShowCalendar(true)}>
-                      <Ionicons name="calendar-outline" size={16} color={NC.primary}/>
-                      <Text style={st.dropBtnText}>{selectedDate}</Text>
-                    </TouchableOpacity>
-                  </View>
-                  {activeModule!=='hotel' && (
-                    <View style={[st.inputWrap,{flex:1}]}>
-                      <Text style={st.label}>Trip Type</Text>
-                      <TouchableOpacity style={st.dropBtn} onPress={() => setShowTripDrop(!showTripDrop)}>
-                        <Text style={st.dropBtnText}>{tripType}</Text>
-                        <Ionicons name="chevron-down" size={14} color={NC.onSurfaceVariant}/>
-                      </TouchableOpacity>
-                      {showTripDrop && (
-                        <View style={st.dropdown}>{TRIP_TYPES.map(tripOpt => (
-                          <TouchableOpacity key={tripOpt} style={st.dropItem} onPress={() => {setTripType(tripOpt);setShowTripDrop(false);}}>
-                            <Text style={[st.dropItemText,tripType===tripOpt&&{color:NC.primary,fontWeight:'900'}]}>{tripOpt}</Text>
-                          </TouchableOpacity>
-                        ))}</View>
-                      )}
-                    </View>
-                  )}
-                </View>
-                )}
-
-                {/* Passengers +/- - Hidden for movies */}
-                {activeModule !== 'movies' && (
-                <View style={{flexDirection:'row',gap:10}}>
-                  <View style={[st.inputWrap,{flex:1}]}>
-                    <Text style={st.label}>Adults</Text>
-                    <View style={st.paxRow}>
-                      <TouchableOpacity style={st.paxBtn} onPress={() => setAdults(Math.max(1,adults-1))}><Ionicons name="remove" size={18} color={NC.primary}/></TouchableOpacity>
-                      <Text style={st.paxCount}>{adults}</Text>
-                      <TouchableOpacity style={st.paxBtn} onPress={() => setAdults(adults+1)}><Ionicons name="add" size={18} color={NC.primary}/></TouchableOpacity>
-                    </View>
-                  </View>
-                  <View style={[st.inputWrap,{flex:1}]}>
-                    <Text style={st.label}>Children</Text>
-                    <View style={st.paxRow}>
-                      <TouchableOpacity style={st.paxBtn} onPress={() => setChildren(Math.max(0,children-1))}><Ionicons name="remove" size={18} color={NC.primary}/></TouchableOpacity>
-                      <Text style={st.paxCount}>{children}</Text>
-                      <TouchableOpacity style={st.paxBtn} onPress={() => setChildren(children+1)}><Ionicons name="add" size={18} color={NC.primary}/></TouchableOpacity>
-                    </View>
-                  </View>
-                  {(activeModule==='train'||activeModule==='flight') && (
-                    <View style={[st.inputWrap,{flex:1}]}>
-                      <Text style={st.label}>{activeModule==='train'?'Train No':'Flight'}</Text>
-                      <TextInput style={st.input} placeholder="Opt." value={qPnr} onChangeText={setQPnr}/>
-                    </View>
-                  )}
-                </View>
-                )}
-
-                {activeModule !== 'movies' && (
-                <ClayButton label={loading?"Searching...":"SEARCH AVAILABILITY"} onPress={handleSearch} color={NC.primary} style={{marginTop:10}}/>
-                )}
-              </View>
-
-              {/* Movies Section - Simplified City-based Search */}
-              {activeModule === 'movies' && (
-                <View style={st.form}>
-                  <Text style={[st.modalTitle, {marginBottom:12}]}>🎬 Now Playing in Theaters</Text>
-                  <Text style={{fontSize:13,color:'#558B2F',marginBottom:12}}>Enter your city to see movies playing near you</Text>
-                  
-                  <View style={[st.inputWrap,{zIndex:20}]}>
-                    <Text style={st.label}>Your City</Text>
-                    <View style={{flexDirection:'row',gap:8}}>
-                      <TextInput 
-                        style={[st.input,{flex:1}]} 
-                        placeholder="e.g., Mumbai, Delhi, Bangalore..." 
-                        value={movieCity} 
-                        onChangeText={(text) => {
-                          setMovieCity(text);
-                          if (text.length >= 2) {
-                            setMovieCitySuggestions(POPULAR_CITIES.filter(c => c.toLowerCase().includes(text.toLowerCase())).slice(0, 5));
-                          } else {
-                            setMovieCitySuggestions([]);
-                          }
-                        }}
-                      />
-                      <TouchableOpacity 
-                        style={[st.syncBtn,{backgroundColor:'#C2185B'}]} 
-                        onPress={() => searchMoviesByCity(movieCity)}
-                        disabled={movieLoading}
-                      >
-                        {movieLoading ? <ActivityIndicator color="#FFF" size="small"/> : <Ionicons name="search" size={20} color="#FFF"/>}
-                      </TouchableOpacity>
-                    </View>
-                    {/* City Suggestions */}
-                    {movieCitySuggestions.length > 0 && (
-                      <View style={st.suggestBox}>
-                        {movieCitySuggestions.map(city => (
-                          <TouchableOpacity 
-                            key={city} 
-                            style={st.suggestItem} 
-                            onPress={() => { setMovieCity(city); setMovieCitySuggestions([]); }}
-                          >
-                            <Ionicons name="location" size={14} color="#C2185B"/>
-                            <Text style={st.suggestText}>{city}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Quick City Buttons */}
-                  <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:16}}>
-                    {['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata'].map(city => (
-                      <TouchableOpacity 
-                        key={city}
-                        style={{backgroundColor:'#FCE4EC',paddingHorizontal:12,paddingVertical:6,borderRadius:16,borderWidth:1,borderColor:'#F8BBD9'}}
-                        onPress={() => { setMovieCity(city); searchMoviesByCity(city); }}
-                      >
-                        <Text style={{fontSize:12,fontWeight:'700',color:'#C2185B'}}>{city}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {movieLoading && <ActivityIndicator size="large" color="#C2185B" style={{marginVertical:20}}/>}
-
-                  {!movieLoading && movieResults.length > 0 && (
-                    <View style={{marginTop:8}}>
-                      <Text style={st.resultHeaders}>🎭 {movieResults.length} MOVIES PLAYING IN {movieCity.toUpperCase()}</Text>
-                      {movieResults.map((movie, i) => (
-                        <TouchableOpacity 
-                          key={movie.id || i} 
-                          activeOpacity={0.8} 
-                          onPress={() => { setSelectedMovie(movie); setShowMovieDetail(true); }}
-                          style={{marginBottom:12}}
-                        >
-                          <ClayCard variant="white" style={{padding:12}}>
-                            <View style={{flexDirection:'row',gap:12}}>
-                              {/* Movie Poster */}
-                              <View style={{width:80,height:120,borderRadius:8,overflow:'hidden',backgroundColor:'#F5F5F5'}}>
-                                {movie.poster_image_thumbnail ? (
-                                  <Image 
-                                    source={{ uri: movie.poster_image_thumbnail }}
-                                    style={{width:'100%',height:'100%'}}
-                                    resizeMode="cover"
-                                  />
-                                ) : (
-                                  <View style={{flex:1,justifyContent:'center',alignItems:'center'}}>
-                                    <Ionicons name="film" size={32} color="#C2185B"/>
-                                  </View>
-                                )}
-                              </View>
-                              <View style={{flex:1,justifyContent:'space-between'}}>
-                                <View>
-                                  <Text style={{fontSize:16,fontWeight:'900',color:'#1B5E20'}} numberOfLines={2}>{movie.title}</Text>
-                                  <Text style={{fontSize:12,color:'#558B2F',marginTop:4}}>{movie.genres?.join(' • ')}</Text>
-                                  <Text style={{fontSize:11,color:'#81C784',marginTop:2}}>{movie.runtime} min • {movie.director}</Text>
-                                </View>
-                                
-                                {/* Rating */}
-                                <View style={{flexDirection:'row',alignItems:'center',gap:8,marginTop:8}}>
-                                  <View style={{flexDirection:'row',alignItems:'center',backgroundColor:'#FFC107',paddingHorizontal:8,paddingVertical:4,borderRadius:6}}>
-                                    <Ionicons name="star" size={12} color="#FFF"/>
-                                    <Text style={{fontSize:12,fontWeight:'900',color:'#FFF',marginLeft:4}}>{movie.rating}</Text>
-                                  </View>
-                                  <Text style={{fontSize:11,color:'#81C784'}}>({movie.reviews?.toLocaleString()} reviews)</Text>
-                                </View>
-
-                                {/* View Showtimes Button */}
-                                <View style={{flexDirection:'row',alignItems:'center',marginTop:8,gap:4}}>
-                                  <Text style={{fontSize:12,fontWeight:'800',color:'#C2185B'}}>Check Showtimes</Text>
-                                  <Ionicons name="chevron-forward" size={14} color="#C2185B"/>
-                                </View>
-                              </View>
-                            </View>
-                          </ClayCard>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                  
-                  {!movieLoading && movieResults.length === 0 && movieCity && (
-                    <View style={{alignItems:'center',paddingVertical:40}}>
-                      <Ionicons name="film-outline" size={60} color="#E8F5E9"/>
-                      <Text style={{fontSize:16,fontWeight:'700',color:'#81C784',marginTop:16}}>Search for movies in your city</Text>
-                      <Text style={{fontSize:13,color:'#A5D6A7',marginTop:4}}>Enter your city name above</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* Train Section - Reorganized */}
-              {activeModule === 'train' && (
-                <View style={st.form}>
-                  <Text style={[st.modalTitle, {marginBottom:12}]}>🚂 Train Search & Tracking</Text>
-                  
-                  {/* === TRAIN SEARCH - AT THE TOP === */}
-                  <Text style={{fontSize:14,fontWeight:'800',color:'#1B5E20',marginBottom:10}}>Find Trains Between Stations</Text>
-                  <View style={{flexDirection:'row',gap:10,marginBottom:12}}>
-                    <View style={[st.inputWrap,{flex:1}]}>
-                      <Text style={st.label}>From (Station Code)</Text>
-                      <TextInput 
-                        style={st.input} 
-                        placeholder="e.g., NDLS, CSTM..." 
-                        value={sourceStation} 
-                        onChangeText={setSourceStation}
-                        autoCapitalize="characters"
-                      />
-                    </View>
-                    <View style={[st.inputWrap,{flex:1}]}>
-                      <Text style={st.label}>To (Station Code)</Text>
-                      <TextInput 
-                        style={st.input} 
-                        placeholder="e.g., BCT, BBS..." 
-                        value={destStation} 
-                        onChangeText={setDestStation}
-                        autoCapitalize="characters"
-                      />
-                    </View>
-                  </View>
-                  
-                  {/* Quick Station Codes Help */}
-                  <View style={{flexDirection:'row',flexWrap:'wrap',gap:6,marginBottom:12}}>
-                    <Text style={{fontSize:11,color:'#81C784',width:'100%',marginBottom:4}}>Popular stations:</Text>
-                    {['NDLS-Delhi', 'CSTM-Mumbai', 'HWH-Kolkata', 'MAS-Chennai', 'SBC-Bangalore', 'HYD-Hyderabad'].map(code => (
-                      <TouchableOpacity 
-                        key={code}
-                        style={{backgroundColor:'#E3F2FD',paddingHorizontal:8,paddingVertical:4,borderRadius:10}}
-                        onPress={() => {
-                          const [station] = code.split('-');
-                          if (!sourceStation) setSourceStation(station);
-                          else setDestStation(station);
-                        }}
-                      >
-                        <Text style={{fontSize:10,fontWeight:'700',color:'#1565C0'}}>{code}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  <ClayButton 
-                    label={trainsLoading ? "Searching..." : "🔍 FIND TRAINS"} 
-                    onPress={() => fetchRunningTrains(sourceStation, destStation)} 
-                    color="#1565C0" 
-                    style={{marginBottom:16}}
-                  />
-
-                  {/* TRAIN SEARCH RESULTS */}
-                  {runningTrains.length > 0 && (
-                    <View style={{marginBottom:20}}>
-                      <Text style={[st.resultHeaders,{fontSize:14,color:'#1565C0'}]}>🚆 {runningTrains.length} TRAINS FOUND</Text>
-                      {runningTrains.slice(0, 5).map((train, i) => (
-                        <ClayCard key={i} variant="white" style={{marginBottom:10,padding:14,borderLeftWidth:4,borderLeftColor:'#1565C0'}}>
-                          <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start'}}>
-                            <View style={{flex:1}}>
-                              <Text style={{fontSize:15,fontWeight:'900',color:'#1B5E20'}}>{train.train_name || train.name}</Text>
-                              <Text style={{fontSize:13,fontWeight:'700',color:'#558B2F',marginTop:2}}>Train #{train.train_number || train.number}</Text>
-                            </View>
-                            <TouchableOpacity 
-                              style={{backgroundColor:'#E8F5E9',paddingHorizontal:10,paddingVertical:5,borderRadius:8}}
-                              onPress={() => {
-                                setTrainNumber(train.train_number || train.number || '');
-                                fetchTrainRunningStatus(train.train_number || train.number || '');
-                              }}
-                            >
-                              <Text style={{fontSize:11,fontWeight:'800',color:'#2E7D32'}}>Track</Text>
-                            </TouchableOpacity>
-                          </View>
-                          <View style={{flexDirection:'row',justifyContent:'space-between',marginTop:10,paddingTop:10,borderTopWidth:1,borderTopColor:'#E8F5E9'}}>
-                            <View>
-                              <Text style={{fontSize:10,color:'#81C784'}}>DEPARTURE</Text>
-                              <Text style={{fontSize:16,fontWeight:'900',color:'#1B5E20'}}>{train.from_std || train.departure || '--:--'}</Text>
-                            </View>
-                            <View style={{alignItems:'center'}}>
-                              <Text style={{fontSize:12,color:'#558B2F'}}>{train.duration_h || train.duration || '--'}</Text>
-                              <View style={{width:40,height:1,backgroundColor:'#C8E6C9',marginVertical:4}} />
-                              <Text style={{fontSize:10,color:'#81C784'}}>{train.distance || '--'} km</Text>
-                            </View>
-                            <View style={{alignItems:'flex-end'}}>
-                              <Text style={{fontSize:10,color:'#81C784'}}>ARRIVAL</Text>
-                              <Text style={{fontSize:16,fontWeight:'900',color:'#1B5E20'}}>{train.to_std || train.arrival || '--:--'}</Text>
-                            </View>
-                          </View>
-                          <View style={{flexDirection:'row',gap:6,marginTop:8}}>
-                            {(train.train_type || 'Express').split(' ').map((tag: string, idx: number) => (
-                              <View key={idx} style={{backgroundColor:'#FFF3E0',paddingHorizontal:8,paddingVertical:3,borderRadius:6}}>
-                                <Text style={{fontSize:10,fontWeight:'700',color:'#E65100'}}>{tag}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </ClayCard>
-                      ))}
-                      {runningTrains.length > 5 && (
-                        <Text style={{textAlign:'center',fontSize:12,color:'#81C784',marginTop:4}}>
-                          + {runningTrains.length - 5} more trains
-                        </Text>
-                      )}
-                    </View>
-                  )}
-
-                  {/* === DIVIDER === */}
-                  <View style={{height:2,backgroundColor:'#E8F5E9',marginVertical:16}} />
-
-                  {/* === LIVE TRAIN TRACKING TOGGLE === */}
-                  <TouchableOpacity 
-                    style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:10,paddingVertical:8}}
-                    onPress={() => setShowTrainTracking(!showTrainTracking)}
-                  >
-                    <Text style={{fontSize:14,fontWeight:'800',color:'#1B5E20'}}>📍 Live Train Tracking & PNR</Text>
-                    <Ionicons name={showTrainTracking ? "chevron-up" : "chevron-down"} size={20} color="#1B5E20"/>
-                  </TouchableOpacity>
-                  
-                  {showTrainTracking && (
-                  <>
-                  <View style={[st.inputWrap,{marginBottom:12}]}>
-                    <Text style={st.label}>Enter Train Number</Text>
-                    <View style={{flexDirection:'row',gap:8}}>
-                      <TextInput 
-                        style={[st.input,{flex:1}]} 
-                        placeholder="e.g., 12952 for Rajdhani" 
-                        value={trainNumber} 
-                        onChangeText={setTrainNumber}
-                        keyboardType="numeric"
-                      />
-                      <TouchableOpacity 
-                        style={[st.syncBtn,{backgroundColor:'#E53935'}]} 
-                        onPress={() => fetchTrainRunningStatus(trainNumber)}
-                        disabled={trainLoading}
-                      >
-                        {trainLoading ? <ActivityIndicator color="#FFF" size="small"/> : <Ionicons name="locate" size={20} color="#FFF"/>}
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {trainStatus && (
-                    <ClayCard variant="white" style={{marginBottom: 20, padding: 0, borderRadius: 24, overflow: 'hidden'}}>
-                      {/* Premium Header */}
-                      <View style={{backgroundColor: '#1E293B', padding: 20, paddingTop: 24}}>
-                        <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start'}}>
-                          <View style={{flex: 1}}>
-                            <View style={{flexDirection:'row',alignItems:'center',gap:8,marginBottom:4}}>
-                              <Ionicons name="train" size={22} color="#4ADE80" />
-                              <Text style={{fontSize: 22, fontWeight: '900', color: '#F8FAFC', letterSpacing: -0.5}} numberOfLines={1}>{trainStatus.train_name}</Text>
-                            </View>
-                            <Text style={{fontSize: 14, fontWeight: '600', color: '#94A3B8', letterSpacing: 1}}>No. {trainStatus.train_number}</Text>
-                          </View>
-                          <View style={{backgroundColor: trainStatus.delay > 0 ? '#EF444420' : '#22C55E20', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: trainStatus.delay > 0 ? '#EF444440' : '#22C55E40'}}>
-                            <Text style={{fontSize: 13, fontWeight: '800', color: trainStatus.delay > 0 ? '#FCA5A5' : '#86EFAC'}}>
-                              {trainStatus.delay > 0 ? `LATE ${trainStatus.delay}M` : 'ON TIME'}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-
-                      {/* Info Section */}
-                      <View style={{padding: 20, backgroundColor: '#FFFFFF'}}>
-                        {/* Live Status Message Highlight */}
-                        <View style={{backgroundColor: '#F0FDF4', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#DCFCE7', marginBottom: 20}}>
-                          <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6}}>
-                            <View style={{width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E', shadowColor: '#22C55E', shadowOffset: {width:0, height:0}, shadowRadius: 6, shadowOpacity: 0.8}} />
-                            <Text style={{fontSize: 12, fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: 1}}>Live Update</Text>
-                          </View>
-                          <Text style={{fontSize: 15, fontWeight: '600', color: '#14532D', lineHeight: 22}}>
-                            {/* Remove HTML tags if any from the API message */}
-                            {(trainStatus.status || '').replace(/<[^>]+>/g, '') || `Train passed ${trainStatus.current_station}`}
-                          </Text>
-                        </View>
-
-                        {/* Station Timeline */}
-                        <View style={{position: 'relative', paddingLeft: 10}}>
-                          {/* Timeline Line */}
-                          <View style={{position: 'absolute', top: 12, bottom: 20, left: 15, width: 2, backgroundColor: '#E2E8F0'}} />
-                          
-                          {/* Current Station */}
-                          <View style={{flexDirection: 'row', alignItems: 'flex-start', marginBottom: 24}}>
-                            <View style={{width: 12, height: 12, borderRadius: 6, backgroundColor: '#3B82F6', borderWidth: 2, borderColor: '#FFFFFF', marginTop: 4, marginLeft: -1, zIndex: 2}} />
-                            <View style={{marginLeft: 16, flex: 1}}>
-                              <Text style={{fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 2, textTransform: 'uppercase'}}>Currently At</Text>
-                              <Text style={{fontSize: 18, fontWeight: '800', color: '#0F172A'}} numberOfLines={1}>{trainStatus.current_station}</Text>
-                              {trainStatus.raw?.time_of_availability && (
-                                <Text style={{fontSize: 12, color: '#64748B', marginTop: 2, fontStyle: 'italic'}}>Updated {trainStatus.raw.time_of_availability}</Text>
-                              )}
-                            </View>
-                          </View>
-
-                          {/* Next Station */}
-                          <View style={{flexDirection: 'row', alignItems: 'flex-start'}}>
-                            <View style={{width: 12, height: 12, borderRadius: 6, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#CBD5E1', marginTop: 4, marginLeft: -1, zIndex: 2}} />
-                            <View style={{marginLeft: 16, flex: 1}}>
-                              <Text style={{fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 2, textTransform: 'uppercase'}}>Next Station</Text>
-                              <Text style={{fontSize: 16, fontWeight: '700', color: '#334155'}} numberOfLines={1}>{trainStatus.next_station}</Text>
-                              <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4}}>
-                                <Ionicons name="time-outline" size={14} color="#0F172A" />
-                                <Text style={{fontSize: 14, fontWeight: '800', color: '#0F172A'}}>ETA: {trainStatus.expected_arrival}</Text>
-                              </View>
-                            </View>
-                          </View>
-                        </View>
-                      </View>
-                    </ClayCard>
-                  )}
-
-                  {/* === PNR STATUS === */}
-                  <Text style={{fontSize:14,fontWeight:'800',color:'#1B5E20',marginBottom:10}}>🎫 PNR Status Check</Text>
-                  <View style={[st.inputWrap,{marginBottom:12}]}>
-                    <Text style={st.label}>Enter 10-digit PNR Number</Text>
-                    <View style={{flexDirection:'row',gap:8}}>
-                      <TextInput 
-                        style={[st.input,{flex:1}]} 
-                        placeholder="e.g., 1234567890" 
-                        value={pnrNumber} 
-                        onChangeText={setPnrNumber}
-                        keyboardType="numeric"
-                        maxLength={10}
-                      />
-                      <TouchableOpacity 
-                        style={[st.syncBtn,{backgroundColor:'#1565C0'}]} 
-                        onPress={() => fetchPNRStatus(pnrNumber)}
-                        disabled={pnrLoading}
-                      >
-                        {pnrLoading ? <ActivityIndicator color="#FFF" size="small"/> : <Ionicons name="search" size={20} color="#FFF"/>}
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {pnrStatus && (
-                    <ClayCard variant="white" style={{padding:16,borderLeftWidth:4,borderLeftColor:'#1565C0'}}>
-                      <Text style={{fontSize:17,fontWeight:'900',color:'#1B5E20'}}>{pnrStatus.train_name}</Text>
-                      <Text style={{fontSize:14,fontWeight:'700',color:'#558B2F',marginTop:2}}>Train #{pnrStatus.train_number}</Text>
-                      <View style={{flexDirection:'row',alignItems:'center',gap:8,marginTop:6}}>
-                        <Text style={{fontSize:13,color:'#2E7D32',fontWeight:'700'}}>{pnrStatus.boarding_station}</Text>
-                        <Ionicons name="arrow-forward" size={14} color="#81C784" />
-                        <Text style={{fontSize:13,color:'#2E7D32',fontWeight:'700'}}>{pnrStatus.reservation_upto}</Text>
-                      </View>
-                      <Text style={{fontSize:12,color:'#81C784',marginTop:4}}>PNR: {pnrStatus.pnr_number}</Text>
-                      
-                      <View style={{marginTop:12,paddingTop:12,borderTopWidth:1,borderTopColor:'#E8F5E9'}}>
-                        <Text style={{fontSize:12,fontWeight:'900',color:'#1B5E20',marginBottom:8}}>Passenger Status:</Text>
-                        {pnrStatus.passengers?.map((p: any, i: number) => (
-                          <View key={i} style={{flexDirection:'row',alignItems:'center',gap:8,marginBottom:6}}>
-                            <View style={{width:24,height:24,borderRadius:12,backgroundColor:p.current_status.includes('CNF') ? '#E8F5E9' : '#FFEBEE',alignItems:'center',justifyContent:'center'}}>
-                              <Text style={{fontSize:10,fontWeight:'900',color:p.current_status.includes('CNF') ? '#2E7D32' : '#E53935'}}>{i+1}</Text>
-                            </View>
-                            <Text style={{fontSize:14,fontWeight:'700',color:p.current_status.includes('CNF') ? '#2E7D32' : '#E53935'}}>
-                              {p.current_status}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    </ClayCard>
-                  )}
-              </>
-              )}
-                </View>
-              )}
-
-              {loading && activeModule !== 'train' && <ActivityIndicator size="large" color={NC.primary} style={{marginVertical:30}}/>}
-
-              {/* Generic results - NOT for train module (train has its own results above) */}
-              {!loading && results && !selectedResult && activeModule !== 'train' && (
-                <View style={{marginTop:6}}>
-                  <Text style={st.resultHeaders}>FOUND {results.length} RESULTS</Text>
-                  {results.map((r,i) => (
-                    <TouchableOpacity key={i} activeOpacity={0.8} onPress={() => setSelectedResult(r)}>
-                      <ClayCard variant="white" style={st.resultCard}>
-                        <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
-                          <Text style={st.resTitle} numberOfLines={1}>{safeStr(r.title)}</Text>
-                          <View style={st.resStatusBadge}><Text style={st.resStatusText}>{safeStr(r.status)}</Text></View>
-                        </View>
-                        <Text style={st.resSub}>{safeStr(r.subtitle)}</Text>
-                        <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
-                          <Text style={st.resPrice}>{safeStr(r.price)}</Text>
-                          <View style={{flexDirection:'row',alignItems:'center',gap:4}}>
-                            <Text style={{fontSize:11,fontWeight:'800',color:NC.primary}}>Details</Text>
-                            <Ionicons name="chevron-forward" size={14} color={NC.primary}/>
-                          </View>
-                        </View>
-                      </ClayCard>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-
-              {/* Detailed View */}
-              {selectedResult && (
-                <View style={{marginTop:6}}>
-                  <TouchableOpacity style={{flexDirection:'row',alignItems:'center',marginBottom:16}} onPress={() => setSelectedResult(null)}>
-                    <Ionicons name="arrow-back" size={20} color={NC.primary}/>
-                    <Text style={{fontSize:14,fontWeight:'800',color:NC.primary,marginLeft:8}}>Back to Results</Text>
-                  </TouchableOpacity>
-                  
-                  <ClayCard variant="green" style={{marginBottom:16,padding:20}}>
-                    <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                      <Ionicons 
-                        name={(
-                          activeModule==='flight' ? 'airplane' :
-                          activeModule==='bus' ? 'bus' :
-                          activeModule==='train' ? 'train' :
-                          'bed'
-                        ) as any} 
-                        size={28} 
-                        color="#FFF"
-                      />
-                      <View style={{backgroundColor:'rgba(255,255,255,0.2)',paddingHorizontal:10,paddingVertical:4,borderRadius:10}}>
-                        <Text style={{color:'#FFF',fontSize:10,fontWeight:'900'}}>{safeStr(selectedResult.status)}</Text>
-                      </View>
-                    </View>
-                    <Text style={{color:'#FFF',fontSize:20,fontWeight:'900',marginBottom:6}}>{safeStr(selectedResult.title)}</Text>
-                    <Text style={{color:'rgba(255,255,255,0.9)',fontSize:13,fontWeight:'700'}}>{safeStr(selectedResult.subtitle)}</Text>
-                    <Text style={{color:'#FFF',fontSize:24,fontWeight:'900',marginTop:16}}>{safeStr(selectedResult.price)}</Text>
-                  </ClayCard>
-
-                  <Text style={st.gridTitle}>Route Information</Text>
-                  <ClayCard variant="white" style={{marginBottom:16}}>
-                    <View style={st.detailRow}><Text style={st.detailLabel}>From</Text><Text style={st.detailValue}>{qFrom||'Origin'}</Text></View>
-                    <View style={st.detailRow}><Text style={st.detailLabel}>To</Text><Text style={st.detailValue}>{qTo||'Destination'}</Text></View>
-                    <View style={st.detailRow}><Text style={st.detailLabel}>Departure</Text><Text style={st.detailValue}>08:30 AM</Text></View>
-                    <View style={[st.detailRow,{borderBottomWidth:0}]}><Text style={st.detailLabel}>Arrival</Text><Text style={st.detailValue}>11:45 AM</Text></View>
-                  </ClayCard>
-
-                  <Text style={st.gridTitle}>Availability & Fare</Text>
-                  <ClayCard variant="white" style={{marginBottom:16}}>
-                    <View style={st.detailRow}><Text style={st.detailLabel}>Available Seats</Text><Text style={[st.detailValue,{color:'#4CAF50'}]}>{Math.floor(Math.random()*40)+5} Seats</Text></View>
-                    <View style={st.detailRow}><Text style={st.detailLabel}>Base Fare</Text><Text style={st.detailValue}>{safeStr(selectedResult.price)}</Text></View>
-                    <View style={st.detailRow}><Text style={st.detailLabel}>Taxes & Fees</Text><Text style={st.detailValue}>+₹450</Text></View>
-                    <View style={[st.detailRow,{borderBottomWidth:0}]}><Text style={st.detailLabel}>Refundable</Text><Text style={st.detailValue}>Yes (Partial)</Text></View>
-                  </ClayCard>
-
-                  <View style={{height: 10}}/>
-
-                  <TouchableOpacity style={st.officialBtn} onPress={() => {
-                    if(activeModule==='train') openOfficialApp('irctc://','https://www.irctc.co.in/');
-                    else if(activeModule==='bus') openOfficialApp('redbus://','https://www.redbus.in/');
-                    else if(activeModule==='flight') openOfficialApp('makemytrip://','https://www.makemytrip.com/flights/');
-                    else openOfficialApp('booking://','https://www.booking.com/');
-                  }}>
-                    <Ionicons name="open-outline" size={18} color="#FFF" style={{marginRight:8}}/>
-                    <Text style={[st.officialText,{fontSize:15}]}>Book on Official App</Text>
-                  </TouchableOpacity>
-                  <Text style={{textAlign:'center',fontSize:11,color:NC.onSurfaceVariant,marginTop:10}}>Redirects to partner application</Text>
-                </View>
-              )}
-              </ScrollView>
-            </View>
-          </View>
-          </KeyboardAvoidingView>
-        </Modal>
-      )}
-
-      {/* Movie Detail Modal */}
-      {showMovieDetail && selectedMovie && (
-        <Modal visible transparent animationType="slide">
-          <View style={st.modalOverlay}>
-            <View style={[st.modalSheet,{maxHeight:'92%'}]}>
-              <View style={st.modalHeader}>
-                <Text style={st.modalTitle}>Movie Details</Text>
-                <TouchableOpacity onPress={() => setShowMovieDetail(false)} style={st.closeBtn}>
-                  <Ionicons name="close" size={24} color={NC.onSurfaceVariant}/>
-                </TouchableOpacity>
-              </View>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Movie Poster */}
-                <View style={{alignItems:'center',marginBottom:20}}>
-                  <View style={{width:150,height:220,borderRadius:12,overflow:'hidden',backgroundColor:'#F5F5F5',shadowColor:'#000',shadowOffset:{width:0,height:4},shadowOpacity:0.3,shadowRadius:8,elevation:10}}>
-                    {selectedMovie.poster_image_thumbnail ? (
-                      <Image 
-                        source={{ uri: selectedMovie.poster_image_thumbnail }}
-                        style={{width:'100%',height:'100%'}}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <View style={{flex:1,justifyContent:'center',alignItems:'center'}}>
-                        <Ionicons name="film" size={60} color="#C2185B"/>
-                      </View>
-                    )}
-                  </View>
-                </View>
-
-                {/* Title & Rating */}
-                <Text style={{fontSize:24,fontWeight:'900',color:'#1B5E20',textAlign:'center'}}>{selectedMovie.title}</Text>
-                <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap:12,marginTop:8}}>
-                  <View style={{flexDirection:'row',alignItems:'center',backgroundColor:'#FFC107',paddingHorizontal:10,paddingVertical:5,borderRadius:8}}>
-                    <Ionicons name="star" size={14} color="#FFF"/>
-                    <Text style={{fontSize:14,fontWeight:'900',color:'#FFF',marginLeft:4}}>{selectedMovie.rating}/10</Text>
-                  </View>
-                  <Text style={{fontSize:13,color:'#558B2F'}}>{selectedMovie.runtime} min</Text>
-                  <Text style={{fontSize:13,color:'#81C784'}}>{selectedMovie.genres?.join(' • ')}</Text>
-                </View>
-                <Text style={{fontSize:12,color:'#81C784',textAlign:'center',marginTop:4}}>
-                  {selectedMovie.reviews?.toLocaleString()} reviews
-                </Text>
-
-                {/* About Section */}
-                <Text style={{fontSize:16,fontWeight:'900',color:'#1B5E20',marginTop:20,marginBottom:8}}>📖 About the Movie</Text>
-                <ClayCard variant="white" style={{padding:16,marginBottom:16}}>
-                  <Text style={{fontSize:14,color:'#2E7D32',lineHeight:22}}>{selectedMovie.plot}</Text>
-                </ClayCard>
-
-                {/* Cast & Crew */}
-                <Text style={{fontSize:16,fontWeight:'900',color:'#1B5E20',marginBottom:8}}>� Cast & Crew</Text>
-                <ClayCard variant="mint" style={{padding:16,marginBottom:16}}>
-                  <View style={{marginBottom:8}}>
-                    <Text style={{fontSize:12,color:'#81C784'}}>Director</Text>
-                    <Text style={{fontSize:15,fontWeight:'800',color:'#1B5E20'}}>{selectedMovie.director}</Text>
-                  </View>
-                  <View>
-                    <Text style={{fontSize:12,color:'#81C784'}}>Cast</Text>
-                    <Text style={{fontSize:14,fontWeight:'700',color:'#2E7D32'}}>{selectedMovie.cast}</Text>
-                  </View>
-                </ClayCard>
-                
-                {/* Showtimes Section */}
-                <Text style={{fontSize:16,fontWeight:'900',color:'#1B5E20',marginBottom:12}}>🎬 Showtimes in {movieCity}</Text>
-                
-                <ClayCard variant="white" style={{marginBottom:12,padding:16}}>
-                  <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-                    <View>
-                      <Text style={{fontSize:15,fontWeight:'800',color:'#1B5E20'}}>PVR Cinemas</Text>
-                      <Text style={{fontSize:11,color:'#558B2F'}}>Dolby Atmos • Recliner</Text>
-                    </View>
-                    <Text style={{fontSize:12,color:'#2E7D32',fontWeight:'700'}}>2.5 km</Text>
-                  </View>
-                  <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
-                    {['10:30 AM', '1:15 PM', '4:00 PM', '7:30 PM', '10:45 PM'].map((time, i) => (
-                      <TouchableOpacity key={i} style={{backgroundColor:'#C2185B',paddingHorizontal:14,paddingVertical:8,borderRadius:8}}>
-                        <Text style={{color:'#FFF',fontSize:12,fontWeight:'800'}}>{time}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  <Text style={{fontSize:11,color:'#81C784',marginTop:8}}>₹250 - ₹650 per ticket</Text>
-                </ClayCard>
-
-                <ClayCard variant="white" style={{marginBottom:12,padding:16}}>
-                  <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-                    <View>
-                      <Text style={{fontSize:15,fontWeight:'800',color:'#1B5E20'}}>INOX Movies</Text>
-                      <Text style={{fontSize:11,color:'#558B2F'}}>IMAX • 4K Projection</Text>
-                    </View>
-                    <Text style={{fontSize:12,color:'#2E7D32',fontWeight:'700'}}>4.1 km</Text>
-                  </View>
-                  <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
-                    {['11:00 AM', '2:30 PM', '6:00 PM', '9:30 PM'].map((time, i) => (
-                      <TouchableOpacity key={i} style={{backgroundColor:'#1565C0',paddingHorizontal:14,paddingVertical:8,borderRadius:8}}>
-                        <Text style={{color:'#FFF',fontSize:12,fontWeight:'800'}}>{time}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  <Text style={{fontSize:11,color:'#81C784',marginTop:8}}>₹300 - ₹800 per ticket</Text>
-                </ClayCard>
-
-                <ClayCard variant="white" style={{marginBottom:16,padding:16}}>
-                  <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-                    <View>
-                      <Text style={{fontSize:15,fontWeight:'800',color:'#1B5E20'}}>Cinepolis</Text>
-                      <Text style={{fontSize:11,color:'#558B2F'}}>4DX • 7.1 Surround</Text>
-                    </View>
-                    <Text style={{fontSize:12,color:'#2E7D32',fontWeight:'700'}}>5.8 km</Text>
-                  </View>
-                  <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
-                    {['9:45 AM', '12:30 PM', '3:45 PM', '7:00 PM', '10:15 PM'].map((time, i) => (
-                      <TouchableOpacity key={i} style={{backgroundColor:'#E65100',paddingHorizontal:14,paddingVertical:8,borderRadius:8}}>
-                        <Text style={{color:'#FFF',fontSize:12,fontWeight:'800'}}>{time}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  <Text style={{fontSize:11,color:'#81C784',marginTop:8}}>₹200 - ₹550 per ticket</Text>
-                </ClayCard>
-
-                {/* Book Button */}
-                <TouchableOpacity 
-                  style={{backgroundColor:'#C2185B',borderRadius:16,paddingVertical:16,alignItems:'center',flexDirection:'row',justifyContent:'center',marginBottom:8}}
-                  onPress={() => {
-                    const searchQuery = encodeURIComponent(selectedMovie.title);
-                    Linking.openURL(`https://in.bookmyshow.com/search/movies?search_query=${searchQuery}`);
-                  }}
-                >
-                  <Ionicons name="ticket" size={22} color="#FFF" style={{marginRight:10}}/>
-                  <Text style={{color:'#FFF',fontSize:17,fontWeight:'900'}}>Book on BookMyShow</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={{backgroundColor:'#FFF',borderRadius:16,paddingVertical:14,alignItems:'center',borderWidth:2,borderColor:'#E53935',marginBottom:20}}
-                  onPress={() => {
-                    const searchQuery = encodeURIComponent(selectedMovie.title);
-                    Linking.openURL(`https://paytm.com/movies/search?query=${searchQuery}`);
-                  }}
-                >
-                  <Text style={{color:'#E53935',fontSize:15,fontWeight:'800'}}>Book on Paytm</Text>
-                </TouchableOpacity>
-                
-                <View style={{height:20}}/>
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-      )}
-    </SafeAreaView>
-    </>
+    </View>
   );
 }
 
-const st = StyleSheet.create({
-  container:{flex:1,backgroundColor:NC.background},
-  scroll:{paddingHorizontal:20},
-  header:{marginTop:10,marginBottom:24,flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start'},
-  heading:{fontSize:32,fontWeight:'900',color:NC.primary,letterSpacing:-0.5},
-  sub:{fontSize:13,color:NC.onSurfaceVariant,fontWeight:'700',marginTop:4},
-  historyBtn:{flexDirection:'row',alignItems:'center',gap:6,backgroundColor:NC.surfaceLowest,paddingHorizontal:14,paddingVertical:8,borderRadius:20,borderWidth:2,borderColor:'rgba(165,214,167,0.3)'},
-  historyBtnText:{fontSize:12,fontWeight:'800',color:NC.primary},
-  heroCard:{padding:24,backgroundColor:NC.primaryFixed,marginBottom:24},
-  heroLabel:{color:'rgba(255,255,255,0.7)',fontSize:10,fontWeight:'900',letterSpacing:1.5,marginBottom:4},
-  heroTitle:{color:'#FFF',fontSize:22,fontWeight:'900',letterSpacing:-0.5,marginBottom:4},
-  heroSub:{color:'rgba(255,255,255,0.85)',fontSize:12,lineHeight:18},
-  gridTitle:{fontSize:16,fontWeight:'900',color:NC.onSurface,marginBottom:14},
-  grid:{flexDirection:'row',flexWrap:'wrap',justifyContent:'space-between'},
-  gridItem:{width:'48%',marginBottom:14},
-  gridItemCard:{padding:16,alignItems:'center'},
-  iconOrb:{width:50,height:50,borderRadius:25,alignItems:'center',justifyContent:'center',marginBottom:8},
-  modTitle:{fontSize:13,fontWeight:'900',color:NC.onSurface,textAlign:'center'},
-  modSub:{fontSize:9,fontWeight:'700',color:NC.onSurfaceVariant,textAlign:'center',marginTop:2},
-  syncCard:{padding:14,marginBottom:20,borderWidth:2,borderColor:'rgba(21,101,192,0.12)'},
-  syncTitle:{fontSize:13,fontWeight:'900',color:'#1565C0'},
-  syncBtn:{width:46,height:46,borderRadius:23,backgroundColor:'#1565C0',alignItems:'center',justifyContent:'center'},
-  tkCard:{marginBottom:12,padding:14,borderLeftWidth:5,borderLeftColor:NC.primaryFixed},
-  tkHead:{flexDirection:'row',alignItems:'center',marginBottom:8},
-  tkPnr:{flex:1,fontSize:12,fontWeight:'900',color:NC.onSurface,marginLeft:6},
-  tkStatusBadge:{backgroundColor:'#4CAF50',paddingHorizontal:8,paddingVertical:3,borderRadius:10},
-  tkStatusText:{fontSize:9,fontWeight:'900',color:'#FFF'},
-  tkTitle:{fontSize:16,fontWeight:'900',color:NC.primary,marginBottom:8},
-  tkGrid:{flexDirection:'row',justifyContent:'space-between'},
-  tkLabel:{fontSize:8,fontWeight:'800',color:NC.onSurfaceVariant,letterSpacing:1,marginBottom:1},
-  tkVal:{fontSize:12,fontWeight:'800',color:NC.onSurface},
-  histSecTitle:{fontSize:12,fontWeight:'900',color:NC.onSurfaceVariant,marginTop:16,marginBottom:10,letterSpacing:1},
-  modalOverlay:{flex:1,backgroundColor:'rgba(0,0,0,0.6)',justifyContent:'flex-end'},
-  modalSheet:{backgroundColor:'#FFF',borderTopLeftRadius:36,borderTopRightRadius:36,maxHeight:'90%',padding:24},
-  modalHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start',marginBottom:18},
-  modalTitle:{fontSize:22,fontWeight:'900',color:NC.primary,letterSpacing:-0.5},
-  modalSub:{fontSize:11,fontWeight:'700',color:NC.onSurfaceVariant,marginTop:3},
-  closeBtn:{width:38,height:38,borderRadius:19,backgroundColor:NC.surfaceLow,alignItems:'center',justifyContent:'center'},
-  form:{marginBottom:16},
-  inputWrap:{marginBottom:14},
-  label:{fontSize:10,fontWeight:'800',color:NC.onSurfaceVariant,marginBottom:6,letterSpacing:0.5},
-  input:{backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14,fontSize:14,color:NC.onSurface,fontWeight:'700'},
-  dropBtn:{flexDirection:'row',alignItems:'center',gap:6,backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,padding:14},
-  dropBtnText:{fontSize:13,fontWeight:'700',color:NC.onSurface,flex:1},
-  dropdown:{position:'absolute',top:68,left:0,right:0,backgroundColor:'#FFF',borderRadius:16,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',zIndex:100,elevation:10,shadowColor:'#000',shadowOffset:{width:0,height:4},shadowOpacity:0.15,shadowRadius:12},
-  dropItem:{padding:14,borderBottomWidth:1,borderBottomColor:'rgba(0,0,0,0.04)'},
-  dropItemText:{fontSize:13,fontWeight:'700',color:NC.onSurface},
-  paxRow:{flexDirection:'row',alignItems:'center',justifyContent:'center',backgroundColor:NC.surfaceLowest,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',borderRadius:18,paddingVertical:10,paddingHorizontal:6},
-  paxBtn:{width:32,height:32,borderRadius:16,backgroundColor:'rgba(165,214,167,0.3)',alignItems:'center',justifyContent:'center'},
-  paxCount:{fontSize:18,fontWeight:'900',color:NC.onSurface,marginHorizontal:12},
-  suggestBox:{backgroundColor:'#FFF',borderRadius:14,borderWidth:2,borderColor:'rgba(165,214,167,0.3)',marginTop:4,elevation:8,shadowColor:'#000',shadowOffset:{width:0,height:2},shadowOpacity:0.1,shadowRadius:8},
-  suggestItem:{flexDirection:'row',alignItems:'center',gap:8,padding:12,borderBottomWidth:1,borderBottomColor:'rgba(0,0,0,0.03)'},
-  suggestText:{fontSize:14,fontWeight:'700',color:NC.onSurface},
-  resultHeaders:{fontSize:11,fontWeight:'900',color:NC.outline,marginBottom:10,letterSpacing:1},
-  resultCard:{padding:16,borderWidth:2,borderColor:NC.primaryFixed,marginBottom:12},
-  resTitle:{fontSize:16,fontWeight:'900',color:NC.onSurface,flex:1},
-  resStatusBadge:{backgroundColor:NC.primaryFixed,paddingHorizontal:10,paddingVertical:4,borderRadius:10},
-  resStatusText:{fontSize:9,fontWeight:'900',color:'#FFF'},
-  resSub:{fontSize:11,color:NC.onSurfaceVariant,marginTop:6,fontWeight:'600'},
-  resPrice:{fontSize:18,fontWeight:'900',color:NC.primary,marginTop:6},
-  bookDivider:{height:1,backgroundColor:'rgba(0,0,0,0.06)',marginVertical:12},
-  officialBtn:{flexDirection:'row',backgroundColor:'#000',padding:14,borderRadius:16,alignItems:'center',justifyContent:'center'},
-  officialText:{color:'#FFF',fontSize:13,fontWeight:'800'},
-  calOverlay:{flex:1,backgroundColor:'rgba(0,0,0,0.5)',justifyContent:'center',alignItems:'center'},
-  calSheet:{backgroundColor:'#FFF',borderRadius:28,padding:24,width:'85%'},
-  calHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:16},
-  calMonthLabel:{fontSize:18,fontWeight:'900',color:NC.primary},
-  calDayNames:{flexDirection:'row',justifyContent:'space-around',marginBottom:8},
-  calDayName:{fontSize:11,fontWeight:'800',color:NC.onSurfaceVariant,width:36,textAlign:'center'},
-  calGrid:{flexDirection:'row',flexWrap:'wrap'},
-  calCell:{width:'14.28%',alignItems:'center',justifyContent:'center',paddingVertical:8},
-  calCellSel:{backgroundColor:NC.primary,borderRadius:20},
-  calCellText:{fontSize:14,fontWeight:'700',color:NC.onSurface},
-  calCellTextSel:{color:'#FFF',fontWeight:'900'},
-  calClose:{alignItems:'center',marginTop:16,paddingVertical:10},
-  detailHero:{alignItems:'center',backgroundColor:NC.primary,borderRadius:24,padding:22,marginBottom:18},
-  detailPnr:{fontSize:26,fontWeight:'900',color:'#FFF',marginTop:8},
-  detailStatusBadge:{backgroundColor:'rgba(255,255,255,0.2)',paddingHorizontal:14,paddingVertical:5,borderRadius:12,marginTop:8},
-  detailStatusText:{fontSize:11,fontWeight:'900',color:'#FFF'},
-  detailTitle:{fontSize:18,fontWeight:'900',color:NC.onSurface,marginBottom:14},
-  detailRow:{flexDirection:'row',justifyContent:'space-between',paddingVertical:11,borderBottomWidth:1,borderBottomColor:'rgba(0,0,0,0.05)'},
-  detailLabel:{fontSize:13,fontWeight:'700',color:NC.onSurfaceVariant},
-  detailValue:{fontSize:13,fontWeight:'800',color:NC.onSurface},
+const s = StyleSheet.create({
+  root: { flex: 1 },
+  // App Bar
+  appBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },
+  appBarSup: { fontSize: 10, fontFamily: FONTS.display, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
+  appBarTitle: { fontSize: 28, fontFamily: FONTS.display, fontWeight: '900', letterSpacing: -0.5 },
+  bellBtn: { ...CLAY_CARD_V2, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
+  bellDot: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', borderWidth: 2 },
+  
+  // Tabs (Squishy pill container)
+  modeTabBar: { flexDirection: 'row', padding: 6, marginHorizontal: 16, borderRadius: 32, borderWidth: 1.5 },
+  modeTab: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 26, gap: 4 },
+  modeTabLabel: { fontSize: 11, fontFamily: FONTS.body, letterSpacing: 0.2 },
+
+  scroll: { padding: 16, paddingBottom: 120 },
+
+  // Search Card (Bento 50px-style radius)
+  searchCard: { ...CLAY_CARD_V2, padding: 20, marginBottom: 24, paddingBottom: 24 },
+  tripTypeRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18, gap: 8 },
+  tripTypePill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  tripTypeTxt: { fontSize: 13, fontFamily: FONTS.body },
+  classPill: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
+  classTxt: { fontSize: 12 },
+
+  // Route Input (Squishy interior block)
+  routeBox: { borderRadius: 24, borderWidth: 1.5, overflow: 'hidden', marginBottom: 16 },
+  routeRow: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
+  routeDot: { width: 12, height: 12, borderRadius: 6 },
+  routeFieldLabel: { fontSize: 10, fontFamily: FONTS.display, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 2 },
+  routeInput: { fontSize: 20, fontFamily: FONTS.display, fontWeight: '800' },
+  routeDivider: { height: 1.5 },
+  swapBtn: { position: 'absolute', right: 16, top: '40%', width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', borderWidth: 2, zIndex: 2 },
+  suggestBox: { borderRadius: 20, borderWidth: 1.5, marginBottom: 16, overflow: 'hidden' },
+  suggestRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderBottomWidth: 1 },
+  suggestTxt: { fontSize: 15, fontFamily: FONTS.display, fontWeight: '700' },
+
+  // Passengers
+  fieldLabel: { fontSize: 11, fontFamily: FONTS.display, fontWeight: '800', letterSpacing: 1 },
+  passengerSection: { flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 4 },
+  counterWrap: { flex: 1, alignItems: 'flex-start' },
+  counterRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 },
+  cBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  cVal: { fontSize: 20, fontFamily: FONTS.display, fontWeight: '900', minWidth: 20, textAlign: 'center' },
+  cDivider: { width: 1.5, height: 50, marginHorizontal: 16 },
+
+  searchBtn: { ...CLAY_BTN_V2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 60, gap: 10, marginTop: 24 },
+  searchBtnTxt: { fontSize: 16, fontFamily: FONTS.display, fontWeight: '900', color: '#FFF' },
+
+  // Results
+  resultsSection: { marginBottom: 16 },
+  resultsHeader: { marginBottom: 16 },
+  resultsSummary: { fontSize: 14, fontFamily: FONTS.display, fontWeight: '800' },
+  resultCard: { ...CLAY_CARD_V2, padding: 18, marginBottom: 16 },
+  resultTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  resultIconBox: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  resultName: { fontSize: 16, fontFamily: FONTS.display, fontWeight: '900' },
+  resultSub: { fontSize: 12, marginTop: 2, fontFamily: FONTS.body },
+  resultPrice: { fontSize: 20, fontFamily: FONTS.display, fontWeight: '900' },
+  resultTimeRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  resultTime: { fontSize: 20, fontFamily: FONTS.display, fontWeight: '900' },
+  resultMiddle: { flex: 1, alignItems: 'center', paddingHorizontal: 12, gap: 6 },
+  resultDur: { fontSize: 11, fontFamily: FONTS.body, fontWeight: '700' },
+  resultLine: { height: 2, width: '100%', borderRadius: 1 },
+  resultFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 14, borderTopWidth: 1.5 },
+  statusTxt: { fontSize: 12, fontFamily: FONTS.display, fontWeight: '800' },
+  bookChip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 16 },
+  bookChipTxt: { fontSize: 11, fontFamily: FONTS.display, fontWeight: '900', color: '#FFF' },
+
+  // Agent CTA
+  agentCTA: { backgroundColor: '#0A2640', borderRadius: 32, padding: 20, marginBottom: 24, elevation: 8, shadowColor: '#0A2640', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12 },
+  agentTop: { flexDirection: 'row', alignItems: 'center' },
+  orb: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  agentTitle: { fontSize: 18, fontFamily: FONTS.display, fontWeight: '900', color: '#FFF' },
+  agentSub: { fontSize: 13, fontFamily: FONTS.body, color: '#94A3B8', marginTop: 2 },
+
+  // Horizontal Scrollers
+  sectionLabel: { fontSize: 17, fontFamily: FONTS.display, fontWeight: '900', marginBottom: 14 },
+  offerCard: { ...CLAY_CARD_V2, width: 240, padding: 18, marginRight: 14 },
+  offerIconBox: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  offerTitle: { fontSize: 15, fontFamily: FONTS.display, fontWeight: '900' },
+  offerSub: { fontSize: 12, fontFamily: FONTS.body },
+  
+  creditCard: { width: 260, height: 160, borderRadius: 28, marginRight: 14, overflow: 'hidden', elevation: 8, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10 },
+  creditCardInner: { flex: 1, padding: 20, justifyContent: 'space-between' },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardBank: { color: '#FFF', fontSize: 14, fontFamily: FONTS.display, fontWeight: '800' },
+  cardChip: { width: 32, height: 22, borderRadius: 6 },
+  cardNum: { color: '#FFF', fontSize: 18, fontFamily: FONTS.display, letterSpacing: 2, marginTop: 10 },
+  cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  cardName: { color: '#FFF', fontSize: 13, fontFamily: FONTS.body },
+  cardBadgeTxt: { color: '#FFF', fontSize: 15, fontFamily: FONTS.display, fontWeight: '900', fontStyle: 'italic' },
+
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  quickCard: { ...CLAY_CARD_V2, width: (width - 44) / 2, padding: 16, alignItems: 'center', gap: 12 },
+  quickIconBox: { width: 50, height: 50, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  quickLabel: { fontSize: 14, fontFamily: FONTS.display, fontWeight: '800' },
+
+  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'flex-end' },
+  ticketSheet: { borderTopLeftRadius: 40, borderTopRightRadius: 40, overflow: 'hidden' },
+  ticketStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 12 },
+  ticketStripTitle: { fontSize: 16, fontFamily: FONTS.display, fontWeight: '900', letterSpacing: 1.5, color: '#FFF' },
+  refBox: { borderRadius: 24, borderWidth: 1.5, padding: 20, alignItems: 'center', marginBottom: 24 },
+  refLabel: { fontSize: 10, fontFamily: FONTS.display, fontWeight: '900', letterSpacing: 1.5, marginBottom: 6 },
+  refVal: { fontSize: 28, fontFamily: FONTS.display, fontWeight: '900', letterSpacing: 3 },
+  downloadBtn: { ...CLAY_BTN_V2, alignItems: 'center', marginBottom: 16 },
+  downloadBtnTxt: { fontSize: 16, fontFamily: FONTS.display, fontWeight: '900', color: '#FFF' },
+  closeBtn: { height: 56, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
+  closeBtnTxt: { fontSize: 15, fontFamily: FONTS.display, fontWeight: '800' },
 });
